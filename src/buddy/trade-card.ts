@@ -6,6 +6,7 @@
 
 import type { Rarity } from './types.js'
 import { RARITY_STARS } from './types.js'
+import type { TradeReport } from './trade-report.js'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -252,4 +253,101 @@ export function formatCardForClipboard(card: string): string {
  */
 export function rarityToStars(rarity: Rarity): string {
   return RARITY_STARS[rarity]
+}
+
+// ─── Trade Report Card ──────────────────────────────────────────────────────
+
+/**
+ * Generates a shareable trade report card with box-drawing art.
+ * Shows completed trade metrics: P&L, R-multiple, MAE/MFE, efficiency.
+ */
+export function generateTradeReportCard(report: TradeReport): string {
+  const contentLines = buildReportCardLines(report)
+
+  const maxContent = contentLines.reduce(
+    (m, c) => Math.max(m, displayWidth(c)), 0,
+  )
+  const cardWidth = Math.max(MIN_CARD_WIDTH, maxContent + 5)
+  const innerWidth = cardWidth - 5
+
+  const lines: string[] = []
+  lines.push(`\u250C${'─'.repeat(cardWidth - 2)}\u2510`)
+  for (const content of contentLines) {
+    if (content === '') {
+      lines.push(emptyLine(cardWidth))
+    } else {
+      lines.push(padLine(content, innerWidth))
+    }
+  }
+  lines.push(`\u2514${'─'.repeat(cardWidth - 2)}\u2518`)
+
+  return lines.join('\n')
+}
+
+/**
+ * Builds inner content lines for a trade report card.
+ */
+function buildReportCardLines(report: TradeReport): string[] {
+  const content: string[] = []
+  const side = report.side === 'buy' ? 'LONG' : 'SHORT'
+  const pnlSign = report.netPnL >= 0 ? '+' : ''
+  const pctSign = report.netPnLPercent >= 0 ? '+' : ''
+  const resultIcon = report.netPnL >= 0 ? '\u{1F7E2}' : '\u{1F534}'
+
+  content.push(
+    `${resultIcon} ${report.symbol} ${side} CLOSED`,
+  )
+  content.push('')
+
+  const pnlStr = `${pnlSign}$${formatReportPrice(report.netPnL)}`
+  const pctStr = `${pctSign}${report.netPnLPercent.toFixed(2)}%`
+  content.push(`P&L: ${pnlStr} (${pctStr})`)
+
+  content.push(
+    `Entry: $${formatReportPrice(report.entryPrice)} | Exit: $${formatReportPrice(report.exitPrice)}`,
+  )
+
+  const qty = formatReportQty(report.quantity)
+  const baseCurrency = report.symbol.split('/')[0] ?? report.symbol
+  content.push(`Qty: ${qty} ${baseCurrency}`)
+  content.push('')
+
+  const rStr = `${report.rMultiple.toFixed(2)}R`
+  content.push(`R-Multiple: ${rStr}`)
+  content.push(`Hold: ${report.holdDurationHuman}`)
+  content.push('')
+
+  const maeStr = `${report.mae.toFixed(2)}%`
+  const mfeStr = `+${Math.abs(report.mfe).toFixed(2)}%`
+  content.push(`MAE: ${maeStr} | MFE: ${mfeStr}`)
+  content.push(`Efficiency: ${report.efficiencyRatio}%`)
+  content.push('')
+
+  content.push('\u26A1 vibe-sensei')
+  return content
+}
+
+function formatReportPrice(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 1) {
+    return value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  }
+  if (abs === 0) return '0.00'
+  const d = Math.max(2, Math.min(6, -Math.floor(Math.log10(abs)) + 2))
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  })
+}
+
+function formatReportQty(value: number): string {
+  if (Number.isInteger(value)) return value.toLocaleString('en-US')
+  const decimals = Math.min(8, String(value).split('.')[1]?.length ?? 2)
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: decimals,
+  })
 }
