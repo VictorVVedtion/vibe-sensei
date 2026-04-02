@@ -7,4 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendPtyResize: (cols: number, rows: number) =>
     ipcRenderer.send('pty:resize', cols, rows),
   getUdfPort: () => ipcRenderer.invoke('udf:port'),
+  minimizeWindow: () => ipcRenderer.send('window:minimize'),
+  maximizeWindow: () => ipcRenderer.send('window:maximize'),
+  closeWindow: () => ipcRenderer.send('window:close'),
+  isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
 })
