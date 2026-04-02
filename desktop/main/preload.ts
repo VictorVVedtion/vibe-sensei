@@ -9,6 +9,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('pty:resize', cols, rows),
   getUdfPort: () => ipcRenderer.invoke('udf:port'),
 
+  // ── PTY Lifecycle ──
+  onPtyExit: (callback: (exitCode: number) => void) => {
+    const handler = (_event: any, exitCode: number) => callback(exitCode)
+    ipcRenderer.on('pty:exit', handler)
+    return () => {
+      ipcRenderer.removeListener('pty:exit', handler)
+    }
+  },
+  onPtyReady: (callback: () => void) => {
+    const handler = () => callback()
+    ipcRenderer.on('pty:ready', handler)
+    return () => {
+      ipcRenderer.removeListener('pty:ready', handler)
+    }
+  },
+  restartPty: () => ipcRenderer.send('pty:restart'),
+
   // ── Window Controls ──
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   maximizeWindow: () => ipcRenderer.send('window:maximize'),
