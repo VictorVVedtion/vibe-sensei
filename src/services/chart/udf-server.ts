@@ -140,7 +140,20 @@ async function fetchCandles(
   const ex = await getConnectedExchange();
   const exchangeSymbol = symbolToExchangeFormat(symbol);
   const limit = computeCandleLimit(from, to, resolution);
-  const candles = await ex.getCandles(exchangeSymbol, timeframe, limit);
+
+  let candles: Candle[];
+  try {
+    candles = await ex.getCandles(exchangeSymbol, timeframe, limit);
+  } catch (originalError: unknown) {
+    // Retry once after 500ms on transient errors
+    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      candles = await ex.getCandles(exchangeSymbol, timeframe, limit);
+    } catch {
+      throw originalError;
+    }
+  }
+
   const filtered = filterCandlesByRange(candles, from, to);
 
   if (filtered.length === 0) {

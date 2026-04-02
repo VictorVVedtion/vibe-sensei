@@ -139,7 +139,9 @@ export class CcxtClient implements ExchangeInterface {
   async getBalance(): Promise<Balance[]> {
     this.ensureConnected();
     try {
-      const raw = await this.exchange.fetchBalance();
+      const raw = await this.withRateLimitRetry(() =>
+        this.exchange.fetchBalance(),
+      );
       return this.parseBalances(raw);
     } catch (error: unknown) {
       translateCcxtError(error);
@@ -207,11 +209,8 @@ export class CcxtClient implements ExchangeInterface {
   ): Promise<Candle[]> {
     this.ensureConnected();
     try {
-      const raw = await this.exchange.fetchOHLCV(
-        symbol,
-        timeframe,
-        undefined,
-        limit,
+      const raw = await this.withRateLimitRetry(() =>
+        this.exchange.fetchOHLCV(symbol, timeframe, undefined, limit),
       );
       return raw.map((c) => this.parseCandleArray(c));
     } catch (error: unknown) {
@@ -222,7 +221,9 @@ export class CcxtClient implements ExchangeInterface {
   async getTicker(symbol: string): Promise<Ticker> {
     this.ensureConnected();
     try {
-      const raw = await this.exchange.fetchTicker(symbol);
+      const raw = await this.withRateLimitRetry(() =>
+        this.exchange.fetchTicker(symbol),
+      );
       return this.parseTicker(raw, symbol);
     } catch (error: unknown) {
       translateCcxtError(error);
@@ -234,6 +235,21 @@ export class CcxtClient implements ExchangeInterface {
       throw new Error(
         'Exchange not connected. Call connect() before using the client.',
       );
+    }
+  }
+
+  /**
+   * Retry a CCXT call once on RateLimitExceeded, with a 1s delay.
+   */
+  private async withRateLimitRetry<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      if (error instanceof ccxt.RateLimitExceeded) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await fn();
+      }
+      throw error;
     }
   }
 

@@ -23,6 +23,10 @@ type TickerCallback = (ticker: TickerUpdate) => void;
 const DEFAULT_INTERVAL = 5000;
 const DEFAULT_SYMBOLS = ['BTC/USDT', 'ETH/USDT'];
 
+export type FeedStatus = 'connected' | 'reconnecting' | 'disconnected';
+
+type StatusCallback = (status: FeedStatus) => void;
+
 export class MarketFeed {
   private symbols: string[];
   private interval: number;
@@ -30,10 +34,25 @@ export class MarketFeed {
   private callbacks: TickerCallback[] = [];
   private latest: Map<string, TickerUpdate> = new Map();
   private running = false;
+  private consecutiveErrors = 0;
+  private maxRetryDelay = 60000;
+  private status: FeedStatus = 'disconnected';
+  private statusCallbacks: StatusCallback[] = [];
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(symbols: string[] = DEFAULT_SYMBOLS) {
     this.symbols = symbols;
     this.interval = DEFAULT_INTERVAL;
+  }
+
+  /** Get the current connection status. */
+  getStatus(): FeedStatus {
+    return this.status;
+  }
+
+  /** Register a callback for status changes. */
+  onStatusChange(cb: StatusCallback): void {
+    this.statusCallbacks.push(cb);
   }
 
   /**
@@ -59,6 +78,7 @@ export class MarketFeed {
     if (this.running) return;
     this.interval = interval ?? DEFAULT_INTERVAL;
     this.running = true;
+    this.setStatus('connected');
     // Fire an initial poll immediately, then repeat on the interval.
     this.poll();
     this.timer = setInterval(() => this.poll(), this.interval);
@@ -74,11 +94,51 @@ export class MarketFeed {
       clearInterval(this.timer);
       this.timer = null;
     }
+    if (this.reconnectTimer !== null) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.consecutiveErrors = 0;
+    this.setStatus('disconnected');
   }
 
   // --- Internal ---------------------------------------------------------
 
+  private setStatus(newStatus: FeedStatus): void {
+    if (this.status === newStatus) return;
+    this.status = newStatus;
+    for (const cb of this.statusCallbacks) {
+      try {
+        cb(newStatus);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[MarketFeed] status callback error: ${msg}`);
+      }
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    const delay = Math.min(
+      1000 * Math.pow(2, this.consecutiveErrors),
+      this.maxRetryDelay,
+    );
+    console.error(
+      `[MarketFeed] reconnecting in ${delay}ms (attempt ${this.consecutiveErrors})`,
+    );
+    this.setStatus('reconnecting');
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.poll();
+      this.timer = setInterval(() => this.poll(), this.interval);
+    }, delay);
+  }
+
   private async poll(): Promise<void> {
+    let anySuccess = false;
     for (const symbol of this.symbols) {
       try {
         const exchange = await getConnectedExchange();
@@ -95,10 +155,21 @@ export class MarketFeed {
         };
         this.latest.set(symbol, update);
         this.emit(update);
+        anySuccess = true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[MarketFeed] poll error for ${symbol}: ${msg}`);
         // Continue polling -- never crash the feed loop.
+      }
+    }
+
+    if (anySuccess) {
+      this.consecutiveErrors = 0;
+      this.setStatus('connected');
+    } else {
+      this.consecutiveErrors++;
+      if (this.consecutiveErrors >= 3) {
+        this.scheduleReconnect();
       }
     }
   }
