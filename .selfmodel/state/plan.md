@@ -113,7 +113,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 12: Guardian Evolution Diary
 - Agent: opus
 - Dependencies: Sprint 4, Sprint 5
-- Status: ACTIVE
+- Status: MERGED
 - Priority: P2
 - Timeout: 180
 - Description: Create src/buddy/diary.ts. After each trade (success or failure), guardian records an observation in SQLite (better-sqlite3). Schema: diary(id, master, timestamp, trade_id, observation, pattern_type). After 10+ entries, guardian can summarize observed patterns: "I've noticed you tend to exit winners too early." Surface diary insights as periodic guardian comments during quiet moments.
