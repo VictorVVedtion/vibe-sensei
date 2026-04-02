@@ -23,7 +23,7 @@ CCXT paper trading works. "buy 0.1 BTC" in terminal → AI parses → guardian c
 ### Sprint 2: OrderTool + PositionTool + BalanceTool
 - Agent: opus
 - Dependencies: Sprint 1
-- Status: ACTIVE
+- Status: MERGED
 - Priority: P0
 - Timeout: 180
 - Description: Create 3 trading tools following existing Claude Code Tool pattern (buildTool factory). OrderTool: place market/limit/stop orders via exchange service. PositionTool: query current positions with P&L. BalanceTool: account balance + buying power. Register all in tools.ts. Each tool has inputSchema (JSON Schema), call() implementation, and React render component.
