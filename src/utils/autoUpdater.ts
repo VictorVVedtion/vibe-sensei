@@ -68,6 +68,8 @@ export type MaxVersionConfig = {
  * This approach keeps version comparison logic simple while maintaining traceability via the SHA.
  */
 export async function assertMinVersion(): Promise<void> {
+  // Vibe Sensei: skip version check (not Claude Code anymore)
+  return
   if (process.env.NODE_ENV === 'test') {
     return
   }
