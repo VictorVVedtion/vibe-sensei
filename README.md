@@ -1,16 +1,20 @@
 # Vibe Sensei
 
-**AI trading terminal with 52 master guardians.**
+**An AI trading terminal guided by 52 master guardians -- and one ancient octopus from the deep.**
 
-Vibe Sensei is a terminal-based trading copilot where historical trading legends, philosophers, and scientists act as your personal risk guardians. Each user is deterministically assigned a master who watches your trades, warns you in character, and debates other masters before big moves. Paper trading sandbox included.
+Vibe Sensei is a terminal-native trading copilot where historical trading legends, philosophers, and scientists watch your trades from the shadows. Each user is deterministically assigned a master guardian who warns you in character, debates other masters before big moves, and evolves alongside your habits. At the center sits Vane -- a deep-sea sensei octopus wearing a hachimaki (鉢巻) headband, ancient and knowing, who watches from the abyss and speaks only when the current shifts.
+
+Paper trading sandbox included. 100k USDT starting balance. No real money at risk unless you choose it.
 
 ## Quick Start
 
 ```bash
-bun install
-bun run dev          # Interactive terminal REPL
-bun run dev -- --web # REPL + TradingView chart UI on :3456
-bun run build        # Production single-file bundle
+bun install               # Install dependencies
+bun run dev               # Interactive terminal REPL
+bun run dev -- --web      # REPL + TradingView chart UI on :3456
+bun run desktop:dev       # Electron desktop app (dev mode)
+bun run desktop:build mac # Build macOS installer
+bun run build             # Production single-file bundle
 ```
 
 **Requirements:** [Bun](https://bun.sh/) >= 1.3.11, valid API key (Anthropic, Bedrock, or Vertex).
@@ -18,6 +22,10 @@ bun run build        # Production single-file bundle
 ## Features
 
 - **52 master guardians** -- deterministic assignment per user via seeded PRNG
+- **Desktop app (Electron)** -- 3-panel layout: terminal, chart, and guardian sidebar
+- **Real-time IPC bridge** -- guardian data flows from REPL to sidebar in real time
+- **PTY crash recovery** -- child process crashes are caught and restarted gracefully
+- **28MB optimized bundle** -- production build, down from 37MB
 - **Paper trading sandbox** -- 100k USDT starting balance, CCXT-powered exchange
 - **Real-time risk engine** -- position size and drawdown checks after every trade
 - **Guardian personality system** -- 9 archetypes, 5 stat dimensions, in-character alerts
@@ -183,6 +191,8 @@ Only 1 ghost per session to prevent alert fatigue.
 
 ## Architecture
 
+### Terminal (CLI)
+
 ```
 src/
   buddy/           # Guardian system (52 masters, risk engine, personas)
@@ -204,19 +214,49 @@ src/
   components/      # Terminal UI components
 ```
 
+### Desktop App (Electron)
+
+```
+Electron Main → PTY Manager → Bun REPL (child process)
+             → IPC Router  → Renderer (Terminal + Chart + Guardian Sidebar)
+             → Desktop Bridge (JSONL file protocol)
+```
+
+The desktop app wraps the terminal REPL in a 3-panel Electron shell. The PTY manager spawns the Bun process and handles crash recovery -- if the child process dies, it restarts automatically without losing the conversation. Guardian state flows from the REPL through a JSONL file bridge into the sidebar, where your master's personality, alerts, and trade evaluations render in real time.
+
+### Stack
+
 - **Runtime:** Bun
 - **UI:** React + Ink (terminal rendering)
+- **Desktop:** Electron (3-panel layout with IPC bridge)
 - **Charts:** TradingView Lightweight Charts + UDF data server
 - **Exchange:** CCXT (paper mode default, live mode supported)
-- **Build:** `bun run build` produces a single-file bundle (~25MB)
+- **Build:** `bun run build` produces a 28MB optimized single-file bundle
+
+## Design System -- Abyss
+
+Vibe Sensei's visual identity draws from the deep ocean. The palette is built around the idea that wisdom lives in darkness -- and the creatures who thrive there carry their own light.
+
+| Element | Value | Notes |
+|---------|-------|-------|
+| Background | `#0A1628` | Deep-sea navy, the color of the abyssal zone |
+| Accent | `#00D4FF` | Bioluminescent cyan, the glow of deep-sea life |
+| Aesthetic | Japanese-inspired | Clean lines, deliberate spacing, quiet authority |
+| Mascot | Vane | Deep-sea sensei octopus with hachimaki (鉢巻) headband |
+
+Vane is not a monster. Not a mascot in the playful sense. Vane is an ancient, many-armed intelligence who has watched markets rise and fall from the deepest trench -- dignified, patient, and knowing. The hachimaki headband is the signature element: a mark of focus and resolve, borrowed from Japanese tradition, worn by one who has chosen their purpose.
+
+The Abyss palette carries through the desktop app, the terminal UI, charts, and all guardian-facing surfaces. Dark backgrounds let the bioluminescent accents do the talking -- data glows, alerts pulse, and the sensei watches from the deep.
 
 ## Commands
 
 ```bash
-bun install          # Install dependencies
-bun run dev          # Interactive REPL
-bun run dev -- --web # REPL + chart server on :3456
-bun run build        # Production bundle to dist/cli.js
+bun install               # Install dependencies
+bun run dev               # Interactive REPL
+bun run dev -- --web      # REPL + chart server on :3456
+bun run desktop:dev       # Electron desktop app (dev mode)
+bun run desktop:build mac # Build macOS installer
+bun run build             # Production bundle to dist/cli.js
 ```
 
 ## License
