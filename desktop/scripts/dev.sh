@@ -23,8 +23,10 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # ── Launch dev environment ───────────────────────────────────────────────────
+# Dev mode: pass main/index.ts directly so Electron loads raw TypeScript
+# (package.json "main" points to dist/main/index.js for production)
 npx concurrently \
   --names "vite,electron" \
   --prefix-colors "cyan,green" \
   "npx vite --config vite.config.ts" \
-  "sleep 3 && npx electron ."
+  "sleep 3 && npx electron main/index.ts"

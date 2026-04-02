@@ -6,9 +6,8 @@ directories:
   output: release
 
 files:
-  - main/
-  - shared/
-  - renderer/dist/
+  - dist/main/
+  - dist/renderer/
   - node_modules/
   - package.json
 

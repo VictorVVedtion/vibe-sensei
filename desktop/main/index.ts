@@ -103,7 +103,9 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.ts'),
+      preload: isDev
+        ? path.join(__dirname, 'preload.ts')
+        : path.join(__dirname, 'preload.js'),
     },
   }
 
@@ -135,7 +137,7 @@ function createWindow(): void {
     mainWindow.loadURL('http://localhost:5173')
   } else {
     mainWindow.loadFile(
-      path.join(__dirname, '..', 'dist', 'renderer', 'index.html'),
+      path.join(__dirname, '..', 'renderer', 'index.html'),
     )
   }
 

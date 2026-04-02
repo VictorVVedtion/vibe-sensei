@@ -24,8 +24,8 @@ case "${PLATFORM}" in
     ;;
 esac
 
-# ── Step 1: Build CLI bundle ─────────────────────────────────────────────────
-echo "==> Step 1/4: Building CLI bundle..."
+# ── Step 1/5: Build CLI bundle ───────────────────────────────────────────────
+echo "==> Step 1/5: Building CLI bundle..."
 cd "${PROJECT_ROOT}"
 
 if ! command -v bun &>/dev/null; then
@@ -40,17 +40,28 @@ mkdir -p "${DESKTOP_DIR}/resources/bun-cli"
 cp "${PROJECT_ROOT}/dist/cli.js" "${DESKTOP_DIR}/resources/bun-cli/cli.js"
 echo "  CLI bundle copied to desktop/resources/bun-cli/"
 
-# ── Step 2: Install desktop dependencies ──────────────────────────────────────
-echo "==> Step 2/4: Installing desktop dependencies..."
+# ── Step 2/5: Install desktop dependencies ───────────────────────────────────
+echo "==> Step 2/5: Installing desktop dependencies..."
 cd "${DESKTOP_DIR}"
 npm install
 
-# ── Step 3: Build renderer ────────────────────────────────────────────────────
-echo "==> Step 3/4: Building renderer..."
+# ── Step 3/5: Build main process ─────────────────────────────────────────────
+echo "==> Step 3/5: Building main process..."
+cd "${DESKTOP_DIR}"
+npx esbuild main/index.ts --bundle --platform=node \
+  --external:electron --external:electron-store --external:node-pty \
+  --outdir=dist/main --format=cjs
+npx esbuild main/preload.ts --bundle --platform=node \
+  --external:electron \
+  --outdir=dist/main --format=cjs
+echo "  Main process compiled to desktop/dist/main/"
+
+# ── Step 4/5: Build renderer ─────────────────────────────────────────────────
+echo "==> Step 4/5: Building renderer..."
 npx vite build --config vite.config.ts
 
-# ── Step 4: Package with electron-builder ─────────────────────────────────────
-echo "==> Step 4/4: Packaging for ${PLATFORM}..."
+# ── Step 5/5: Package with electron-builder ──────────────────────────────────
+echo "==> Step 5/5: Packaging for ${PLATFORM}..."
 
 BUILDER_FLAG=""
 case "${PLATFORM}" in
