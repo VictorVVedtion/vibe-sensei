@@ -16,6 +16,7 @@ export class PtyManager {
   private process: pty.IPty | null = null
   private onDataCallback: ((data: string) => void) | null = null
   private onExitCallback: ((exitCode: number) => void) | null = null
+  private onReadyCallback: (() => void) | null = null
 
   private restartAttempts = 0
   private lastSpawnTime = 0
@@ -59,6 +60,8 @@ export class PtyManager {
 
       this.onExitCallback?.(code)
     })
+
+    this.onReadyCallback?.()
   }
 
   onData(callback: (data: string) => void): void {
@@ -67,6 +70,10 @@ export class PtyManager {
 
   onExit(callback: (exitCode: number) => void): void {
     this.onExitCallback = callback
+  }
+
+  onReady(callback: () => void): void {
+    this.onReadyCallback = callback
   }
 
   write(data: string): void {
@@ -138,6 +145,7 @@ export class PtyManager {
   clearCallbacks(): void {
     this.onDataCallback = null
     this.onExitCallback = null
+    this.onReadyCallback = null
   }
 
   get isRunning(): boolean {

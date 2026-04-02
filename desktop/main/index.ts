@@ -148,6 +148,7 @@ function createWindow(): void {
   mainWindow.on('unmaximize', saveWindowState)
 
   mainWindow.on('closed', () => {
+    ptyManager?.clearCallbacks()
     mainWindow = null
   })
 }
@@ -157,6 +158,23 @@ function setupPty(): void {
 
   ptyManager.onData((data: string) => {
     mainWindow?.webContents.send(IPC.PTY_DATA, data)
+  })
+
+  ptyManager.onExit((exitCode: number) => {
+    mainWindow?.webContents.send(IPC.PTY_EXIT, exitCode)
+
+    if (!ptyManager) return
+    const result = ptyManager.restart()
+    if (result.willRestart) {
+      mainWindow?.webContents.send(IPC.PTY_RESTART, {
+        attempt: result.attempt,
+        delayMs: result.delayMs,
+      })
+    }
+  })
+
+  ptyManager.onReady(() => {
+    mainWindow?.webContents.send(IPC.PTY_READY)
   })
 
   ptyManager.spawn()
@@ -172,6 +190,12 @@ function setupIpcHandlers(): void {
 
   ipcMain.on(IPC.PTY_RESIZE, (_event, cols: number, rows: number) => {
     ptyManager?.resize(cols, rows)
+  })
+
+  ipcMain.on(IPC.PTY_RESTART, () => {
+    if (!ptyManager) return
+    ptyManager.kill()
+    setupPty()
   })
 
   ipcMain.handle(IPC.UDF_PORT, () => UDF_PORT)
