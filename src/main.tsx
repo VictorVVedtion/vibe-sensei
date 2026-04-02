@@ -1031,6 +1031,17 @@ async function run(): Promise<CommanderCommand> {
         console.error('⚠️ Chart server failed to start:', (err as Error).message ?? err);
       }
     }
+
+    // Desktop mode: auto-start UDF server for the Electron chart panel
+    if (process.env.VIBE_SENSEI_DESKTOP === '1' && !(options as { web?: boolean }).web) {
+      try {
+        const { startUdfServer } = await import('./services/chart/index.js');
+        await startUdfServer(3456);
+        console.error('📊 UDF server running at http://localhost:3456 (desktop mode)');
+      } catch (err) {
+        console.error('⚠️ UDF server failed to start:', (err as Error).message ?? err);
+      }
+    }
     // Ignore "code" as a prompt - treat it the same as no prompt
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});
