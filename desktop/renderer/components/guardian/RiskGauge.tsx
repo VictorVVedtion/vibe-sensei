@@ -26,7 +26,14 @@ export function RiskGauge({ score }: RiskGaugeProps) {
     'linear-gradient(to right, #00ff88 0%, #f1fa8c 35%, #ffaa00 65%, #ff4444 100%)'
 
   return (
-    <div style={styles.container}>
+    <div
+      style={styles.container}
+      role="progressbar"
+      aria-valuenow={clamped}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`Risk score ${clamped} out of 100, severity ${label}`}
+    >
       <div style={styles.header}>
         <span style={styles.title}>Risk</span>
         <span style={{ ...styles.scoreLabel, color }}>

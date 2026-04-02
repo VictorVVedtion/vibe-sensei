@@ -182,7 +182,9 @@ export function Layout({
         <div
           ref={terminalPanelRef}
           className={`panel panel-terminal${focusedPanel === 'terminal' ? ' focused' : ''}`}
+          tabIndex={0}
           onClick={() => setFocusedPanel('terminal')}
+          onFocus={() => setFocusedPanel('terminal')}
         >
           {terminal}
         </div>
@@ -206,7 +208,9 @@ export function Layout({
           {/* Chart Panel */}
           <div
             className={`panel panel-chart${focusedPanel === 'chart' ? ' focused' : ''}`}
+            tabIndex={0}
             onClick={() => setFocusedPanel('chart')}
+            onFocus={() => setFocusedPanel('chart')}
           >
             {chart}
           </div>
@@ -220,7 +224,9 @@ export function Layout({
           {/* Sidebar Panel */}
           <div
             className={`panel panel-sidebar${focusedPanel === 'sidebar' ? ' focused' : ''}`}
+            tabIndex={0}
             onClick={() => setFocusedPanel('sidebar')}
+            onFocus={() => setFocusedPanel('sidebar')}
           >
             {sidebar}
           </div>

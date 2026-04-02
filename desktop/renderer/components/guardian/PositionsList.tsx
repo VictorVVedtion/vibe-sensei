@@ -11,13 +11,15 @@ function formatNumber(n: number, decimals = 2): string {
 }
 
 function formatPnl(n: number): string {
+  const arrow = n >= 0 ? '\u25B2' : '\u25BC'
   const prefix = n >= 0 ? '+' : ''
-  return prefix + formatNumber(n)
+  return `${arrow} ${prefix}${formatNumber(n)}`
 }
 
 function formatPct(n: number): string {
+  const arrow = n >= 0 ? '\u25B2' : '\u25BC'
   const prefix = n >= 0 ? '+' : ''
-  return prefix + n.toFixed(2) + '%'
+  return `${arrow} ${prefix}${n.toFixed(2)}%`
 }
 
 function PositionRow({ position }: { position: TradingPosition }) {
@@ -26,7 +28,10 @@ function PositionRow({ position }: { position: TradingPosition }) {
   const sideColor = position.side === 'buy' ? '#00d4aa' : '#ff6b6b'
 
   return (
-    <div style={styles.row}>
+    <div
+      style={styles.row}
+      aria-label={`${position.symbol} ${position.side} position, PnL ${position.unrealizedPnl >= 0 ? 'profit' : 'loss'} ${formatNumber(Math.abs(position.unrealizedPnl))}`}
+    >
       <div style={styles.symbolCol}>
         <span style={styles.symbol}>{position.symbol}</span>
         <span style={{ ...styles.side, color: sideColor }}>

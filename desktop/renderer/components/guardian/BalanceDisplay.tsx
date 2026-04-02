@@ -77,7 +77,7 @@ export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplay
                 <div style={styles.assetMeta}>
                   <span style={styles.assetPct}>{pct.toFixed(1)}%</span>
                   <span style={styles.assetBreakdown}>
-                    Free: {bal.free.toFixed(2)} / Used: {bal.used.toFixed(2)}
+                    Free: +{bal.free.toFixed(2)} / Used: -{bal.used.toFixed(2)}
                   </span>
                 </div>
               </div>

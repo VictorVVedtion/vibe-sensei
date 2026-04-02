@@ -54,7 +54,7 @@ export function AlertFeed({ alerts }: AlertFeedProps) {
   }, [alerts.length])
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} role="log" aria-live="polite" aria-label="Guardian alerts">
       <div style={styles.headerBar}>
         <span style={styles.title}>Alerts</span>
         <span style={styles.count}>{alerts.length}</span>
