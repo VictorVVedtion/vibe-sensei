@@ -15,6 +15,8 @@ import {
   STAT_NAMES,
   type StatName,
 } from './types.js'
+import { isDesktopMode, emitToDesktop } from '../services/desktop/bridge.js'
+import { getMasterArchetype } from './persona.js'
 
 // Mulberry32 — tiny seeded PRNG, good enough for picking masters
 function mulberry32(seed: number): () => number {
@@ -115,6 +117,9 @@ function rollFrom(rng: () => number): Roll {
   return { bones, inspirationSeed: Math.floor(rng() * 1e9) }
 }
 
+// Track whether we've already emitted master_info to desktop bridge
+let desktopMasterEmitted = false
+
 // Called from hot paths with the same userId → cache the deterministic result.
 let rollCache: { key: string; value: Roll } | undefined
 export function roll(userId: string): Roll {
@@ -144,7 +149,9 @@ export function getCompanion(): Companion | undefined {
 
   // If companion already stored, merge with fresh bones
   if (config.companion) {
-    return { ...config.companion, ...bones }
+    const result = { ...config.companion, ...bones }
+    emitMasterInfoToDesktop(result)
+    return result
   }
 
   // Auto-initialize: master identity is known from types.ts
@@ -164,7 +171,33 @@ export function getCompanion(): Companion | undefined {
     // Config save failed — still return the companion for this session
   }
 
-  return { ...autoSoul, ...bones }
+  const result = { ...autoSoul, ...bones }
+  emitMasterInfoToDesktop(result)
+  return result
+}
+
+/**
+ * Emit master_info to the desktop bridge (once per session).
+ * Silently swallows all errors — must NEVER crash the trading engine.
+ */
+function emitMasterInfoToDesktop(companion: Companion): void {
+  try {
+    if (desktopMasterEmitted) return
+    if (!isDesktopMode()) return
+
+    const master = companion.species as Master
+    emitToDesktop('master_info', {
+      id: companion.species,
+      name: companion.name,
+      rarity: companion.rarity,
+      archetype: getMasterArchetype(master),
+      quote: companion.personality,
+      stats: companion.stats,
+    })
+    desktopMasterEmitted = true
+  } catch {
+    // Bridge emission must never propagate
+  }
 }
 
 // Get display name for current master
