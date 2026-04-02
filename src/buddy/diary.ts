@@ -848,6 +848,7 @@ export class GuardianDiary {
     const summary = buildEnhancedSummary(this.entries)
     this.enhancedCache = { hash, summary }
     return summary
+  }
 
   /** Record a completed trade report. Keeps the last 50 reports. */
   recordTradeReport(report: TradeReport): void {

@@ -84,7 +84,9 @@ function computePortfolioValue(
     total += p.currentPrice * p.quantity
   }
   return total
+}
 
+/**
  * Get or create a session-scoped diary instance.
  * Returns null when the diary module is unavailable.
  */
