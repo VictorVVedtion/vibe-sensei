@@ -20,49 +20,67 @@ type Props = {
 // look-* use top-quadrant eye chars (▙/▟) so both eyes change from the
 // default (▛/▜, bottom pupils) — otherwise only one eye would appear to move.
 type Segments = {
-  /** row 1 left (no bg): optional raised arm + side */
+  /** row 1 left (no bg): dome side */
   r1L: string;
-  /** row 1 eyes (with bg): left-eye, forehead, right-eye */
+  /** row 1 center (with bg): dome top */
   r1E: string;
-  /** row 1 right (no bg): side + optional raised arm */
+  /** row 1 right (no bg): dome side */
   r1R: string;
-  /** row 2 left (no bg): arm + body curve */
+  /** row 2 left (no bg): body curve */
   r2L: string;
-  /** row 2 right (no bg): body curve + arm */
+  /** row 2 center (with bg): face/eyes */
+  r2E: string;
+  /** row 2 right (no bg): body curve */
   r2R: string;
 };
-// Vibe Sensei: "The Kraken" — Cthulhu octopus with rounded dome
-// Row 1: organic curved dome (quarter-block corners → half-block → full)
-// Row 2: tapered face with all-seeing eyes
-// Row 3: curling tentacles with living tips
+// Vibe Sensei: Kraken — uses Claude's proven quarter-block curve technique
+//
+// Original Claude technique (the gold standard):
+//  ▐▛███▜▌     ← ▛▜ quarter blocks = smooth dome + pupil eyes
+// ▝▜█████▛▘    ← ▝▜/▛▘ = body wider than head, organic taper
+//   ▘▘ ▝▝     ← quarter blocks = tiny minimal feet
+//
+// Kraken adaptation: same curves, but eyes in row 2, tentacles in row 3
+//  ▐▛███▜▌     ← identical dome (octopus head is round!)
+// ▝▜█◉█◉█▛▘   ← Claude body shape + embedded ◉ eyes
+//   ╲╱╲╱╲     ← flowing tentacles (replaces tiny feet)
+//
+// look-* shifts eye positions within r2 center:
+//   default:  █◉█◉█  (eyes at pos 2,4)
+//   look-left: ◉█◉██  (eyes shift left)
+//   look-right:██◉█◉  (eyes shift right)
 const POSES: Record<ClawdPose, Segments> = {
   default: {
-    r1L: '▗▄',      //  ▗▄▀███▀▄▖
-    r1E: '▀███▀',   //  ▐█◉█◉█▌
-    r1R: '▄▖',      //  ╰╮╱╲╱╲╱╭╯
-    r2L: '▐█',
-    r2R: '█▌'
+    r1L: ' ▐',
+    r1E: '▛███▜',
+    r1R: '▌',
+    r2L: '▝▜',
+    r2E: '█◉█◉█',
+    r2R: '▛▘'
   },
   'look-left': {
-    r1L: '▗▄',
-    r1E: '▀███▀',
-    r1R: '▄▖',
-    r2L: '▐▌',
-    r2R: '█▌'
+    r1L: ' ▐',
+    r1E: '▛███▜',
+    r1R: '▌',
+    r2L: '▝▜',
+    r2E: '◉█◉██',
+    r2R: '▛▘'
   },
   'look-right': {
-    r1L: '▗▄',
-    r1E: '▀███▀',
-    r1R: '▄▖',
-    r2L: '▐█',
-    r2R: '▌▐'
+    r1L: ' ▐',
+    r1E: '▛███▜',
+    r1R: '▌',
+    r2L: '▝▜',
+    r2E: '██◉█◉',
+    r2R: '▛▘'
   },
   'arms-up': {
-    r1L: '▟▄',
-    r1E: '▀███▀',
-    r1R: '▄▙',
-    r2L: '▐█',
-    r2R: '█▌'
+    r1L: '▗▟',
+    r1E: '▛███▜',
+    r1R: '▙▖',
+    r2L: ' ▜',
+    r2E: '█◉█◉█',
+    r2R: '▛ '
   }
 };
 
@@ -144,11 +162,12 @@ export function Clawd(t0) {
     t7 = $[15];
   }
   let t8;
-  if ($[16] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = <Text color="clawd_body" backgroundColor="clawd_background">◉ █ ◉</Text>;
-    $[16] = t8;
+  if ($[16] !== p.r2E) {
+    t8 = <Text color="clawd_body" backgroundColor="clawd_background">{p.r2E}</Text>;
+    $[16] = p.r2E;
+    $[17] = t8;
   } else {
-    t8 = $[16];
+    t8 = $[17];
   }
   let t9;
   if ($[17] !== p.r2R) {
@@ -169,7 +188,7 @@ export function Clawd(t0) {
   }
   let t11;
   if ($[22] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text color="clawd_body">╰╮╱╲╱╲╱╭╯</Text>;
+    t11 = <Text color="clawd_body">{"  "}╲╱╲╱╲{"  "}</Text>;
     $[22] = t11;
   } else {
     t11 = $[22];
@@ -224,8 +243,8 @@ function AppleTerminalClawd(t0) {
   let t6;
   let t7;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t6 = <Text backgroundColor="clawd_body">{"◉  █  ◉"}</Text>;
-    t7 = <Text color="clawd_body">╰╮╱╲╱╭╯</Text>;
+    t6 = <Text backgroundColor="clawd_body">{"█◉█◉█"}</Text>;
+    t7 = <Text color="clawd_body"> ╲╱╲╱╲</Text>;
     $[6] = t6;
     $[7] = t7;
   } else {
