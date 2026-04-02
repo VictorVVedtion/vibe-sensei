@@ -31,49 +31,49 @@ type Segments = {
   /** row 2 right (no bg): body curve + arm */
   r2R: string;
 };
-// Vibe Sensei: Cthulhu octopus — the ancient one watches your trades
-// Row 1: domed head with eyes in bg-colored center
-// Row 2: face with tentacle-mouth in bg-colored center
-// Row 3: tentacles spreading outward
+// Vibe Sensei: "The Kraken" — Cthulhu octopus with rounded dome
+// Row 1: organic curved dome (quarter-block corners → half-block → full)
+// Row 2: tapered face with all-seeing eyes
+// Row 3: curling tentacles with living tips
 const POSES: Record<ClawdPose, Segments> = {
   default: {
-    r1L: ' ▄',       //        ▄█▀█▀█▄
-    r1E: '█▀█▀█',    //        ██◉█◉██
-    r1R: '▄',        //        ╱╲╱╲╱╲╱╲
-    r2L: '██',
-    r2R: '██'
+    r1L: '▗▄',      //  ▗▄▀███▀▄▖
+    r1E: '▀███▀',   //  ▐█◉█◉█▌
+    r1R: '▄▖',      //  ╰╮╱╲╱╲╱╭╯
+    r2L: '▐█',
+    r2R: '█▌'
   },
   'look-left': {
-    r1L: ' ▄',
-    r1E: '█▀█▀█',
-    r1R: '▄',
-    r2L: '▐█',
-    r2R: '██'
+    r1L: '▗▄',
+    r1E: '▀███▀',
+    r1R: '▄▖',
+    r2L: '▐▌',
+    r2R: '█▌'
   },
   'look-right': {
-    r1L: ' ▄',
-    r1E: '█▀█▀█',
-    r1R: '▄',
-    r2L: '██',
-    r2R: '█▌'
+    r1L: '▗▄',
+    r1E: '▀███▀',
+    r1R: '▄▖',
+    r2L: '▐█',
+    r2R: '▌▐'
   },
   'arms-up': {
     r1L: '▟▄',
-    r1E: '█▀█▀█',
+    r1E: '▀███▀',
     r1R: '▄▙',
-    r2L: '██',
-    r2R: '██'
+    r2L: '▐█',
+    r2R: '█▌'
   }
 };
 
 // Apple Terminal uses a bg-fill trick (see below), so only eye poses make
 // sense. Arm poses fall back to default.
-// Apple Terminal: simplified Cthulhu eyes
+// Apple Terminal: simplified Kraken
 const APPLE_EYES: Record<ClawdPose, string> = {
-  default: ' ◉ █ ◉ ',
-  'look-left': '◉  █ ◉ ',
-  'look-right': ' ◉ █  ◉',
-  'arms-up': ' ◉ █ ◉ '
+  default: '◉  █  ◉',
+  'look-left': '◉ █  ◉ ',
+  'look-right': ' ◉  █ ◉',
+  'arms-up': '◉  █  ◉'
 };
 export function Clawd(t0) {
   const $ = _c(26);
@@ -145,7 +145,7 @@ export function Clawd(t0) {
   }
   let t8;
   if ($[16] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = <Text color="clawd_body" backgroundColor="clawd_background">◉█◉</Text>;
+    t8 = <Text color="clawd_body" backgroundColor="clawd_background">◉ █ ◉</Text>;
     $[16] = t8;
   } else {
     t8 = $[16];
@@ -169,7 +169,7 @@ export function Clawd(t0) {
   }
   let t11;
   if ($[22] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text color="clawd_body">{" "}╱╲╱╲╱╲╱{"╲"}</Text>;
+    t11 = <Text color="clawd_body">╰╮╱╲╱╲╱╭╯</Text>;
     $[22] = t11;
   } else {
     t11 = $[22];
@@ -224,8 +224,8 @@ function AppleTerminalClawd(t0) {
   let t6;
   let t7;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t6 = <Text backgroundColor="clawd_body">{" ◉█◉ "}</Text>;
-    t7 = <Text color="clawd_body">╱╲╱╲╱</Text>;
+    t6 = <Text backgroundColor="clawd_body">{"◉  █  ◉"}</Text>;
+    t7 = <Text color="clawd_body">╰╮╱╲╱╭╯</Text>;
     $[6] = t6;
     $[7] = t7;
   } else {
