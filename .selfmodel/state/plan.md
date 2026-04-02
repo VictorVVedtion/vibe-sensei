@@ -52,7 +52,7 @@ Phase 0 complete. Paper trading loop works end-to-end. Guardian alerts display i
 ### Sprint 5: Guardian Persona Prompt System
 - Agent: codex
 - Dependencies: Sprint 4
-- Status: PENDING
+- Status: ACTIVE
 - Priority: P0
 - Timeout: 120
 - Description: Wire getGuardianPrompt() into the AI query loop. Before each AI call, prepend the master's persona instruction to the system prompt. The AI should respond in character as the assigned master when discussing trades. Test: same trade question yields different responses for Buffett vs Soros vs Taleb.
@@ -76,7 +76,7 @@ Phase 0 complete. Paper trading loop works end-to-end. Guardian alerts display i
 ### Sprint 8: Ghost Warning System
 - Agent: codex
 - Dependencies: Sprint 4
-- Status: PENDING
+- Status: MERGED
 - Priority: P1
 - Timeout: 120
 - Description: Implement ghost warnings from types.ts GHOST_WARNINGS array. Detect trigger conditions: SBF triggers on missing stop loss, Do Kwon on ignoring warning signs, Su Zhu on >3x leverage, Newton on buying after 20%+ run-up. When triggered, display ghost warning with terminal visual effect (dim screen via ANSI escape codes, flickering text, eerie quote). Max 1 ghost per session to avoid fatigue.
