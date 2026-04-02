@@ -58,6 +58,23 @@ async function getModules() {
 }
 
 /**
+ * Compute total portfolio value from USDT balance + position market values.
+ */
+function computePortfolioValue(
+  balances: import('../exchange/types.js').Balance[],
+  positions: import('../exchange/types.js').Position[],
+): number {
+  let total = 0
+  for (const b of balances) {
+    if (b.currency === 'USDT') total += b.total
+  }
+  for (const p of positions) {
+    total += p.currentPrice * p.quantity
+  }
+  return total
+}
+
+/**
  * Emit trading state to the desktop bridge (positions + balances).
  * Computes actual portfolio heat for the riskScore field.
  * Silently swallows all errors.
@@ -76,16 +93,6 @@ async function emitTradingState(
       exchange.getOpenOrders(),
     ])
 
-    // Compute total portfolio value from USDT balance + position values
-    let totalValue = 0
-    for (const b of balances) {
-      if (b.currency === 'USDT') totalValue += b.total
-    }
-    for (const p of positions) {
-      totalValue += p.currentPrice * p.quantity
-    }
-
-    // Compute actual risk score from portfolio heat
     const { calculatePortfolioHeat } = await import(
       '../portfolio/heat-calculator.js'
     )
@@ -107,7 +114,7 @@ async function emitTradingState(
         used: b.used,
         total: b.total,
       })),
-      totalPortfolioValue: totalValue,
+      totalPortfolioValue: computePortfolioValue(balances, positions),
       riskScore: heat.riskScore,
       timestamp: Date.now(),
     })
