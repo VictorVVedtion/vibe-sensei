@@ -11,6 +11,7 @@ import { homedir } from 'os'
 import type { Master } from './types.js'
 import { MASTER_NAMES } from './types.js'
 import type { OrderSide } from '../services/exchange/types.js'
+import type { TradeReport } from './trade-report.js'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,14 @@ interface SerializedEntry {
 interface DiaryFile {
   version: 1
   entries: SerializedEntry[]
+  tradeReports?: TradeReport[]
+}
+
+export interface CumulativeStats {
+  winRate: number
+  avgR: number
+  expectancy: number
+  totalTrades: number
 }
 
 // ─── Pattern detection ───────────────────────────────────────────────────────
@@ -222,6 +231,7 @@ const DEFAULT_STORE_PATH = join(DEFAULT_STORE_DIR, 'diary.json')
 
 export class GuardianDiary {
   private entries: DiaryEntry[] = []
+  private tradeReports: TradeReport[] = []
   private readonly storePath: string
 
   constructor(storePath?: string) {
@@ -262,6 +272,36 @@ export class GuardianDiary {
     return this.entries.slice(start).reverse()
   }
 
+  /** Record a completed trade report. Keeps the last 50 reports. */
+  recordTradeReport(report: TradeReport): void {
+    this.tradeReports.push(report)
+    if (this.tradeReports.length > 50) {
+      this.tradeReports = this.tradeReports.slice(-50)
+    }
+    this.save()
+  }
+
+  /** Compute rolling stats from the most recent 20 trade reports. */
+  getCumulativeStats(): CumulativeStats | null {
+    if (this.tradeReports.length === 0) return null
+
+    const recent = this.tradeReports.slice(-20)
+    const total = recent.length
+    const wins = recent.filter((r) => r.netPnL > 0).length
+    const winRate = (wins / total) * 100
+
+    const rValues = recent.map((r) => r.rMultiple)
+    const avgR = rValues.reduce((s, v) => s + v, 0) / total
+
+    const avgWin = computeAvgWin(recent)
+    const avgLoss = computeAvgLoss(recent)
+    const winProb = winRate / 100
+    const lossProb = 1 - winProb
+    const expectancy = winProb * avgWin - lossProb * Math.abs(avgLoss)
+
+    return { winRate, avgR, expectancy, totalTrades: total }
+  }
+
   /** Persist diary to JSON file. */
   save(): void {
     const dir = dirname(this.storePath)
@@ -274,6 +314,7 @@ export class GuardianDiary {
     const data: DiaryFile = {
       version: 1,
       entries: this.entries.map(serializeEntry),
+      tradeReports: this.tradeReports,
     }
 
     const json = JSON.stringify(data, null, 2)
@@ -297,12 +338,17 @@ export class GuardianDiary {
       const parsed = JSON.parse(raw) as DiaryFile
       if (!isValidDiaryFile(parsed)) {
         this.entries = []
+        this.tradeReports = []
         return
       }
       this.entries = parsed.entries.map(deserializeEntry)
+      this.tradeReports = Array.isArray(parsed.tradeReports)
+        ? parsed.tradeReports
+        : []
     } catch {
       // Corrupted JSON — reset to empty diary
       this.entries = []
+      this.tradeReports = []
     }
   }
 }
@@ -361,4 +407,45 @@ function isValidSerializedEntry(entry: unknown): entry is SerializedEntry {
     typeof e.patternType === 'string' &&
     VALID_PATTERN_TYPES.has(e.patternType)
   )
+}
+
+// ─── Cumulative stats helpers ───────────────────────────────────────────────
+
+function computeAvgWin(reports: TradeReport[]): number {
+  const wins = reports.filter((r) => r.netPnL > 0)
+  if (wins.length === 0) return 0
+  return wins.reduce((s, r) => s + r.rMultiple, 0) / wins.length
+}
+
+function computeAvgLoss(reports: TradeReport[]): number {
+  const losses = reports.filter((r) => r.netPnL <= 0)
+  if (losses.length === 0) return 0
+  return losses.reduce((s, r) => s + r.rMultiple, 0) / losses.length
+}
+
+// ─── Module-level singleton access ──────────────────────────────────────────
+
+let diaryInstance: GuardianDiary | null = null
+
+function getDiary(): GuardianDiary {
+  if (!diaryInstance) {
+    diaryInstance = new GuardianDiary()
+  }
+  return diaryInstance
+}
+
+/**
+ * Records a trade report to the global diary singleton.
+ * Creates the diary instance on first call.
+ */
+export function recordTradeReport(report: TradeReport): void {
+  getDiary().recordTradeReport(report)
+}
+
+/**
+ * Computes rolling cumulative stats from the global diary singleton.
+ * Returns null if no trade reports exist.
+ */
+export function computeCumulativeStats(): CumulativeStats | null {
+  return getDiary().getCumulativeStats()
 }
