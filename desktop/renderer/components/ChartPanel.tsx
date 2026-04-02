@@ -36,12 +36,6 @@ interface TickerMessage {
   }
 }
 
-function formatPrice(price: number): string {
-  if (price >= 1000) return price.toFixed(2)
-  if (price >= 1) return price.toFixed(4)
-  return price.toFixed(6)
-}
-
 function mapCandleData(udf: UdfHistoryResponse): CandlestickData<Time>[] {
   if (!udf || udf.s !== 'ok' || !udf.t || udf.t.length === 0) return []
   const result: CandlestickData<Time>[] = []
