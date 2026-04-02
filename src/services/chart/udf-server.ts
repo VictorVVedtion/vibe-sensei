@@ -6,8 +6,18 @@
 
 import type { Request, Response, Express } from 'express';
 import express from 'express';
+import { LRUCache } from 'lru-cache';
 import { getConnectedExchange } from '../exchange/singleton.js';
 import type { Candle } from '../exchange/types.js';
+
+type CandleResponse = { s: string; t: number[]; o: number[]; h: number[]; l: number[]; c: number[]; v: number[] };
+
+const candleCache = new LRUCache<string, CandleResponse>({
+  max: 200,
+  ttl: 3 * 60 * 1000, // 3 minutes
+});
+
+const inflight = new Map<string, Promise<CandleResponse | null>>();
 
 const SUPPORTED_RESOLUTIONS = ['1', '5', '15', '30', '60', '240', '1D', '1W'];
 
@@ -120,6 +130,26 @@ function handleSymbols(req: Request, res: Response): void {
   });
 }
 
+async function fetchCandles(
+  symbol: string,
+  resolution: string,
+  timeframe: string,
+  from: number,
+  to: number,
+): Promise<CandleResponse | null> {
+  const ex = await getConnectedExchange();
+  const exchangeSymbol = symbolToExchangeFormat(symbol);
+  const limit = computeCandleLimit(from, to, resolution);
+  const candles = await ex.getCandles(exchangeSymbol, timeframe, limit);
+  const filtered = filterCandlesByRange(candles, from, to);
+
+  if (filtered.length === 0) {
+    return null;
+  }
+
+  return formatCandlesResponse(filtered);
+}
+
 /** GET /history — OHLCV bars for charting */
 async function handleHistory(req: Request, res: Response): Promise<void> {
   const symbol = String(req.query.symbol ?? '');
@@ -138,19 +168,32 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  try {
-    const ex = await getConnectedExchange();
-    const exchangeSymbol = symbolToExchangeFormat(symbol);
-    const limit = computeCandleLimit(from, to, resolution);
-    const candles = await ex.getCandles(exchangeSymbol, timeframe, limit);
-    const filtered = filterCandlesByRange(candles, from, to);
+  const cacheKey = `${symbol}:${resolution}:${from}:${to}`;
 
-    if (filtered.length === 0) {
+  const cached = candleCache.get(cacheKey);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
+  try {
+    let pending = inflight.get(cacheKey);
+    if (!pending) {
+      pending = fetchCandles(symbol, resolution, timeframe, from, to).finally(() => {
+        inflight.delete(cacheKey);
+      });
+      inflight.set(cacheKey, pending);
+    }
+
+    const result = await pending;
+
+    if (result === null) {
       res.json({ s: 'no_data', nextTime: null });
       return;
     }
 
-    res.json(formatCandlesResponse(filtered));
+    candleCache.set(cacheKey, result);
+    res.json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[UDF] /history error for ${symbol}: ${message}`);
