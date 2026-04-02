@@ -23,7 +23,7 @@ CCXT paper trading works. "buy 0.1 BTC" in terminal → AI parses → guardian c
 ### Sprint 2: OrderTool + PositionTool + BalanceTool
 - Agent: opus
 - Dependencies: Sprint 1
-- Status: PENDING
+- Status: ACTIVE
 - Priority: P0
 - Timeout: 180
 - Description: Create 3 trading tools following existing Claude Code Tool pattern (buildTool factory). OrderTool: place market/limit/stop orders via exchange service. PositionTool: query current positions with P&L. BalanceTool: account balance + buying power. Register all in tools.ts. Each tool has inputSchema (JSON Schema), call() implementation, and React render component.
@@ -31,7 +31,7 @@ CCXT paper trading works. "buy 0.1 BTC" in terminal → AI parses → guardian c
 ### Sprint 3: Trading Context Injection
 - Agent: codex
 - Dependencies: Sprint 1
-- Status: PENDING
+- Status: MERGED
 - Priority: P0
 - Timeout: 120
 - Description: Modify src/context.ts to inject trading state into the AI system prompt. Include: current positions + P&L, account balance, open orders, risk guardian mood, market summary (prices from watchlist). Keep under 500 tokens. Ensure context refreshes before each AI call.
