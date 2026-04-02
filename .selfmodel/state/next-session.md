@@ -5,46 +5,41 @@ AI 交易终端，fork 自 Claude Code 框架。52 个历史大师守护者 + 4 
 
 ## Current State (截至 2026-04-02)
 
-**已完成 — 12/24 sprints merged + 品牌改造 + 人格系统**
-- CCXT 交易所 + paper trading (100k USDT)
-- 3 交易工具 (Order, Position, Balance)
-- 52 大师类型 + 确定性分配 (mulberry32)
-- 守护者风控引擎 (position_size + drawdown)
-- 守护者人格 (stat-driven tone)
-- 跨守护者咨询 + 辩论 + 幽灵警告
-- TradingView UDF + Lightweight Charts 前端
-- 交易卡片 + 进化日记
-- 品牌 Claude Code → Vibe Sensei (logo + 提示词 + UI)
-- Companion 自动初始化
+**全部 40/40 sprints 已 MERGED — v0.2.1 完整交付**
+
+Phase 0 (Core Trading): Sprints 1-4 ✅
+Phase 1 (Guardians): Sprints 5-8 ✅
+Phase 2 (Web + Polish): Sprints 9-12 ✅
+Phase 3 (Integration): Sprints 13-16 ✅
+Phase 4 (Docs + Cleanup): Sprints 17-20 ✅
+Phase 5 (Advanced): Sprints 21-24 ✅
+Phase 6 (Performance): Sprints 25-28 ✅
+Phase 7 (Desktop App): Sprints 29-34 ✅
+Phase 8 (Desktop Hardening): Sprints 35-40 ✅
+
+## Phase 8 成果 (Post-Review Fixes)
+- Build 流水线修复: esbuild 编译 main process TS→JS (Sprint 35)
+- PTY 崩溃恢复: 退出检测 + 指数退避重启 + 进程组清理 + 错误 UI (Sprint 36)
+- IPC 桥接 Part 1: Bun→Electron JSONL 临时文件协议 (Sprint 37)
+- IPC 桥接 Part 2: 真实 guardian 数据 + 移除所有占位数据 (Sprint 38)
+- 竞态修复 + IPC 验证: PTY 就绪握手 + Zod schema + Error Boundary (Sprint 39)
+- 无障碍 + 测试: Tab 导航 + ARIA + 色盲指示 + vitest (22 测试) (Sprint 40)
+
+## 启动方式
+- `bun run dev` — REPL (终端)
+- `bun run dev -- --web` — REPL + TradingView 图表 (:3456)
+- `bun run desktop:dev` — Electron 桌面版 (开发模式)
+- `bun run desktop:build mac` — macOS DMG 安装包
+
+## Desktop 架构
+```
+Electron Main → PTY Manager → Bun REPL (子进程)
+             → IPC Router  → Renderer (Terminal + Chart + Guardian Sidebar)
+             → Desktop Bridge (JSONL file protocol) ← Bun trading engine
+```
+
+## Bundle: 27MB (从 37MB 优化)
+## Desktop 文件数: 40 (含 22 个测试)
 
 **Repo**: github.com/VictorVVedtion/vibe-sensei (private)
 **Location**: ~/Desktop/vibe-sensei
-
-## Next: Phase 3 — Integration (Sprint 13-16)
-
-### Sprint 13: Guardian in Query Loop (P0, opus)
-把风控引擎接入查询循环。每次工具调用后 evaluate()，告警注入为消息。
-
-### Sprint 14: --web Flag (P0, codex)
-main.tsx 加 --web 参数，启动 UDF 服务器 + 开浏览器。
-
-### Sprint 15: Exchange Singleton (P0, codex)
-3 个交易工具改用全局单例，session 内状态持久化。
-
-### Sprint 16: REPL Welcome (P1, codex)
-启动时显示守护者信息 + 余额。
-
-**可并行**: Sprint 13 + 14 + 15
-
-## Known Issues
-1. sprites.ts 改为大师身份卡后，CompanionSprite 渲染可能需要验证
-2. Companion auto-init 用 require() 动态导入，首次启动需验证
-3. Paper trading 不跨 session 持久化（需 SQLite）
-
-## 后续 Phase 4-5
-- README/CLAUDE.md 重写
-- 死代码清理
-- 更多风控检查
-- WebSocket 行情
-- Python 策略桥接
-- Karpathy AutoResearch
