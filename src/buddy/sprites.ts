@@ -2,22 +2,21 @@ import type { CompanionBones, Eye, Master } from './types.js'
 import { MASTER_NAMES, RARITY_STARS, MASTER_RARITY } from './types.js'
 
 /**
- * Master sprites — simplified iconic representations for terminal display.
- * Instead of 18 animal ASCII art frames, masters get a compact 4-line card.
+ * Master sprites — compact visual identity cards with box-drawing frames.
  * The LLM persona system handles personality; sprites handle visual identity.
  */
 
 // Archetype emblems for terminal display
 const ARCHETYPE_EMBLEMS: Record<string, string> = {
-  value_investor: '📊',
-  trend_follower: '📈',
-  macro_trader:   '🌍',
-  quant:          '🔢',
-  strategist:     '⚔️',
-  philosopher:    '🧠',
-  first_principles: '💡',
-  crypto_native:  '₿',
-  scientist:      '🔬',
+  value_investor: '\u{1F4CA}',
+  trend_follower: '\u{1F4C8}',
+  macro_trader:   '\u{1F30D}',
+  quant:          '\u{1F522}',
+  strategist:     '\u2694\uFE0F',
+  philosopher:    '\u{1F9E0}',
+  first_principles: '\u{1F4A1}',
+  crypto_native:  '\u20BF',
+  scientist:      '\u{1F52C}',
 }
 
 function getEmblem(master: Master): string {
@@ -48,26 +47,52 @@ function getEmblem(master: Master): string {
     benoit_mandelbrot: 'scientist', john_von_neumann: 'scientist',
   }
   const archetype = archetypeMap[master] ?? 'philosopher'
-  return ARCHETYPE_EMBLEMS[archetype] ?? '🧠'
+  return ARCHETYPE_EMBLEMS[archetype] ?? '\u{1F9E0}'
 }
 
 /**
- * Render a compact master sprite for terminal display.
- * Returns 4 lines representing the master's identity card.
+ * Pad or truncate a string to fit within a fixed visual width.
+ * Simple approach: pads with spaces on the right.
+ */
+function padTo(text: string, width: number): string {
+  if (text.length >= width) return text.slice(0, width)
+  return text + ' '.repeat(width - text.length)
+}
+
+/**
+ * Render a compact master sprite with box-drawing frame.
+ * Returns 6 lines representing the master's identity card.
+ *
+ * Example:
+ * ┌───────────────────┐
+ * │ 📊 Warren Buffett  │
+ * │ ★★★★★ Legendary   │
+ * │    (◉  ◉)         │
+ * │ Your Guardian      │
+ * └───────────────────┘
  */
 export function renderSprite(bones: CompanionBones, _frame = 0): string[] {
   const master = bones.species as Master
   const name = MASTER_NAMES[master] ?? master
   const rarity = MASTER_RARITY[master] ?? bones.rarity
-  const stars = RARITY_STARS[rarity] ?? '★'
+  const stars = RARITY_STARS[rarity] ?? '\u2605'
   const emblem = getEmblem(master)
+  const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1)
 
-  // Compact 4-line master card
+  // Inner width: 19 chars (content between │ and │)
+  const W = 19
+  const line1 = padTo(` ${emblem} ${name}`, W)
+  const line2 = padTo(` ${stars} ${rarityLabel}`, W)
+  const line3 = padTo(`    (${bones.eye}  ${bones.eye})`, W)
+  const line4 = padTo(` Your Guardian`, W)
+
   return [
-    `  ${emblem} ${name}`,
-    `  ${stars}`,
-    `  (${bones.eye}  ${bones.eye})`,
-    `  guardian`,
+    `\u250C${'─'.repeat(W)}\u2510`,
+    `\u2502${line1}\u2502`,
+    `\u2502${line2}\u2502`,
+    `\u2502${line3}\u2502`,
+    `\u2502${line4}\u2502`,
+    `\u2514${'─'.repeat(W)}\u2518`,
   ]
 }
 

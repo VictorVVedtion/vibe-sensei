@@ -44,7 +44,7 @@ const IDLE: Frame = {
 };
 const FRAME_MS = 60;
 const incrementFrame = (i: number) => i + 1;
-const CLAWD_HEIGHT = 3;
+const CLAWD_HEIGHT = 6;
 
 /**
  * Clawd with click-triggered animations (crouch-jump with arms up, or
