@@ -6,6 +6,7 @@
 
 import { getConnectedExchange } from '../exchange/singleton.js';
 import type { Ticker } from '../exchange/types.js';
+import { computeRegimeForSymbol, isRegimeExpired } from './regime.js';
 
 export interface TickerUpdate {
   symbol: string;
@@ -170,6 +171,32 @@ export class MarketFeed {
       this.consecutiveErrors++;
       if (this.consecutiveErrors >= 3) {
         this.scheduleReconnect();
+      }
+    }
+
+    // Regime computation piggybacks on the poll loop.
+    // Only runs when cached regimes have expired (every 4 hours).
+    if (anySuccess) {
+      this.pollRegimes().catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[MarketFeed] regime poll failed: ${msg}`);
+      });
+    }
+  }
+
+  /**
+   * Check and recompute market regimes for all tracked symbols.
+   * Only runs when the cached regime has expired (every 4 hours).
+   */
+  private async pollRegimes(): Promise<void> {
+    for (const symbol of this.symbols) {
+      try {
+        if (!isRegimeExpired(symbol)) continue
+        const exchange = await getConnectedExchange();
+        await computeRegimeForSymbol(symbol, exchange);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[MarketFeed] regime poll error for ${symbol}: ${msg}`);
       }
     }
   }

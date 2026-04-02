@@ -10,6 +10,8 @@ import { getConnectedExchange } from './exchange/singleton.js'
 import type { Balance, ExchangeInterface, Position } from './exchange/types.js'
 import { getCompanion, getMasterName } from '../buddy/companion.js'
 import { RARITY_STARS } from '../buddy/types.js'
+import { calculatePortfolioHeat } from './portfolio/heat-calculator.js'
+import { getLatestRegime } from './market/regime.js'
 
 const UNAVAILABLE_MSG = '[Trading context unavailable]'
 
@@ -81,6 +83,34 @@ function buildPositionsBlock(positions: Position[]): string {
   return [...header, ...rows].join('\n') + '\n'
 }
 
+/** Format portfolio heat as a summary line. */
+function buildHeatLine(
+  positions: Position[],
+  balances: Balance[],
+  openOrders: import('./exchange/types.js').Order[],
+): string {
+  const heat = calculatePortfolioHeat(positions, balances, openOrders)
+  if (heat.heatPercent <= 0) return '**Portfolio Heat:** 0.0% (no risk)\n'
+  const pct = heat.heatPercent.toFixed(1)
+  const unhedged = heat.positions.filter((p) => !p.hasStopLoss).length
+  const suffix = unhedged > 0 ? ` (${unhedged} without stop-loss)` : ''
+  return `**Portfolio Heat:** ${pct}%${suffix}\n`
+}
+
+/** Format market regime as a summary line for tracked symbols. */
+function buildRegimeLines(symbols: string[]): string {
+  const lines: string[] = []
+  for (const symbol of symbols) {
+    const regime = getLatestRegime(symbol)
+    if (!regime) continue
+    const label = regime.regime.replace('_', ' ')
+    const conf = (regime.confidence * 100).toFixed(0)
+    lines.push(`${symbol}: ${label} (${conf}% confidence)`)
+  }
+  if (lines.length === 0) return ''
+  return `**Market Regime:** ${lines.join(', ')}\n`
+}
+
 /** Connect, fetch data, and format the trading context block. */
 async function fetchAndFormat(exchange: ExchangeInterface): Promise<string> {
   const [balances, positions, openOrders] = await Promise.all([
@@ -94,6 +124,13 @@ async function fetchAndFormat(exchange: ExchangeInterface): Promise<string> {
   parts.push(buildBalanceLine(balances))
   parts.push(buildPositionsBlock(positions))
   parts.push(`**Open Orders:** ${openOrders.length} active`)
+  parts.push(buildHeatLine(positions, balances, openOrders))
+
+  // Include regime data for common symbols
+  const regimeSymbols = positions.map((p) => p.symbol)
+  if (!regimeSymbols.includes('BTC/USDT')) regimeSymbols.push('BTC/USDT')
+  if (!regimeSymbols.includes('ETH/USDT')) regimeSymbols.push('ETH/USDT')
+  parts.push(buildRegimeLines(regimeSymbols))
 
   return parts.filter(Boolean).join('\n').trim()
 }
