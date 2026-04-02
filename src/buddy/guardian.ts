@@ -41,6 +41,13 @@ const SEVERITY_RANK: Record<Severity, number> = {
 
 const COOLDOWN_MS = 30_000
 
+/** Result from guardian evaluation, includes trading state for context-aware alerts. */
+export interface EvaluationResult {
+  alerts: RiskAlert[]
+  positions: Position[]
+  balances: Balance[]
+}
+
 export class RiskGuardian {
   private readonly companion: Companion
   private readonly exchange: ExchangeInterface
@@ -51,8 +58,13 @@ export class RiskGuardian {
     this.exchange = exchange ?? createExchange()
   }
 
-  /** Run all checks against current trading state, return at most 1 alert. */
-  async evaluate(): Promise<RiskAlert[]> {
+  /** Expose exchange for context-aware alerts. */
+  getExchange(): ExchangeInterface {
+    return this.exchange
+  }
+
+  /** Run all checks against current trading state, return at most 1 alert with trading state. */
+  async evaluate(): Promise<EvaluationResult> {
     const [positions, balances] = await Promise.all([
       this.exchange.getPositions(),
       this.exchange.getBalance(),
@@ -83,14 +95,14 @@ export class RiskGuardian {
       if (alert) candidates.push(alert)
     }
 
-    if (candidates.length === 0) return []
+    if (candidates.length === 0) return { alerts: [], positions, balances }
 
     // Pick highest severity, break ties by order (first registered wins)
     candidates.sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity])
     const winner = candidates[0]!
 
     this.lastAlertTime.set(winner.checkName, Date.now())
-    return [winner]
+    return { alerts: [winner], positions, balances }
   }
 
   /** Policy: max 1 alert per 30s per check type. */

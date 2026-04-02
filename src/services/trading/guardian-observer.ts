@@ -33,7 +33,11 @@ let cachedModules: {
   personaMod: typeof import('../../buddy/persona.js')
   exchangeMod: typeof import('../exchange/singleton.js')
   bridgeMod: typeof import('../desktop/bridge.js')
+  diaryMod: typeof import('../../buddy/diary.js') | null
 } | null = null
+
+// Session-scoped diary instance — one per session.
+let cachedDiary: InstanceType<typeof import('../../buddy/diary.js').GuardianDiary> | null = null
 
 // Track whether we've sent master info to desktop — only need to send once per companion.
 let lastEmittedMasterId: string | null = null
@@ -53,7 +57,15 @@ async function getModules() {
       import('../desktop/bridge.js'),
     ])
 
-  cachedModules = { guardianMod, companionMod, personaMod, exchangeMod, bridgeMod }
+  // Diary module is optional — graceful degradation if unavailable
+  let diaryMod: typeof import('../../buddy/diary.js') | null = null
+  try {
+    diaryMod = await import('../../buddy/diary.js')
+  } catch {
+    // Diary module unavailable — context-aware alerts will fall back
+  }
+
+  cachedModules = { guardianMod, companionMod, personaMod, exchangeMod, bridgeMod, diaryMod }
   return cachedModules
 }
 
@@ -72,6 +84,22 @@ function computePortfolioValue(
     total += p.currentPrice * p.quantity
   }
   return total
+
+ * Get or create a session-scoped diary instance.
+ * Returns null when the diary module is unavailable.
+ */
+function getDiary(
+  diaryMod: typeof import('../../buddy/diary.js') | null,
+): InstanceType<typeof import('../../buddy/diary.js').GuardianDiary> | null {
+  if (!diaryMod) return null
+  if (cachedDiary) return cachedDiary
+
+  try {
+    cachedDiary = new diaryMod.GuardianDiary()
+    return cachedDiary
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -193,7 +221,7 @@ export async function evaluateAfterToolCall(
 
   try {
     // Dynamic imports — non-fatal if any module is missing
-    const { guardianMod, companionMod, personaMod, exchangeMod, bridgeMod } =
+    const { guardianMod, companionMod, personaMod, exchangeMod, bridgeMod, diaryMod } =
       await getModules()
 
     // Always emit trading state to desktop — even if companion is unresolved
@@ -219,12 +247,12 @@ export async function evaluateAfterToolCall(
       cachedGuardian = { instance: guardian, companion }
     }
 
-    // Run evaluation — returns at most 1 alert (highest severity)
-    const alerts = await guardian.evaluate()
+    // Run evaluation — returns at most 1 alert with trading state
+    const result = await guardian.evaluate()
 
-    if (alerts.length === 0) return null
+    if (result.alerts.length === 0) return null
 
-    const topAlert = alerts[0]!
+    const topAlert = result.alerts[0]!
 
     // Emit guardian alert to desktop bridge
     emitGuardianAlert(topAlert, bridgeMod)
@@ -232,7 +260,22 @@ export async function evaluateAfterToolCall(
     const master = companion.species as import('../../buddy/types.js').Master
     const stats = companion.stats
 
-    return personaMod.getPersonalizedAlert(master, stats, topAlert)
+    // Try context-aware alert (with exchange, diary, positions, balances)
+    try {
+      const diary = getDiary(diaryMod)
+      const exchange = guardian.getExchange()
+      return await personaMod.getPersonalizedAlertWithContext(
+        { species: master, stats },
+        topAlert,
+        exchange,
+        diary,
+        result.positions,
+        result.balances,
+      )
+    } catch {
+      // Fall back to non-context alert on any failure
+      return personaMod.getPersonalizedAlert(master, stats, topAlert)
+    }
   } catch {
     // Guardian failure must never propagate — silently return null
     return null
