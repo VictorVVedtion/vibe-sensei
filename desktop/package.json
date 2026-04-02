@@ -17,7 +17,8 @@
     "lightweight-charts": "^4.2.3",
     "node-pty": "^1.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

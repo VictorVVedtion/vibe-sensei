@@ -39,16 +39,24 @@ let currentMaster: MasterInfo | null = null
 export function setupIpcRouter(getMainWindow: () => BrowserWindow | null): void {
   // Handle request for current trading state — returns live data
   ipcMain.on(IPC.TRADING_STATE_REQUEST, () => {
-    const win = getMainWindow()
-    if (!win) return
-    win.webContents.send(IPC.TRADING_STATE, currentState)
+    try {
+      const win = getMainWindow()
+      if (!win) return
+      win.webContents.send(IPC.TRADING_STATE, currentState)
+    } catch (err) {
+      console.error('[IPC] Trading state request error:', err)
+    }
   })
 
   // Handle request for guardian master info — returns live data if available
   ipcMain.on(IPC.GUARDIAN_MASTER_REQUEST, () => {
-    const win = getMainWindow()
-    if (!win || !currentMaster) return
-    win.webContents.send(IPC.GUARDIAN_MASTER, currentMaster)
+    try {
+      const win = getMainWindow()
+      if (!win || !currentMaster) return
+      win.webContents.send(IPC.GUARDIAN_MASTER, currentMaster)
+    } catch (err) {
+      console.error('[IPC] Guardian master request error:', err)
+    }
   })
 }
 

@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('pty:resize', cols, rows),
   getUdfPort: () => ipcRenderer.invoke('udf:port'),
 
+  isPtyReady: () => ipcRenderer.invoke('pty:isReady'),
+
   // ── PTY Lifecycle ──
   onPtyExit: (callback: (exitCode: number) => void) => {
     const handler = (_event: any, exitCode: number) => callback(exitCode)

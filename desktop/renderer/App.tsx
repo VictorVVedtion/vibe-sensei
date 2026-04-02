@@ -1,10 +1,57 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { TerminalPanel } from './components/TerminalPanel'
 import { ChartPanel } from './components/ChartPanel'
 import { Layout } from './components/Layout'
 import { GuardianSidebar } from './components/GuardianSidebar'
 
-export function App() {
+// ── Error Boundary ─────────────────────────────────────────────────────────
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null as Error | null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, color: '#ff4444', background: '#0a1a14', height: '100vh' }}>
+          <h1>Something went wrong</h1>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {this.state.error?.message}
+          </pre>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: 20,
+              padding: '8px 16px',
+              background: '#1a3a2a',
+              color: '#00ff88',
+              border: '1px solid #00ff88',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
+
+function AppInner() {
   const [symbol, setSymbol] = useState('BTCUSDT')
   const [lastPrice, setLastPrice] = useState<number | null>(null)
   const [prevClose, setPrevClose] = useState<number | null>(null)
@@ -43,5 +90,13 @@ export function App() {
       lastPrice={lastPrice}
       prevClose={prevClose}
     />
+  )
+}
+
+export function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
   )
 }
