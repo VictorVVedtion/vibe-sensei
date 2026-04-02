@@ -1,0 +1,198 @@
+/* Vibe Sensei Desktop — Dark trading terminal theme */
+/* Adapted from web/styles.css for Electron desktop app */
+
+/* ── Chart Panel ── */
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #0a2a1f;
+  color: #e0e0e0;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  overflow: hidden;
+}
+
+/* ── Controls Bar ── */
+
+.chart-controls {
+  background: #0d3326;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #1a4a3a;
+  flex-shrink: 0;
+}
+
+.chart-controls .logo {
+  font-size: 14px;
+  font-weight: 700;
+  color: #00ff88;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.chart-controls .separator {
+  width: 1px;
+  height: 24px;
+  background: #1a4a3a;
+  flex-shrink: 0;
+}
+
+/* ── Symbol Selector ── */
+
+.symbol-select {
+  background: #143d2e;
+  color: #e0e0e0;
+  border: 1px solid #1a5a42;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.symbol-select:hover {
+  border-color: #00ff88;
+}
+
+.symbol-select:focus {
+  border-color: #00ff88;
+  box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.25);
+}
+
+/* ── Timeframe Buttons ── */
+
+.tf-group {
+  display: flex;
+  gap: 4px;
+}
+
+.tf-btn {
+  background: #143d2e;
+  color: #e0e0e0;
+  border: 1px solid #1a5a42;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tf-btn:hover {
+  background: #1a5a42;
+  border-color: #2a6a52;
+}
+
+.tf-btn.active {
+  background: #00ff88;
+  border-color: #00ff88;
+  color: #0a2a1f;
+  font-weight: 600;
+}
+
+/* ── Loading Indicator ── */
+
+.loading-indicator {
+  color: #00ff88;
+  font-size: 12px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.loading-indicator.visible {
+  opacity: 1;
+}
+
+/* ── Chart Container ── */
+
+.chart-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #0a2a1f;
+}
+
+.chart-container .error-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 42, 31, 0.95);
+  border: 1px solid #ff4444;
+  border-radius: 8px;
+  padding: 24px 32px;
+  text-align: center;
+  max-width: 400px;
+  z-index: 10;
+}
+
+.chart-container .error-overlay h3 {
+  color: #ff4444;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.chart-container .error-overlay p {
+  color: #a0b0a8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ── OHLC Info Bar ── */
+
+.ohlc-bar-panel {
+  background: #0d3326;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid #1a4a3a;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.ohlc-bar-panel .price-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.ohlc-bar-panel .symbol-label {
+  color: #a0b0a8;
+}
+
+.ohlc-bar-panel .last-price {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ohlc-bar-panel .last-price.up {
+  color: #00ff88;
+}
+
+.ohlc-bar-panel .last-price.down {
+  color: #ff4444;
+}
+
+.ohlc-bar-panel .ohlc-values {
+  display: flex;
+  gap: 10px;
+  color: #809088;
+  font-size: 11px;
+}
+
+.ohlc-bar-panel .ohlc-values span {
+  white-space: nowrap;
+}
+
+.ohlc-bar-panel .ohlc-values .label {
+  color: #608070;
+}
