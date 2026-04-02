@@ -15,7 +15,7 @@ CCXT paper trading works. "buy 0.1 BTC" in terminal → AI parses → guardian c
 ### Sprint 1: CCXT Exchange Service + Paper Trading
 - Agent: opus
 - Dependencies: none
-- Status: PENDING
+- Status: MERGED
 - Priority: P0
 - Timeout: 180
 - Description: Create src/services/exchange/ with ccxt-client.ts (unified CCXT wrapper), paper-trading.ts (simulated exchange with balances, positions, order matching), types.ts (Order, Position, Candle, Balance, Fill types). Install ccxt npm package. Paper trading starts with 100,000 USDT. Support market/limit orders, position tracking, P&L calculation.
