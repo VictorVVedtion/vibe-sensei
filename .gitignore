@@ -17,3 +17,4 @@ dist/
 .selfmodel/artifacts/
 !.selfmodel/state/.gitkeep
 !.selfmodel/artifacts/.gitkeep
+.claude/worktrees/
