@@ -181,9 +181,31 @@ export const getUserContext = memoize(
       claudemd_disabled: Boolean(shouldDisableClaudeMd),
     })
 
+    // Vibe Sensei: inject trading context + guardian persona
+    let tradingCtx: string | null = null
+    let guardianPersona: string | null = null
+    try {
+      const { buildTradingContext } = await import('./services/trading-context.js')
+      tradingCtx = await buildTradingContext()
+    } catch {
+      // Trading context unavailable — non-fatal
+    }
+    try {
+      const { getCompanion } = await import('./buddy/companion.js')
+      const { buildGuardianSystemPrompt } = await import('./buddy/persona.js')
+      const companion = getCompanion()
+      if (companion) {
+        guardianPersona = buildGuardianSystemPrompt(companion.species as any, companion.stats)
+      }
+    } catch {
+      // Guardian persona unavailable — non-fatal
+    }
+
     return {
       ...(claudeMd && { claudeMd }),
       currentDate: `Today's date is ${getLocalISODate()}.`,
+      ...(guardianPersona && { guardianPersona }),
+      ...(tradingCtx && { tradingContext: tradingCtx }),
     }
   },
 )
