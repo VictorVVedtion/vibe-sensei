@@ -31,34 +31,35 @@ type Segments = {
   /** row 2 right (no bg): body curve + arm */
   r2R: string;
 };
+// Vibe Sensei: trading-themed mascot (candlestick-inspired)
 const POSES: Record<ClawdPose, Segments> = {
   default: {
-    r1L: ' ▐',
-    r1E: '▛███▜',
-    r1R: '▌',
-    r2L: '▝▜',
-    r2R: '▛▘'
+    r1L: ' ╱',
+    r1E: '█▓▒░█',
+    r1R: '╲',
+    r2L: '▕▎',
+    r2R: '▎▏'
   },
   'look-left': {
-    r1L: ' ▐',
-    r1E: '▟███▟',
-    r1R: '▌',
-    r2L: '▝▜',
-    r2R: '▛▘'
+    r1L: ' ╱',
+    r1E: '◀▓▒░█',
+    r1R: '╲',
+    r2L: '▕▎',
+    r2R: '▎▏'
   },
   'look-right': {
-    r1L: ' ▐',
-    r1E: '▙███▙',
-    r1R: '▌',
-    r2L: '▝▜',
-    r2R: '▛▘'
+    r1L: ' ╱',
+    r1E: '█▓▒░▶',
+    r1R: '╲',
+    r2L: '▕▎',
+    r2R: '▎▏'
   },
   'arms-up': {
-    r1L: '▗▟',
-    r1E: '▛███▜',
-    r1R: '▙▖',
-    r2L: ' ▜',
-    r2R: '▛ '
+    r1L: '╱╱',
+    r1E: '█▓▒░█',
+    r1R: '╲╲',
+    r2L: ' ▎',
+    r2R: '▎ '
   }
 };
 
@@ -164,7 +165,7 @@ export function Clawd(t0) {
   }
   let t11;
   if ($[22] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text color="clawd_body">{"  "}▘▘ ▝▝{"  "}</Text>;
+    t11 = <Text color="clawd_body">{"  "}╲╱ ╲╱{"  "}</Text>;
     $[22] = t11;
   } else {
     t11 = $[22];
