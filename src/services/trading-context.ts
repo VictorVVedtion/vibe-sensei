@@ -6,7 +6,7 @@
  * inside the context window without crowding other instructions.
  */
 
-import { createExchange } from './exchange/index.js'
+import { getConnectedExchange } from './exchange/singleton.js'
 import type { Balance, ExchangeInterface, Position } from './exchange/types.js'
 import { getCompanion, getMasterName } from '../buddy/companion.js'
 import { RARITY_STARS } from '../buddy/types.js'
@@ -83,8 +83,6 @@ function buildPositionsBlock(positions: Position[]): string {
 
 /** Connect, fetch data, and format the trading context block. */
 async function fetchAndFormat(exchange: ExchangeInterface): Promise<string> {
-  await exchange.connect()
-
   const [balances, positions, openOrders] = await Promise.all([
     exchange.getBalance(),
     exchange.getPositions(),
@@ -110,7 +108,7 @@ async function fetchAndFormat(exchange: ExchangeInterface): Promise<string> {
  */
 export async function buildTradingContext(): Promise<string> {
   try {
-    const exchange = createExchange()
+    const exchange = await getConnectedExchange()
     return await fetchAndFormat(exchange)
   } catch (err: unknown) {
     const message =

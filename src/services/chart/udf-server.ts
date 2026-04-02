@@ -6,8 +6,8 @@
 
 import type { Request, Response, Express } from 'express';
 import express from 'express';
-import { createExchange } from '../exchange/index.js';
-import type { ExchangeInterface, Candle } from '../exchange/types.js';
+import { getConnectedExchange } from '../exchange/singleton.js';
+import type { Candle } from '../exchange/types.js';
 
 const SUPPORTED_RESOLUTIONS = ['1', '5', '15', '30', '60', '240', '1D', '1W'];
 
@@ -29,27 +29,7 @@ const RESOLUTION_TO_TIMEFRAME: Record<string, string> = {
   '1W': '1w',
 };
 
-let exchange: ExchangeInterface | null = null;
 
-function getExchange(): ExchangeInterface {
-  if (!exchange) {
-    exchange = createExchange({ mode: 'live', exchange: 'binance' });
-  }
-  return exchange;
-}
-
-async function ensureConnected(): Promise<ExchangeInterface> {
-  const ex = getExchange();
-  try {
-    await ex.connect();
-  } catch (error: unknown) {
-    if (error instanceof Error && error.message.includes('already')) {
-      return ex;
-    }
-    throw error;
-  }
-  return ex;
-}
 
 function symbolToExchangeFormat(symbol: string): string {
   const upper = symbol.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -159,7 +139,7 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const ex = await ensureConnected();
+    const ex = await getConnectedExchange();
     const exchangeSymbol = symbolToExchangeFormat(symbol);
     const limit = computeCandleLimit(from, to, resolution);
     const candles = await ex.getCandles(exchangeSymbol, timeframe, limit);
