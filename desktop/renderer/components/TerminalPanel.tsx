@@ -9,6 +9,7 @@ declare global {
       onPtyData: (callback: (data: string) => void) => void
       sendPtyInput: (data: string) => void
       sendPtyResize: (cols: number, rows: number) => void
+      getUdfPort: () => Promise<number>
     }
   }
 }

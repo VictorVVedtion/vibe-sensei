@@ -46,6 +46,8 @@ function setupPty(): void {
   ptyManager.spawn()
 }
 
+const UDF_PORT = 3456
+
 function setupIpcHandlers(): void {
   ipcMain.on(IPC.PTY_INPUT, (_event, data: string) => {
     ptyManager?.write(data)
@@ -54,6 +56,8 @@ function setupIpcHandlers(): void {
   ipcMain.on(IPC.PTY_RESIZE, (_event, cols: number, rows: number) => {
     ptyManager?.resize(cols, rows)
   })
+
+  ipcMain.handle(IPC.UDF_PORT, () => UDF_PORT)
 }
 
 app.whenReady().then(() => {

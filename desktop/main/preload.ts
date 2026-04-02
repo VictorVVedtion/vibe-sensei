@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendPtyInput: (data: string) => ipcRenderer.send('pty:input', data),
   sendPtyResize: (cols: number, rows: number) =>
     ipcRenderer.send('pty:resize', cols, rows),
+  getUdfPort: () => ipcRenderer.invoke('udf:port'),
 })
