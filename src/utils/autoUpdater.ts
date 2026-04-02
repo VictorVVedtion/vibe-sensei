@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { constants as fsConstants } from 'fs'
 import { access, writeFile } from 'fs/promises'
 import { homedir } from 'os'
@@ -27,9 +26,6 @@ import {
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
 
-const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
-
 class AutoUpdaterError extends ClaudeError {}
 
 export type InstallStatus =
@@ -44,12 +40,14 @@ export type AutoUpdaterResult = {
   notifications?: string[]
 }
 
+
 export type MaxVersionConfig = {
   external?: string
   ant?: string
   external_message?: string
   ant_message?: string
 }
+
 
 /**
  * Checks if the current version meets the minimum required version from Statsig config
@@ -100,6 +98,7 @@ This will ensure you have access to the latest features and improvements.
   }
 }
 
+
 /**
  * Returns the maximum allowed version for the current user type.
  * For ants, returns the `ant` field (dev version format).
@@ -115,6 +114,7 @@ export async function getMaxVersion(): Promise<string | undefined> {
   return config.external || undefined
 }
 
+
 /**
  * Returns the server-driven message explaining the known issue, if configured.
  * Shown in the warning banner when the current version exceeds the max allowed version.
@@ -127,6 +127,7 @@ export async function getMaxVersionMessage(): Promise<string | undefined> {
   return config.external_message || undefined
 }
 
+
 async function getMaxVersionConfig(): Promise<MaxVersionConfig> {
   try {
     return await getDynamicConfig_BLOCKS_ON_INIT<MaxVersionConfig>(
@@ -138,6 +139,7 @@ async function getMaxVersionConfig(): Promise<MaxVersionConfig> {
     return {}
   }
 }
+
 
 /**
  * Checks if a target version should be skipped due to user's minimumVersion setting.
@@ -160,6 +162,7 @@ export function shouldSkipVersion(targetVersion: string): boolean {
   return shouldSkip
 }
 
+
 // Lock file for auto-updater to prevent concurrent updates
 const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minute timeout for locks
 
@@ -170,6 +173,7 @@ const LOCK_TIMEOUT_MS = 5 * 60 * 1000 // 5 minute timeout for locks
 export function getLockFilePath(): string {
   return join(getClaudeConfigHomeDir(), '.update.lock')
 }
+
 
 /**
  * Attempts to acquire a lock for auto-updater
@@ -250,6 +254,7 @@ async function acquireLock(): Promise<boolean> {
   }
 }
 
+
 /**
  * Releases the update lock if it's held by this process
  */
@@ -268,6 +273,7 @@ async function releaseLock(): Promise<void> {
     logError(err as Error)
   }
 }
+
 
 async function getInstallationPrefix(): Promise<string | null> {
   // Run from home directory to avoid reading project-level .npmrc/.bunfig.toml
@@ -290,6 +296,7 @@ async function getInstallationPrefix(): Promise<string | null> {
   }
   return prefixResult.stdout.trim()
 }
+
 
 export async function checkGlobalInstallPermissions(): Promise<{
   hasPermissions: boolean
@@ -318,6 +325,7 @@ export async function checkGlobalInstallPermissions(): Promise<{
   }
 }
 
+
 export async function getLatestVersion(
   channel: ReleaseChannel,
 ): Promise<string | null> {
@@ -345,10 +353,12 @@ export async function getLatestVersion(
   return result.stdout.trim()
 }
 
+
 export type NpmDistTags = {
   latest: string | null
   stable: string | null
 }
+
 
 /**
  * Get npm dist-tags (latest and stable versions) from the registry.
@@ -379,80 +389,25 @@ export async function getNpmDistTags(): Promise<NpmDistTags> {
   }
 }
 
+
 /**
- * Get the latest version from GCS bucket for a given release channel.
- * This is used by installations that don't have npm (e.g. package manager installs).
+ * GCS version functions — stubbed for Vibe Sensei.
+ * Native GCS distribution is not used; return no-ops.
  */
 export async function getLatestVersionFromGcs(
-  channel: ReleaseChannel,
+  _channel: ReleaseChannel,
 ): Promise<string | null> {
-  try {
-    const response = await axios.get(`${GCS_BUCKET_URL}/${channel}`, {
-      timeout: 5000,
-      responseType: 'text',
-    })
-    return response.data.trim()
-  } catch (error) {
-    logForDebugging(`Failed to fetch ${channel} from GCS: ${error}`)
-    return null
-  }
+  return null
 }
 
-/**
- * Get available versions from GCS bucket (for native installations).
- * Fetches both latest and stable channel pointers.
- */
+
 export async function getGcsDistTags(): Promise<NpmDistTags> {
-  const [latest, stable] = await Promise.all([
-    getLatestVersionFromGcs('latest'),
-    getLatestVersionFromGcs('stable'),
-  ])
-
-  return { latest, stable }
+  return { latest: null, stable: null }
 }
 
-/**
- * Get version history from npm registry (ant-only feature)
- * Returns versions sorted newest-first, limited to the specified count
- *
- * Uses NATIVE_PACKAGE_URL when available because:
- * 1. Native installation is the primary installation method for ant users
- * 2. Not all JS package versions have corresponding native packages
- * 3. This prevents rollback from listing versions that don't have native binaries
- */
-export async function getVersionHistory(limit: number): Promise<string[]> {
-  if (process.env.USER_TYPE !== 'ant') {
-    return []
-  }
 
-  // Use native package URL when available to ensure we only show versions
-  // that have native binaries (not all JS package versions have native builds)
-  const packageUrl = MACRO.NATIVE_PACKAGE_URL ?? MACRO.PACKAGE_URL
-
-  // Run from home directory to avoid reading project-level .npmrc
-  const result = await execFileNoThrowWithCwd(
-    'npm',
-    ['view', packageUrl, 'versions', '--json', '--prefer-online'],
-    // Longer timeout for version list
-    { abortSignal: AbortSignal.timeout(30000), cwd: homedir() },
-  )
-
-  if (result.code !== 0) {
-    logForDebugging(`npm view versions failed with code ${result.code}`)
-    if (result.stderr) {
-      logForDebugging(`npm stderr: ${result.stderr.trim()}`)
-    }
-    return []
-  }
-
-  try {
-    const versions = jsonParse(result.stdout.trim()) as string[]
-    // Take last N versions, then reverse to get newest first
-    return versions.slice(-limit).reverse()
-  } catch (error) {
-    logForDebugging(`Failed to parse version history: ${error}`)
-    return []
-  }
+export async function getVersionHistory(_limit: number): Promise<string[]> {
+  return []
 }
 
 export async function installGlobalPackage(
@@ -534,6 +489,7 @@ To fix this issue:
   }
 }
 
+
 /**
  * Remove claude aliases from shell configuration files
  * This helps clean up old installation methods when switching to native or npm global
@@ -561,3 +517,4 @@ async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
     }
   }
 }
+
