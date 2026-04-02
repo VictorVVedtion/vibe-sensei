@@ -11,7 +11,7 @@
         "dist"
     ],
     "scripts": {
-        "build": "bun build src/entrypoints/cli.tsx --outdir dist --target bun",
+        "build": "bun build src/entrypoints/cli.tsx --outdir dist --target bun --external @opentelemetry/exporter-logs-otlp-grpc --external @opentelemetry/exporter-logs-otlp-http --external @opentelemetry/exporter-logs-otlp-proto --external @opentelemetry/exporter-metrics-otlp-grpc --external @opentelemetry/exporter-metrics-otlp-http --external @opentelemetry/exporter-metrics-otlp-proto --external @opentelemetry/exporter-prometheus --external @opentelemetry/exporter-trace-otlp-grpc --external @opentelemetry/exporter-trace-otlp-http --external @opentelemetry/exporter-trace-otlp-proto --external @azure/identity --external google-auth-library --external @anthropic-ai/foundry-sdk --external @anthropic-ai/bedrock-sdk --external @anthropic-ai/vertex-sdk --external @aws-sdk/client-bedrock --external @aws-sdk/client-bedrock-runtime --external @aws-sdk/client-sts --external @aws-sdk/credential-provider-node --external @aws-sdk/credential-providers --external @smithy/core --external @smithy/node-http-handler --external sharp --external highlight.js --external cli-highlight --external cacache --external turndown",
         "dev": "bun run src/entrypoints/cli.tsx",
         "prepublishOnly": "bun run build"
     },
@@ -96,7 +96,6 @@
         "proper-lockfile": "^4.1.2",
         "qrcode": "^1.5.4",
         "react": "^19.2.4",
-        "react-compiler-runtime": "^1.0.0",
         "react-reconciler": "^0.33.0",
         "semver": "^7.7.4",
         "sharp": "^0.34.5",
