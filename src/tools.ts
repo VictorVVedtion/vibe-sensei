@@ -16,6 +16,7 @@ import { PositionTool } from './tools/PositionTool/PositionTool.js'
 import { BalanceTool } from './tools/BalanceTool/BalanceTool.js'
 import { StrategyTool } from './tools/StrategyTool/StrategyTool.js'
 import { AutoResearchTool } from './tools/AutoResearchTool/AutoResearchTool.js'
+import { PreTradeGateTool } from './tools/PreTradeGateTool/PreTradeGateTool.js'
 // Dead code elimination: conditional import for ant-only tools
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const REPLTool =
@@ -246,6 +247,7 @@ export function getAllBaseTools(): Tools {
     BalanceTool,
     StrategyTool,
     AutoResearchTool,
+    PreTradeGateTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),
     ...(PushNotificationTool ? [PushNotificationTool] : []),
     ...(SubscribePRTool ? [SubscribePRTool] : []),
