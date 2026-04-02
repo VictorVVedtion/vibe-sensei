@@ -105,7 +105,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 11: Trade Card Screenshot Generator
 - Agent: codex
 - Dependencies: Sprint 2, Sprint 5
-- Status: ACTIVE
+- Status: MERGED
 - Priority: P2
 - Timeout: 120
 - Description: Create a /share command that generates a shareable trade card as a text block. Format: "Symbol | Side | Price | Guardian: Name (Rarity) | Thesis: [AI 1-liner] | R:R ratio". Output as copyable text suitable for Twitter/X. No image generation — pure text card that looks good when pasted.
