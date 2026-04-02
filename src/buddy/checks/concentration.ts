@@ -1,14 +1,16 @@
 /**
- * Concentration check — warns when a single position exceeds 40% of portfolio.
- * WARNING at >40%, CRITICAL at >70%.
+ * Concentration check — warns when a single position exceeds threshold of portfolio.
+ * Default: WARNING at >40%, CRITICAL at >70%.
+ * With ThresholdConfig: uses dynamic values from archetype/stat/regime system.
  */
 
 import type { Position, Balance } from '../../services/exchange/types.js'
 import type { RiskAlert, Severity } from '../guardian.js'
+import type { ThresholdConfig } from '../thresholds.js'
 import { totalPortfolioValue, positionNotional } from './utils.js'
 
-const WARNING_THRESHOLD = 0.4  // 40%
-const CRITICAL_THRESHOLD = 0.7 // 70%
+const DEFAULT_WARNING = 0.4  // 40%
+const DEFAULT_CRITICAL = 0.7 // 70%
 
 export function checkConcentration(
   positions: Position[],
@@ -16,11 +18,15 @@ export function checkConcentration(
   masterId: string,
   masterName: string,
   masterQuote: string,
+  thresholds?: ThresholdConfig,
 ): RiskAlert | null {
   if (positions.length === 0) return null
 
   const portfolio = totalPortfolioValue(balances)
   if (portfolio <= 0) return null
+
+  const warnAt = thresholds?.warn ?? DEFAULT_WARNING
+  const critAt = thresholds?.critical ?? DEFAULT_CRITICAL
 
   let worstPos: Position | null = null
   let worstRatio = 0
@@ -36,9 +42,9 @@ export function checkConcentration(
   if (worstPos === null) return null
 
   let severity: Severity | null = null
-  if (worstRatio >= CRITICAL_THRESHOLD) {
+  if (worstRatio >= critAt) {
     severity = 'CRITICAL'
-  } else if (worstRatio >= WARNING_THRESHOLD) {
+  } else if (worstRatio >= warnAt) {
     severity = 'WARNING'
   }
 
