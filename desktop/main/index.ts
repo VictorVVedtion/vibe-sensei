@@ -166,7 +166,7 @@ function setupPty(): void {
     if (!ptyManager) return
     const result = ptyManager.restart()
     if (result.willRestart) {
-      mainWindow?.webContents.send(IPC.PTY_RESTART, {
+      mainWindow?.webContents.send(IPC.PTY_RESTARTING, {
         attempt: result.attempt,
         delayMs: result.delayMs,
       })

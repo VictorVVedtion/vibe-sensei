@@ -4,6 +4,7 @@ export const IPC = {
   PTY_RESIZE: 'pty:resize',
   PTY_EXIT: 'pty:exit',
   PTY_RESTART: 'pty:restart',
+  PTY_RESTARTING: 'pty:restarting',
   PTY_READY: 'pty:ready',
   UDF_PORT: 'udf:port',
   WINDOW_MINIMIZE: 'window:minimize',

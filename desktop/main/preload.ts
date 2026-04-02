@@ -25,6 +25,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   restartPty: () => ipcRenderer.send('pty:restart'),
+  onPtyRestarting: (callback: (info: { attempt: number; delayMs: number }) => void) => {
+    const handler = (_event: any, info: { attempt: number; delayMs: number }) => callback(info)
+    ipcRenderer.on('pty:restarting', handler)
+    return () => {
+      ipcRenderer.removeListener('pty:restarting', handler)
+    }
+  },
 
   // ── Window Controls ──
   minimizeWindow: () => ipcRenderer.send('window:minimize'),

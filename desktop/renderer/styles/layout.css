@@ -281,3 +281,11 @@
 .status-bar .last-price-val.down {
   color: #ff4444;
 }
+
+/* ── PTY Reconnect Spinner ── */
+
+@keyframes pty-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
