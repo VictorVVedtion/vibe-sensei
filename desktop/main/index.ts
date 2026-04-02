@@ -1,9 +1,13 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain } from 'electron'
 import * as path from 'path'
 import Store from 'electron-store'
 import { PtyManager } from './pty-manager'
 import { IPC } from '../shared/ipc-channels'
 import { setupIpcRouter } from './ipc-router'
+import { createTray, destroyTray } from './tray'
+import { createMenu } from './menu'
+import { registerShortcuts, unregisterShortcuts } from './shortcuts'
+import { showGuardianNotification } from './notifications'
 
 interface WindowState {
   x: number | undefined
@@ -169,12 +173,29 @@ app.whenReady().then(() => {
   setupIpcHandlers()
   setupPty()
 
+  // Desktop UX: tray, menu, shortcuts
+  if (mainWindow) {
+    createTray(mainWindow)
+    Menu.setApplicationMenu(createMenu(mainWindow))
+    registerShortcuts(mainWindow)
+  }
+
+  // Guardian alert notifications
+  ipcMain.on('guardian:alert:notify', (_event, alert: { severity: string; masterName: string; message: string }) => {
+    showGuardianNotification(alert)
+  })
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
       setupPty()
     }
   })
+})
+
+app.on('will-quit', () => {
+  unregisterShortcuts()
+  destroyTray()
 })
 
 app.on('window-all-closed', () => {

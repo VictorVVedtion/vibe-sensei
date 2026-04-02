@@ -1,4 +1,5 @@
 import { ipcMain, type BrowserWindow } from 'electron'
+import { showGuardianNotification } from './notifications'
 import { IPC } from '../shared/ipc-channels'
 import type {
   TradingState,
@@ -115,6 +116,8 @@ export function pushGuardianAlert(
 ): void {
   if (!win) return
   win.webContents.send(IPC.GUARDIAN_ALERT, alert)
+  // Fire native OS notification for guardian alerts
+  showGuardianNotification(alert)
 }
 
 /**
