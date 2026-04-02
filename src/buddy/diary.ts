@@ -179,6 +179,268 @@ function classifyTrade(
   }
 }
 
+// ─── Behavioral pattern detectors (v2) ──────────────────────────────────────
+
+type SessionName = 'Asian' | 'European' | 'American'
+
+const SESSION_RANGES: Record<SessionName, [number, number]> = {
+  Asian: [0, 8],
+  European: [8, 16],
+  American: [16, 24],
+}
+
+const TIME_BIAS_WIN_THRESHOLD = 0.35
+const TIME_BIAS_MIN_TRADES = 5
+
+/** Detect UTC time-of-day sessions with poor win rates. */
+export function detectTimeOfDayBias(entries: DiaryEntry[]): string[] {
+  const sessions: Record<SessionName, { wins: number; total: number }> = {
+    Asian: { wins: 0, total: 0 },
+    European: { wins: 0, total: 0 },
+    American: { wins: 0, total: 0 },
+  }
+
+  for (const e of entries) {
+    if (e.tradeUtcHour === undefined || e.outcome === 'pending') continue
+    const hour = e.tradeUtcHour
+    for (const [name, [lo, hi]] of Object.entries(SESSION_RANGES) as [SessionName, [number, number]][]) {
+      if (hour >= lo && hour < hi) {
+        sessions[name].total++
+        if (e.outcome === 'profit') sessions[name].wins++
+        break
+      }
+    }
+  }
+
+  const alerts: string[] = []
+  for (const [name, { wins, total }] of Object.entries(sessions) as [SessionName, { wins: number; total: number }][]) {
+    if (total < TIME_BIAS_MIN_TRADES) continue
+    const winRate = wins / total
+    if (winRate < TIME_BIAS_WIN_THRESHOLD) {
+      const pct = (winRate * 100).toFixed(0)
+      alerts.push(`${name} session (UTC ${SESSION_RANGES[name][0]}-${SESSION_RANGES[name][1]}): ${pct}% win rate across ${total} trades.`)
+    }
+  }
+  return alerts
+}
+
+type HoldBucket = 'scalp' | 'swing' | 'position' | 'invest'
+
+const HOLD_BUCKET_LABELS: Record<HoldBucket, string> = {
+  scalp: 'Scalps (<1h)',
+  swing: 'Swings (1-24h)',
+  position: 'Positions (1-7d)',
+  invest: 'Investments (>7d)',
+}
+
+const HOLD_BIAS_WIN_THRESHOLD = 0.30
+const HOLD_BIAS_MIN_TRADES = 5
+const MS_1H = 3_600_000
+const MS_24H = 86_400_000
+const MS_7D = 604_800_000
+
+function classifyHoldDuration(ms: number): HoldBucket {
+  if (ms < MS_1H) return 'scalp'
+  if (ms < MS_24H) return 'swing'
+  if (ms < MS_7D) return 'position'
+  return 'invest'
+}
+
+/** Detect holding periods with poor win rates. */
+export function detectHoldingPeriodBias(entries: DiaryEntry[]): string[] {
+  const buckets: Record<HoldBucket, { wins: number; total: number }> = {
+    scalp: { wins: 0, total: 0 },
+    swing: { wins: 0, total: 0 },
+    position: { wins: 0, total: 0 },
+    invest: { wins: 0, total: 0 },
+  }
+
+  for (const e of entries) {
+    if (e.holdDurationMs === undefined || e.outcome === 'pending') continue
+    const bucket = classifyHoldDuration(e.holdDurationMs)
+    buckets[bucket].total++
+    if (e.outcome === 'profit') buckets[bucket].wins++
+  }
+
+  const alerts: string[] = []
+  for (const [bucket, { wins, total }] of Object.entries(buckets) as [HoldBucket, { wins: number; total: number }][]) {
+    if (total < HOLD_BIAS_MIN_TRADES) continue
+    const winRate = wins / total
+    if (winRate < HOLD_BIAS_WIN_THRESHOLD) {
+      const pct = (winRate * 100).toFixed(0)
+      alerts.push(`${HOLD_BUCKET_LABELS[bucket]}: ${pct}% win rate across ${total} trades.`)
+    }
+  }
+  return alerts
+}
+
+const INSTRUMENT_BIAS_WIN_THRESHOLD = 0.35
+const INSTRUMENT_BIAS_MIN_TRADES = 5
+
+/** Detect instruments with consistently poor win rates. */
+export function detectInstrumentBias(entries: DiaryEntry[]): string[] {
+  const symbols = new Map<string, { wins: number; total: number }>()
+
+  for (const e of entries) {
+    if (e.outcome === 'pending') continue
+    const stats = symbols.get(e.tradeSymbol) ?? { wins: 0, total: 0 }
+    stats.total++
+    if (e.outcome === 'profit') stats.wins++
+    symbols.set(e.tradeSymbol, stats)
+  }
+
+  const alerts: string[] = []
+  for (const [symbol, { wins, total }] of symbols) {
+    if (total < INSTRUMENT_BIAS_MIN_TRADES) continue
+    const winRate = wins / total
+    if (winRate < INSTRUMENT_BIAS_WIN_THRESHOLD) {
+      const pct = (winRate * 100).toFixed(0)
+      alerts.push(`${symbol}: ${pct}% win rate across ${total} trades.`)
+    }
+  }
+  return alerts
+}
+
+const LARGE_POSITION_PERCENTILE = 67
+const POSITION_SIZE_MIN_LARGE = 3
+const POSITION_SIZE_PENALTY_GAP = 20
+
+/** Detect if large positions perform worse than average. */
+export function detectPositionSizeCorrelation(entries: DiaryEntry[]): string | null {
+  const resolved = entries.filter(e =>
+    e.positionSizePercentile !== undefined && e.outcome !== 'pending',
+  )
+  if (resolved.length === 0) return null
+
+  let totalWins = 0
+  let totalCount = 0
+  let largeWins = 0
+  let largeCount = 0
+
+  for (const e of resolved) {
+    totalCount++
+    if (e.outcome === 'profit') totalWins++
+    if (e.positionSizePercentile! >= LARGE_POSITION_PERCENTILE) {
+      largeCount++
+      if (e.outcome === 'profit') largeWins++
+    }
+  }
+
+  if (largeCount < POSITION_SIZE_MIN_LARGE) return null
+
+  const avgWinRate = totalWins / totalCount
+  const largeWinRate = largeWins / largeCount
+
+  if (largeWinRate < 0.30 || (avgWinRate - largeWinRate) * 100 >= POSITION_SIZE_PENALTY_GAP) {
+    const avgPct = (avgWinRate * 100).toFixed(0)
+    const largePct = (largeWinRate * 100).toFixed(0)
+    return `Large positions (top 33%): ${largePct}% win rate vs ${avgPct}% overall across ${largeCount} large trades.`
+  }
+  return null
+}
+
+export interface AveragingDownResult {
+  symbol: string
+  buyCount: number
+  outcome: 'emotional' | 'planned' | 'mixed'
+}
+
+const AVERAGING_DOWN_WINDOW_MS = 2 * 3_600_000 // 2 hours
+const EMOTIONAL_THRESHOLD_MS = 15 * 60_000     // 15 minutes
+const PLANNED_THRESHOLD_MS = 30 * 60_000       // 30 minutes
+
+/** Detect averaging-down patterns: same symbol, sequential buys, decreasing prices. */
+export function detectAveragingDown(entries: DiaryEntry[]): AveragingDownResult[] {
+  const sorted = [...entries]
+    .filter(e => e.tradeSide === 'buy')
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+  const results: AveragingDownResult[] = []
+  let i = 0
+
+  while (i < sorted.length) {
+    const chain: DiaryEntry[] = [sorted[i]!]
+    let j = i + 1
+
+    while (j < sorted.length) {
+      const prev = chain[chain.length - 1]!
+      const curr = sorted[j]!
+      const gap = curr.timestamp.getTime() - prev.timestamp.getTime()
+      if (curr.tradeSymbol !== prev.tradeSymbol || gap > AVERAGING_DOWN_WINDOW_MS) break
+      chain.push(curr)
+      j++
+    }
+
+    if (chain.length >= 2) {
+      const gaps = chain.slice(1).map((e, idx) =>
+        e.timestamp.getTime() - chain[idx]!.timestamp.getTime(),
+      )
+      const allEmotional = gaps.every(g => g < EMOTIONAL_THRESHOLD_MS)
+      const allPlanned = gaps.every(g => g >= PLANNED_THRESHOLD_MS)
+
+      results.push({
+        symbol: chain[0]!.tradeSymbol,
+        buyCount: chain.length,
+        outcome: allEmotional ? 'emotional' : allPlanned ? 'planned' : 'mixed',
+      })
+    }
+
+    i = j
+  }
+  return results
+}
+
+export interface PyramidResult {
+  symbol: string
+  buyCount: number
+  outcome: 'profit' | 'loss' | 'mixed'
+}
+
+/** Detect pyramid patterns: same symbol, sequential buys, increasing prices. */
+export function detectPyramidSuccess(entries: DiaryEntry[]): PyramidResult[] {
+  const sorted = [...entries]
+    .filter(e => e.tradeSide === 'buy' && e.profitPercent !== undefined)
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+  const results: PyramidResult[] = []
+  let i = 0
+
+  while (i < sorted.length) {
+    const chain: DiaryEntry[] = [sorted[i]!]
+    let j = i + 1
+
+    while (j < sorted.length) {
+      const prev = chain[chain.length - 1]!
+      const curr = sorted[j]!
+      if (curr.tradeSymbol !== prev.tradeSymbol) break
+      // Price increasing = pyramid (profitPercent of later buys is positive)
+      if (curr.profitPercent !== undefined && curr.profitPercent > (prev.profitPercent ?? 0)) {
+        chain.push(curr)
+      } else {
+        break
+      }
+      j++
+    }
+
+    if (chain.length >= 2) {
+      const profits = chain.filter(e => e.outcome === 'profit').length
+      const losses = chain.filter(e => e.outcome === 'loss').length
+      let outcome: 'profit' | 'loss' | 'mixed' = 'mixed'
+      if (profits > 0 && losses === 0) outcome = 'profit'
+      else if (losses > 0 && profits === 0) outcome = 'loss'
+
+      results.push({
+        symbol: chain[0]!.tradeSymbol,
+        buyCount: chain.length,
+        outcome,
+      })
+    }
+
+    i = Math.max(i + 1, j)
+  }
+  return results
+}
+
 // ─── Pattern summary ─────────────────────────────────────────────────────────
 
 const PATTERN_LABELS: Record<PatternType, string> = {
