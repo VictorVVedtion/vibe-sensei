@@ -64,6 +64,37 @@ export interface TradeEvent {
   samePairBuysLastHour: number // count of buys in same pair within last hour
 }
 
+
+// ─── Enhanced summary types ─────────────────────────────────────────────────
+
+export interface SessionAnalysis {
+  session: string
+  winRate: number
+  totalTrades: number
+}
+
+export interface HoldingPeriodAnalysis {
+  period: string
+  winRate: number
+  totalTrades: number
+}
+
+export interface InstrumentBiasInfo {
+  symbol: string
+  winRate: number
+  totalTrades: number
+}
+
+export interface EnhancedPatternSummary {
+  topPattern: { type: PatternType; count: number; label: string; advice: string } | null
+  timeOfDayAnalysis: SessionAnalysis[]
+  holdingPeriodAnalysis: HoldingPeriodAnalysis[]
+  instrumentBiases: InstrumentBiasInfo[]
+  positionSizeBias: string | null
+  averagingDownStats: { total: number; emotional: number; planned: number; mixed: number }
+  pyramidStats: { total: number; profitable: number; unprofitable: number }
+}
+
 // ─── Serialization shapes ────────────────────────────────────────────────────
 
 interface SerializedEntry {
@@ -501,6 +532,147 @@ function buildPatternSummary(entries: DiaryEntry[], masterId: string): string | 
   return `${masterName} has noticed: You tend to ${label} (seen ${top[1]} times). ${advice}`
 }
 
+
+function buildEnhancedSummary(entries: DiaryEntry[]): EnhancedPatternSummary {
+  // Top pattern
+  const counts: Partial<Record<PatternType, number>> = {}
+  for (const e of entries) {
+    counts[e.patternType] = (counts[e.patternType] ?? 0) + 1
+  }
+  let topPattern: EnhancedPatternSummary['topPattern'] = null
+  let maxCount = 0
+  for (const [type, count] of Object.entries(counts) as [PatternType, number][]) {
+    if (type === 'general') continue
+    if (count > maxCount) {
+      maxCount = count
+      topPattern = {
+        type,
+        count,
+        label: PATTERN_LABELS[type],
+        advice: PATTERN_ADVICE[type],
+      }
+    }
+  }
+
+  // Time-of-day analysis
+  const timeOfDayAnalysis: SessionAnalysis[] = buildSessionAnalysis(entries)
+
+  // Holding period analysis
+  const holdingPeriodAnalysis: HoldingPeriodAnalysis[] = buildHoldingAnalysis(entries)
+
+  // Instrument biases
+  const instrumentBiases: InstrumentBiasInfo[] = buildInstrumentAnalysis(entries)
+
+  // Position size bias
+  const positionSizeBias = detectPositionSizeCorrelation(entries)
+
+  // Averaging down stats
+  const avgDown = detectAveragingDown(entries)
+  const averagingDownStats = {
+    total: avgDown.length,
+    emotional: avgDown.filter(r => r.outcome === 'emotional').length,
+    planned: avgDown.filter(r => r.outcome === 'planned').length,
+    mixed: avgDown.filter(r => r.outcome === 'mixed').length,
+  }
+
+  // Pyramid stats
+  const pyramids = detectPyramidSuccess(entries)
+  const pyramidStats = {
+    total: pyramids.length,
+    profitable: pyramids.filter(r => r.outcome === 'profit').length,
+    unprofitable: pyramids.filter(r => r.outcome === 'loss').length,
+  }
+
+  return {
+    topPattern,
+    timeOfDayAnalysis,
+    holdingPeriodAnalysis,
+    instrumentBiases,
+    positionSizeBias,
+    averagingDownStats,
+    pyramidStats,
+  }
+}
+
+function buildSessionAnalysis(entries: DiaryEntry[]): SessionAnalysis[] {
+  const sessions: Record<string, { wins: number; total: number }> = {
+    Asian: { wins: 0, total: 0 },
+    European: { wins: 0, total: 0 },
+    American: { wins: 0, total: 0 },
+  }
+
+  for (const e of entries) {
+    if (e.tradeUtcHour === undefined || e.outcome === 'pending') continue
+    for (const [name, [lo, hi]] of Object.entries(SESSION_RANGES) as [SessionName, [number, number]][]) {
+      if (e.tradeUtcHour >= lo && e.tradeUtcHour < hi) {
+        sessions[name].total++
+        if (e.outcome === 'profit') sessions[name].wins++
+        break
+      }
+    }
+  }
+
+  return Object.entries(sessions)
+    .filter(([, s]) => s.total > 0)
+    .map(([session, s]) => ({
+      session,
+      winRate: s.total > 0 ? s.wins / s.total : 0,
+      totalTrades: s.total,
+    }))
+}
+
+function buildHoldingAnalysis(entries: DiaryEntry[]): HoldingPeriodAnalysis[] {
+  const buckets: Record<string, { wins: number; total: number }> = {
+    'Scalps (<1h)': { wins: 0, total: 0 },
+    'Swings (1-24h)': { wins: 0, total: 0 },
+    'Positions (1-7d)': { wins: 0, total: 0 },
+    'Investments (>7d)': { wins: 0, total: 0 },
+  }
+
+  const bucketMap: Record<HoldBucket, string> = {
+    scalp: 'Scalps (<1h)',
+    swing: 'Swings (1-24h)',
+    position: 'Positions (1-7d)',
+    invest: 'Investments (>7d)',
+  }
+
+  for (const e of entries) {
+    if (e.holdDurationMs === undefined || e.outcome === 'pending') continue
+    const bucket = classifyHoldDuration(e.holdDurationMs)
+    const label = bucketMap[bucket]
+    buckets[label].total++
+    if (e.outcome === 'profit') buckets[label].wins++
+  }
+
+  return Object.entries(buckets)
+    .filter(([, s]) => s.total > 0)
+    .map(([period, s]) => ({
+      period,
+      winRate: s.total > 0 ? s.wins / s.total : 0,
+      totalTrades: s.total,
+    }))
+}
+
+function buildInstrumentAnalysis(entries: DiaryEntry[]): InstrumentBiasInfo[] {
+  const symbols = new Map<string, { wins: number; total: number }>()
+
+  for (const e of entries) {
+    if (e.outcome === 'pending') continue
+    const stats = symbols.get(e.tradeSymbol) ?? { wins: 0, total: 0 }
+    stats.total++
+    if (e.outcome === 'profit') stats.wins++
+    symbols.set(e.tradeSymbol, stats)
+  }
+
+  return Array.from(symbols)
+    .filter(([, s]) => s.total >= INSTRUMENT_BIAS_MIN_TRADES && (s.wins / s.total) < INSTRUMENT_BIAS_WIN_THRESHOLD)
+    .map(([symbol, s]) => ({
+      symbol,
+      winRate: s.wins / s.total,
+      totalTrades: s.total,
+    }))
+}
+
 // ─── Outcome determination ───────────────────────────────────────────────────
 
 function determineOutcome(trade: TradeEvent): 'profit' | 'loss' | 'pending' {
@@ -535,6 +707,7 @@ const DEFAULT_STORE_PATH = join(DEFAULT_STORE_DIR, 'diary.json')
 export class GuardianDiary {
   private entries: DiaryEntry[] = []
   private readonly storePath: string
+  private enhancedCache: { hash: number; summary: EnhancedPatternSummary } | null = null
 
   constructor(storePath?: string) {
     this.storePath = storePath ?? DEFAULT_STORE_PATH
@@ -577,6 +750,25 @@ export class GuardianDiary {
   getRecentEntries(limit: number = 10): DiaryEntry[] {
     const start = Math.max(0, this.entries.length - limit)
     return this.entries.slice(start).reverse()
+  }
+
+  /** Get all entries (for external analysis). */
+  getAllEntries(): DiaryEntry[] {
+    return [...this.entries]
+  }
+
+  /** Enhanced behavioral summary. Requires 20+ entries. Cached until new entries arrive. */
+  getEnhancedSummary(): EnhancedPatternSummary | null {
+    if (this.entries.length < 20) return null
+
+    const hash = this.entries.length
+    if (this.enhancedCache && this.enhancedCache.hash === hash) {
+      return this.enhancedCache.summary
+    }
+
+    const summary = buildEnhancedSummary(this.entries)
+    this.enhancedCache = { hash, summary }
+    return summary
   }
 
   /** Persist diary to JSON file. */
