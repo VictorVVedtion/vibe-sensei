@@ -415,7 +415,7 @@ export async function getSystemPrompt(
 ): Promise<string[]> {
   if (isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)) {
     return [
-      `You are Vibe Sensei, an AI-powered trading terminal with historical master guardians.\nYou help users trade via natural language. You have trading tools (PlaceOrder, GetPositions, GetBalance) and 52 historical trading masters as risk guardians.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
+      `You are Vibe Sensei, an AI-powered trading terminal with historical master guardians.\nYou help users trade via natural language. You have trading tools (PreTradeGate, PlaceOrder, GetPositions, GetBalance) and 52 historical trading masters as risk guardians.\n\nCWD: ${getCwd()}\nDate: ${getSessionStartDate()}`,
     ]
   }
 
@@ -721,7 +721,7 @@ export function getUnameSR(): string {
   return `${osType()} ${osRelease()}`
 }
 
-export const DEFAULT_AGENT_PROMPT = `You are an agent for Vibe Sensei, an AI-powered trading terminal. Given the user's message, you should use the tools available to complete the task. You have access to trading tools (PlaceOrder, GetPositions, GetBalance) and market analysis capabilities. Complete the task fully. When you complete the task, respond with a concise report covering what was done and any key findings.`
+export const DEFAULT_AGENT_PROMPT = `You are an agent for Vibe Sensei, an AI-powered trading terminal. Given the user's message, you should use the tools available to complete the task. You have access to trading tools (PreTradeGate, PlaceOrder, GetPositions, GetBalance) and market analysis capabilities. Complete the task fully. When you complete the task, respond with a concise report covering what was done and any key findings.`
 
 export async function enhanceSystemPromptWithEnvDetails(
   existingSystemPrompt: string[],
