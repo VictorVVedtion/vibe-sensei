@@ -24,8 +24,8 @@ function formatPct(n: number): string {
 
 function PositionRow({ position }: { position: TradingPosition }) {
   const isProfit = position.unrealizedPnl >= 0
-  const pnlColor = isProfit ? '#00ff88' : '#ff4444'
-  const sideColor = position.side === 'buy' ? '#00d4aa' : '#ff6b6b'
+  const pnlColor = isProfit ? '#00E5A0' : '#FF4D6A'
+  const sideColor = position.side === 'buy' ? '#00D4FF' : '#FF4D6A'
 
   return (
     <div
@@ -96,9 +96,9 @@ export function PositionsList({ positions }: PositionsListProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0d2a1f',
+    background: '#0F1924',
     borderRadius: 6,
-    border: '1px solid #1a4a3a',
+    border: '1px solid #253550',
     overflow: 'hidden',
   },
   headerBar: {
@@ -106,20 +106,20 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 10px',
-    background: '#0a2219',
-    borderBottom: '1px solid #1a4a3a',
+    background: '#0A1628',
+    borderBottom: '1px solid #253550',
   },
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#809088',
+    color: '#7B8AA0',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
   count: {
     fontSize: 10,
-    color: '#00d4aa',
-    background: '#143d2e',
+    color: '#00D4FF',
+    background: '#182233',
     borderRadius: 8,
     padding: '1px 6px',
     fontWeight: 600,
@@ -132,7 +132,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     padding: '8px 10px',
-    borderBottom: '1px solid #132e24',
+    borderBottom: '1px solid #182233',
     gap: 8,
   },
   symbolCol: {
@@ -144,7 +144,7 @@ const styles: Record<string, React.CSSProperties> = {
   symbol: {
     fontSize: 12,
     fontWeight: 600,
-    color: '#e0e0e0',
+    color: '#E2E4ED',
   },
   side: {
     fontSize: 9,
@@ -164,11 +164,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   detailLabel: {
     fontSize: 9,
-    color: '#506a5e',
+    color: '#7B8AA0',
   },
   detailValue: {
     fontSize: 10,
-    color: '#a0b0a8',
+    color: '#E2E4ED',
     fontVariantNumeric: 'tabular-nums',
   },
   pnlCol: {
@@ -193,6 +193,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emptyText: {
     fontSize: 11,
-    color: '#3a5a4a',
+    color: '#7B8AA0',
   },
 }

@@ -67,7 +67,7 @@ function mapVolumeData(udf: UdfHistoryResponse): HistogramData<Time>[] {
     result.push({
       time: udf.t[i] as Time,
       value: udf.v[i],
-      color: isUp ? 'rgba(0, 255, 136, 0.35)' : 'rgba(255, 68, 68, 0.35)',
+      color: isUp ? 'rgba(0, 229, 160, 0.35)' : 'rgba(255, 77, 106, 0.35)',
     })
   }
   return result
@@ -118,32 +118,32 @@ export function ChartPanel({
       width: container.clientWidth,
       height: container.clientHeight,
       layout: {
-        background: { type: 'solid' as const, color: '#0a2a1f' },
-        textColor: '#e0e0e0',
+        background: { type: 'solid' as const, color: '#0A1628' },
+        textColor: '#E2E4ED',
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#143d2e' },
-        horzLines: { color: '#143d2e' },
+        vertLines: { color: '#182233' },
+        horzLines: { color: '#182233' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: '#1a5a42',
+          color: '#253550',
           width: 1,
           style: LineStyle.Dashed,
         },
         horzLine: {
-          color: '#1a5a42',
+          color: '#253550',
           width: 1,
           style: LineStyle.Dashed,
         },
       },
       rightPriceScale: {
-        borderColor: '#143d2e',
+        borderColor: '#182233',
       },
       timeScale: {
-        borderColor: '#143d2e',
+        borderColor: '#182233',
         timeVisible: true,
         secondsVisible: false,
       },
@@ -151,12 +151,12 @@ export function ChartPanel({
     })
 
     const candleSeries = chart.addCandlestickSeries({
-      upColor: '#00ff88',
-      downColor: '#ff4444',
-      borderUpColor: '#00ff88',
-      borderDownColor: '#ff4444',
-      wickUpColor: '#00ff88',
-      wickDownColor: '#ff4444',
+      upColor: '#00E5A0',
+      downColor: '#FF4D6A',
+      borderUpColor: '#00E5A0',
+      borderDownColor: '#FF4D6A',
+      wickUpColor: '#00E5A0',
+      wickDownColor: '#FF4D6A',
     })
 
     const volumeSeries = chart.addHistogramSeries({

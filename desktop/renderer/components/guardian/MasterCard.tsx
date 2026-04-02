@@ -14,11 +14,11 @@ const RARITY_STARS: Record<Rarity, string> = {
 }
 
 const RARITY_COLORS: Record<Rarity, string> = {
-  common: '#607068',
-  uncommon: '#00d4aa',
-  rare: '#00aaff',
-  epic: '#cc66ff',
-  legendary: '#ffaa00',
+  common: '#7B8AA0',
+  uncommon: '#00D4FF',
+  rare: '#00D4FF',
+  epic: '#6B4CF0',
+  legendary: '#D4A843',
 }
 
 const STAT_LABELS = ['PRECISION', 'PATIENCE', 'AGGRESSION', 'WISDOM', 'SASS'] as const
@@ -88,10 +88,10 @@ export function MasterCard({ master }: MasterCardProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   card: {
-    background: '#0d2a1f',
+    background: '#0F1924',
     borderRadius: 6,
     padding: 12,
-    border: '1px solid #1a4a3a',
+    border: '1px solid #253550',
   },
   emptyState: {
     display: 'flex',
@@ -99,7 +99,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 6,
     padding: '16px 0',
-    color: '#3a5a4a',
+    color: '#7B8AA0',
   },
   emptyIcon: {
     fontSize: 20,
@@ -133,22 +133,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
   archetype: {
     fontSize: 10,
-    color: '#608070',
+    color: '#7B8AA0',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.8,
     marginTop: 2,
     display: 'block',
   },
   quote: {
-    background: '#0a1a14',
+    background: '#0A1628',
     borderRadius: 4,
     padding: '6px 8px',
     marginBottom: 10,
-    borderLeft: '2px solid #1a5a42',
+    borderLeft: '2px solid #253550',
   },
   quoteText: {
     fontSize: 11,
-    color: '#809088',
+    color: '#7B8AA0',
     fontStyle: 'italic',
     lineHeight: 1.4,
     display: 'block',
@@ -165,7 +165,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statLabel: {
     fontSize: 9,
-    color: '#608070',
+    color: '#7B8AA0',
     width: 32,
     flexShrink: 0,
     fontWeight: 600,
@@ -174,7 +174,7 @@ const styles: Record<string, React.CSSProperties> = {
   statTrack: {
     flex: 1,
     height: 4,
-    background: '#0a1a14',
+    background: '#0A1628',
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -185,7 +185,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statValue: {
     fontSize: 9,
-    color: '#809088',
+    color: '#7B8AA0',
     width: 18,
     textAlign: 'right' as const,
     flexShrink: 0,

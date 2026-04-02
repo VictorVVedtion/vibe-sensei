@@ -32,27 +32,27 @@ export function TerminalPanel() {
         "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
       lineHeight: 1.2,
       theme: {
-        background: '#0a0a0a',
-        foreground: '#e0e0e0',
-        cursor: '#00d4aa',
-        cursorAccent: '#0a0a0a',
-        selectionBackground: '#1a3a2a',
+        background: '#0A1628',
+        foreground: '#E2E4ED',
+        cursor: '#00D4FF',
+        cursorAccent: '#0A1628',
+        selectionBackground: '#253550',
         selectionForeground: '#ffffff',
-        black: '#0a0a0a',
-        red: '#ff5555',
-        green: '#00d4aa',
-        yellow: '#f1fa8c',
-        blue: '#6272a4',
+        black: '#0A1628',
+        red: '#FF4D6A',
+        green: '#00E5A0',
+        yellow: '#FFBB33',
+        blue: '#6B4CF0',
         magenta: '#ff79c6',
-        cyan: '#8be9fd',
-        white: '#e0e0e0',
-        brightBlack: '#4a4a4a',
-        brightRed: '#ff6e6e',
-        brightGreen: '#69ff94',
-        brightYellow: '#ffffa5',
-        brightBlue: '#d6acff',
+        cyan: '#00D4FF',
+        white: '#E2E4ED',
+        brightBlack: '#7B8AA0',
+        brightRed: '#FF4D6A',
+        brightGreen: '#00E5A0',
+        brightYellow: '#FFBB33',
+        brightBlue: '#6B4CF0',
         brightMagenta: '#ff92df',
-        brightCyan: '#a4ffff',
+        brightCyan: '#00D4FF',
         brightWhite: '#ffffff',
       },
     })
@@ -162,10 +162,10 @@ function TerminalOverlay({
       <div style={overlayCardStyle}>
         {overlay.kind === 'disconnected' && (
           <>
-            <div style={{ color: '#ff5555', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
-            <div style={{ color: '#888', fontSize: 12 }}>
+            <div style={{ color: '#7B8AA0', fontSize: 12 }}>
               Attempting to reconnect...
             </div>
           </>
@@ -173,10 +173,10 @@ function TerminalOverlay({
 
         {overlay.kind === 'reconnecting' && (
           <>
-            <div style={{ color: '#f1fa8c', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FFBB33', fontSize: 14, fontWeight: 600 }}>
               Reconnecting...
             </div>
-            <div style={{ color: '#888', fontSize: 12 }}>
+            <div style={{ color: '#7B8AA0', fontSize: 12 }}>
               Attempt {overlay.attempt} of 5
             </div>
             <Spinner />
@@ -185,10 +185,10 @@ function TerminalOverlay({
 
         {overlay.kind === 'failed' && (
           <>
-            <div style={{ color: '#ff5555', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
-            <div style={{ color: '#888', fontSize: 12 }}>
+            <div style={{ color: '#7B8AA0', fontSize: 12 }}>
               Auto-restart exhausted after 5 attempts
             </div>
             <button onClick={onReconnect} style={reconnectButtonStyle}>
@@ -207,8 +207,8 @@ function Spinner() {
       style={{
         width: 20,
         height: 20,
-        border: '2px solid #333',
-        borderTopColor: '#00d4aa',
+        border: '2px solid #253550',
+        borderTopColor: '#00D4FF',
         borderRadius: '50%',
         animation: 'pty-spinner 0.8s linear infinite',
       }}
@@ -228,8 +228,8 @@ const overlayContainerStyle: React.CSSProperties = {
 }
 
 const overlayCardStyle: React.CSSProperties = {
-  background: 'rgba(10, 10, 10, 0.85)',
-  border: '1px solid #333',
+  background: 'rgba(10, 22, 40, 0.85)',
+  border: '1px solid #253550',
   borderRadius: 8,
   padding: '24px 32px',
   display: 'flex',
@@ -240,8 +240,8 @@ const overlayCardStyle: React.CSSProperties = {
 }
 
 const reconnectButtonStyle: React.CSSProperties = {
-  background: '#00d4aa',
-  color: '#0a0a0a',
+  background: '#00D4FF',
+  color: '#0A1628',
   border: 'none',
   borderRadius: 4,
   padding: '8px 20px',

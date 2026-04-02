@@ -10,10 +10,10 @@ function getSeverityLabel(score: number): string {
 }
 
 function getSeverityColor(score: number): string {
-  if (score <= 20) return '#00ff88'
-  if (score <= 50) return '#f1fa8c'
-  if (score <= 75) return '#ffaa00'
-  return '#ff4444'
+  if (score <= 20) return '#00E5A0'
+  if (score <= 50) return '#FFBB33'
+  if (score <= 75) return '#D4A843'
+  return '#FF4D6A'
 }
 
 export function RiskGauge({ score }: RiskGaugeProps) {
@@ -23,7 +23,7 @@ export function RiskGauge({ score }: RiskGaugeProps) {
 
   // Build gradient stops for the track background
   const trackGradient =
-    'linear-gradient(to right, #00ff88 0%, #f1fa8c 35%, #ffaa00 65%, #ff4444 100%)'
+    'linear-gradient(to right, #00E5A0 0%, #FFBB33 35%, #D4A843 65%, #FF4D6A 100%)'
 
   return (
     <div
@@ -70,10 +70,10 @@ export function RiskGauge({ score }: RiskGaugeProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0d2a1f',
+    background: '#0F1924',
     borderRadius: 6,
     padding: '8px 12px',
-    border: '1px solid #1a4a3a',
+    border: '1px solid #253550',
   },
   header: {
     display: 'flex',
@@ -84,7 +84,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#809088',
+    color: '#7B8AA0',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
@@ -117,7 +117,7 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     right: 0,
     height: '100%',
-    background: 'rgba(10, 26, 20, 0.7)',
+    background: 'rgba(10, 22, 40, 0.7)',
     transition: 'width 0.4s ease',
   },
   indicator: {
@@ -125,7 +125,7 @@ const styles: Record<string, React.CSSProperties> = {
     top: -2,
     width: 4,
     height: 12,
-    background: '#0d2a1f',
+    background: '#0F1924',
     border: '2px solid',
     borderRadius: 2,
     transform: 'translateX(-50%)',
@@ -138,7 +138,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   labelText: {
     fontSize: 8,
-    color: '#506a5e',
+    color: '#7B8AA0',
     fontVariantNumeric: 'tabular-nums',
   },
 }

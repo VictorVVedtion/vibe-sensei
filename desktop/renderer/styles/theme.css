@@ -1,5 +1,5 @@
-/* Vibe Sensei Desktop — Dark trading terminal theme */
-/* Adapted from web/styles.css for Electron desktop app */
+/* Vibe Sensei Desktop — Abyss color palette theme */
+/* Deep ocean bioluminescent trading terminal */
 
 /* ── Chart Panel ── */
 
@@ -8,8 +8,8 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: #0a2a1f;
-  color: #e0e0e0;
+  background: #0A1628;
+  color: #E2E4ED;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   overflow: hidden;
 }
@@ -17,20 +17,20 @@
 /* ── Controls Bar ── */
 
 .chart-controls {
-  background: #0d3326;
+  background: #0F1924;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  border-bottom: 1px solid #1a4a3a;
+  border-bottom: 1px solid #253550;
   flex-shrink: 0;
 }
 
 .chart-controls .logo {
   font-size: 14px;
   font-weight: 700;
-  color: #00ff88;
+  color: #00D4FF;
   margin-right: 8px;
   white-space: nowrap;
 }
@@ -38,16 +38,16 @@
 .chart-controls .separator {
   width: 1px;
   height: 24px;
-  background: #1a4a3a;
+  background: #253550;
   flex-shrink: 0;
 }
 
 /* ── Symbol Selector ── */
 
 .symbol-select {
-  background: #143d2e;
-  color: #e0e0e0;
-  border: 1px solid #1a5a42;
+  background: #182233;
+  color: #E2E4ED;
+  border: 1px solid #253550;
   border-radius: 4px;
   padding: 6px 10px;
   font-family: inherit;
@@ -57,12 +57,12 @@
 }
 
 .symbol-select:hover {
-  border-color: #00ff88;
+  border-color: #00D4FF;
 }
 
 .symbol-select:focus {
-  border-color: #00ff88;
-  box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.25);
+  border-color: #00D4FF;
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
 }
 
 /* ── Timeframe Buttons ── */
@@ -73,9 +73,9 @@
 }
 
 .tf-btn {
-  background: #143d2e;
-  color: #e0e0e0;
-  border: 1px solid #1a5a42;
+  background: #182233;
+  color: #E2E4ED;
+  border: 1px solid #253550;
   border-radius: 4px;
   padding: 6px 12px;
   font-family: inherit;
@@ -85,21 +85,21 @@
 }
 
 .tf-btn:hover {
-  background: #1a5a42;
-  border-color: #2a6a52;
+  background: #253550;
+  border-color: #354565;
 }
 
 .tf-btn.active {
-  background: #00ff88;
-  border-color: #00ff88;
-  color: #0a2a1f;
+  background: #00D4FF;
+  border-color: #00D4FF;
+  color: #0A1628;
   font-weight: 600;
 }
 
 /* ── Loading Indicator ── */
 
 .loading-indicator {
-  color: #00ff88;
+  color: #00D4FF;
   font-size: 12px;
   margin-left: auto;
   opacity: 0;
@@ -116,7 +116,7 @@
   flex: 1;
   min-height: 0;
   position: relative;
-  background: #0a2a1f;
+  background: #0A1628;
 }
 
 .chart-container .error-overlay {
@@ -124,8 +124,8 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(10, 42, 31, 0.95);
-  border: 1px solid #ff4444;
+  background: rgba(10, 22, 40, 0.95);
+  border: 1px solid #FF4D6A;
   border-radius: 8px;
   padding: 24px 32px;
   text-align: center;
@@ -134,13 +134,13 @@
 }
 
 .chart-container .error-overlay h3 {
-  color: #ff4444;
+  color: #FF4D6A;
   margin-bottom: 8px;
   font-size: 14px;
 }
 
 .chart-container .error-overlay p {
-  color: #a0b0a8;
+  color: #7B8AA0;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -148,13 +148,13 @@
 /* ── OHLC Info Bar ── */
 
 .ohlc-bar-panel {
-  background: #0d3326;
+  background: #0F1924;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  border-top: 1px solid #1a4a3a;
+  border-top: 1px solid #253550;
   flex-shrink: 0;
   font-size: 12px;
 }
@@ -166,7 +166,7 @@
 }
 
 .ohlc-bar-panel .symbol-label {
-  color: #a0b0a8;
+  color: #7B8AA0;
 }
 
 .ohlc-bar-panel .last-price {
@@ -175,17 +175,17 @@
 }
 
 .ohlc-bar-panel .last-price.up {
-  color: #00ff88;
+  color: #00E5A0;
 }
 
 .ohlc-bar-panel .last-price.down {
-  color: #ff4444;
+  color: #FF4D6A;
 }
 
 .ohlc-bar-panel .ohlc-values {
   display: flex;
   gap: 10px;
-  color: #809088;
+  color: #7B8AA0;
   font-size: 11px;
 }
 
@@ -194,5 +194,5 @@
 }
 
 .ohlc-bar-panel .ohlc-values .label {
-  color: #608070;
+  color: #7B8AA0;
 }

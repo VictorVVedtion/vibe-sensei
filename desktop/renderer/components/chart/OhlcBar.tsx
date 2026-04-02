@@ -27,13 +27,13 @@ export function OhlcBar({
   const displayData = crosshairData
   const isUp =
     lastPrice !== null && prevClose !== null ? lastPrice >= prevClose : true
-  const priceColor = isUp ? '#00ff88' : '#ff4444'
+  const priceColor = isUp ? '#00E5A0' : '#FF4D6A'
 
   const ohlcColor = displayData
     ? displayData.close >= displayData.open
-      ? '#00ff88'
-      : '#ff4444'
-    : '#809088'
+      ? '#00E5A0'
+      : '#FF4D6A'
+    : '#7B8AA0'
 
   return (
     <div className="ohlc-bar-panel">

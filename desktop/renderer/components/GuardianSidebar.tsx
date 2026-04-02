@@ -32,7 +32,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     width: '100%',
     height: '100%',
-    background: '#0d1a14',
+    background: '#0F1924',
     overflow: 'hidden',
   },
   scrollArea: {
