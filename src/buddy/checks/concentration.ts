@@ -5,17 +5,10 @@
 
 import type { Position, Balance } from '../../services/exchange/types.js'
 import type { RiskAlert, Severity } from '../guardian.js'
+import { totalPortfolioValue, positionNotional } from './utils.js'
 
 const WARNING_THRESHOLD = 0.4  // 40%
 const CRITICAL_THRESHOLD = 0.7 // 70%
-
-function totalPortfolioValue(balances: Balance[]): number {
-  return balances.reduce((sum, b) => sum + b.total, 0)
-}
-
-function positionNotional(pos: Position): number {
-  return Math.abs(pos.quantity) * pos.currentPrice
-}
 
 export function checkConcentration(
   positions: Position[],
