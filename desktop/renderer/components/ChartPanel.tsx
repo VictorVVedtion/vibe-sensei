@@ -16,6 +16,14 @@ import '../styles/theme.css'
 
 const WS_RECONNECT_DELAY = 3000
 
+interface ChartPanelProps {
+  onSymbolChange?: (symbol: string) => void
+  onPriceUpdate?: (price: number, prevClose: number | null) => void
+  onConnectionChange?: (
+    status: 'connected' | 'reconnecting' | 'disconnected',
+  ) => void
+}
+
 interface UdfHistoryResponse {
   s: string
   t: number[]
@@ -65,7 +73,11 @@ function mapVolumeData(udf: UdfHistoryResponse): HistogramData<Time>[] {
   return result
 }
 
-export function ChartPanel() {
+export function ChartPanel({
+  onSymbolChange,
+  onPriceUpdate,
+  onConnectionChange,
+}: ChartPanelProps) {
   const port = useUdfPort()
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -87,6 +99,15 @@ export function ChartPanel() {
   currentSymbolRef.current = symbol
 
   const udfBase = port ? `http://localhost:${port}` : null
+
+  // Notify parent of symbol changes
+  const handleSymbolChange = useCallback(
+    (s: string) => {
+      setSymbol(s)
+      onSymbolChange?.(s)
+    },
+    [onSymbolChange],
+  )
 
   // Initialize chart
   useEffect(() => {
@@ -238,6 +259,7 @@ export function ChartPanel() {
       setLastPrice(lastCandle.close)
       setPrevClose(prevCandle.close)
       setCrosshairData(ohlc)
+      onPriceUpdate?.(lastCandle.close, prevCandle.close)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(
@@ -248,7 +270,7 @@ export function ChartPanel() {
     } finally {
       setLoading(false)
     }
-  }, [udfBase, symbol, resolution, port])
+  }, [udfBase, symbol, resolution, port, onPriceUpdate])
 
   useEffect(() => {
     loadData()
@@ -265,12 +287,14 @@ export function ChartPanel() {
         ws = new WebSocket(wsUrl)
       } catch (err) {
         console.warn('[ChartPanel] WebSocket connection failed:', err)
+        onConnectionChange?.('disconnected')
         scheduleReconnect()
         return
       }
 
       ws.onopen = () => {
         console.log('[ChartPanel] WebSocket connected')
+        onConnectionChange?.('connected')
         if (wsReconnectTimerRef.current) {
           clearTimeout(wsReconnectTimerRef.current)
           wsReconnectTimerRef.current = null
@@ -285,6 +309,7 @@ export function ChartPanel() {
             if (chartSymbol !== currentSymbolRef.current) return
             setLastPrice((prev) => {
               setPrevClose(prev)
+              onPriceUpdate?.(msg.data.last, prev)
               return msg.data.last
             })
           }
@@ -299,6 +324,7 @@ export function ChartPanel() {
       ws.onclose = () => {
         console.log('[ChartPanel] WebSocket disconnected')
         wsRef.current = null
+        onConnectionChange?.('reconnecting')
         scheduleReconnect()
       }
 
@@ -329,14 +355,14 @@ export function ChartPanel() {
         wsRef.current = null
       }
     }
-  }, [port])
+  }, [port, onConnectionChange, onPriceUpdate])
 
   return (
     <div className="chart-panel">
       <ChartControls
         symbol={symbol}
         resolution={resolution}
-        onSymbolChange={setSymbol}
+        onSymbolChange={handleSymbolChange}
         onResolutionChange={setResolution}
       />
       <div className="chart-container" ref={containerRef}>

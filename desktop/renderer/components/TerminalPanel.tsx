@@ -3,17 +3,6 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 
-declare global {
-  interface Window {
-    electronAPI: {
-      onPtyData: (callback: (data: string) => void) => void
-      sendPtyInput: (data: string) => void
-      sendPtyResize: (cols: number, rows: number) => void
-      getUdfPort: () => Promise<number>
-    }
-  }
-}
-
 export function TerminalPanel() {
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
