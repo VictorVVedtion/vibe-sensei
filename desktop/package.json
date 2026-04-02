@@ -7,7 +7,8 @@
     "dev": "bash scripts/dev.sh",
     "build:main": "esbuild main/index.ts main/preload.ts --bundle --platform=node --external:electron --external:electron-store --external:node-pty --outdir=dist/main --format=cjs",
     "build:renderer": "vite build",
-    "start": "electron ."
+    "start": "electron .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
@@ -28,6 +29,7 @@
     "electron": "^34.0.0",
     "esbuild": "^0.24.0",
     "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "^3.1.1"
   }
 }
