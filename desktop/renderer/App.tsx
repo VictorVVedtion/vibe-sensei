@@ -2,16 +2,7 @@ import { useState, useCallback } from 'react'
 import { TerminalPanel } from './components/TerminalPanel'
 import { ChartPanel } from './components/ChartPanel'
 import { Layout } from './components/Layout'
-
-function SidebarPlaceholder() {
-  return (
-    <div className="sidebar-placeholder">
-      <span className="icon">📊</span>
-      <span>Positions & Orders</span>
-      <span className="label">Coming Soon</span>
-    </div>
-  )
-}
+import { GuardianSidebar } from './components/GuardianSidebar'
 
 export function App() {
   const [symbol, setSymbol] = useState('BTCUSDT')
@@ -46,7 +37,7 @@ export function App() {
           onConnectionChange={onConnectionChange}
         />
       }
-      sidebar={<SidebarPlaceholder />}
+      sidebar={<GuardianSidebar />}
       connectionStatus={connectionStatus}
       symbol={symbol}
       lastPrice={lastPrice}

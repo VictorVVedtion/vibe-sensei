@@ -3,6 +3,7 @@ import * as path from 'path'
 import Store from 'electron-store'
 import { PtyManager } from './pty-manager'
 import { IPC } from '../shared/ipc-channels'
+import { setupIpcRouter } from './ipc-router'
 
 interface WindowState {
   x: number | undefined
@@ -158,6 +159,9 @@ function setupIpcHandlers(): void {
   ipcMain.handle(IPC.WINDOW_IS_MAXIMIZED, () => {
     return mainWindow?.isMaximized() ?? false
   })
+
+  // Guardian & Trading IPC router
+  setupIpcRouter(() => mainWindow)
 }
 
 app.whenReady().then(() => {
