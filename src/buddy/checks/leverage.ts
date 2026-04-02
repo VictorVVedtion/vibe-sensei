@@ -6,20 +6,10 @@
 
 import type { Position, Balance } from '../../services/exchange/types.js'
 import type { RiskAlert, Severity } from '../guardian.js'
+import { totalPortfolioValue, totalNotionalValue } from './utils.js'
 
 const WARNING_THRESHOLD = 2
 const CRITICAL_THRESHOLD = 5
-
-function totalNotionalValue(positions: Position[]): number {
-  return positions.reduce(
-    (sum, pos) => sum + Math.abs(pos.quantity) * pos.currentPrice,
-    0,
-  )
-}
-
-function totalPortfolioValue(balances: Balance[]): number {
-  return balances.reduce((sum, b) => sum + b.total, 0)
-}
 
 export function checkLeverage(
   positions: Position[],
