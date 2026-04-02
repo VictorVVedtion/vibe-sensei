@@ -1,11 +1,18 @@
 /**
- * Gate Evaluator — orchestrates all 9 pre-trade risk checks.
+ * Gate Evaluator — orchestrates all pre-trade risk checks.
+ *
+ * Execution order:
+ *   1. Circuit Breaker checks (FIRST — can hard-block all further checks)
+ *   2. 9 standard pre-trade risk checks
+ *   3. ATR Stop Advisor (LAST — advisory info appended)
+ *
  * Fetches exchange state once, distributes to each check, aggregates results.
  */
 
 import { getConnectedExchange } from '../../services/exchange/singleton.js'
-import type { Position, Balance, Ticker, Candle } from '../../services/exchange/types.js'
+import type { Position, Balance, Ticker, Candle, ExchangeInterface } from '../../services/exchange/types.js'
 import type { GateInput, CheckResult, RiskGateResult, GateStatus } from './types.js'
+import { totalPortfolioValue } from '../../buddy/checks/utils.js'
 
 import { checkPortfolioHeat } from '../../buddy/checks/portfolio-heat.js'
 import { checkSinglePositionRisk } from '../../buddy/checks/single-position-risk.js'
@@ -17,15 +24,17 @@ import { checkRevengeTrade } from '../../buddy/checks/revenge-trade.js'
 import { checkDailyLossLimit } from '../../buddy/checks/daily-loss-limit.js'
 import { checkConcentrationGate } from '../../buddy/checks/concentration-gate.js'
 
-/** Fetch all exchange data needed by the 9 checks in parallel. */
-async function fetchExchangeData(symbol: string): Promise<{
+import { runCircuitBreakerChecks, hasEmergency } from '../../buddy/checks/circuit-breaker.js'
+import { getCircuitState } from '../../state/circuit-state.js'
+import { checkATRStopAdvisor } from '../../buddy/checks/atr-stop-advisor.js'
+
+/** Fetch all exchange data needed by the checks in parallel. */
+async function fetchExchangeData(symbol: string, exchange: ExchangeInterface): Promise<{
   positions: Position[]
   balances: Balance[]
   ticker: Ticker
   candles: Candle[]
 }> {
-  const exchange = await getConnectedExchange()
-
   const [positions, balances, ticker, candles] = await Promise.all([
     exchange.getPositions().catch((): Position[] => []),
     exchange.getBalance().catch((): Balance[] => []),
@@ -85,14 +94,34 @@ function buildRecommendation(checks: CheckResult[]): string | undefined {
   return recs.join('; ')
 }
 
-/** Run all 9 pre-trade gate checks and return aggregated result. */
+/** Run all pre-trade gate checks and return aggregated result. */
 export async function evaluateGate(input: GateInput): Promise<RiskGateResult> {
-  const { positions, balances, ticker, candles } = await fetchExchangeData(input.symbol)
+  const exchange = await getConnectedExchange()
+  const { positions, balances, ticker, candles } = await fetchExchangeData(input.symbol, exchange)
   const entryPrice = resolveEntryPrice(input, ticker)
+  const equity = totalPortfolioValue(balances)
 
+  // ── Phase 1: Circuit Breaker (runs FIRST) ──────────────────────────────
+  const circuitState = getCircuitState(equity)
+  const circuitChecks = runCircuitBreakerChecks(circuitState, equity)
+
+  // EMERGENCY = hard block — skip all remaining checks
+  if (hasEmergency(circuitChecks)) {
+    return {
+      status: 'fail',
+      checks: circuitChecks,
+      summary: 'CIRCUIT BREAKER TRIPPED — trading suspended',
+      recommendation: circuitChecks
+        .filter(c => c.status === 'fail')
+        .map(c => c.recommendation ?? c.message)
+        .join('; '),
+    }
+  }
+
+  // ── Phase 2: Standard 9 risk checks ────────────────────────────────────
   const regime = detectRegime(candles)
 
-  const checks: CheckResult[] = [
+  const standardChecks: CheckResult[] = [
     checkPortfolioHeat(input, positions, balances),
     checkSinglePositionRisk(input, balances, entryPrice),
     checkConcentrationGate(input, positions, balances, entryPrice),
@@ -104,11 +133,17 @@ export async function evaluateGate(input: GateInput): Promise<RiskGateResult> {
     checkDailyLossLimit(positions, balances),
   ]
 
-  const status = aggregateStatus(checks)
-  const summary = buildSummary(status, checks)
-  const recommendation = buildRecommendation(checks)
+  // ── Phase 3: ATR Stop Advisor (runs LAST, advisory) ────────────────────
+  const atrCheck = await checkATRStopAdvisor(input, entryPrice, exchange)
 
-  return { status, checks, summary, recommendation }
+  // Combine all checks in execution order
+  const allChecks = [...circuitChecks, ...standardChecks, atrCheck]
+
+  const status = aggregateStatus(allChecks)
+  const summary = buildSummary(status, allChecks)
+  const recommendation = buildRecommendation(allChecks)
+
+  return { status, checks: allChecks, summary, recommendation }
 }
 
 /** Format gate result as a readable text block for LLM consumption. */
@@ -127,9 +162,39 @@ export function formatGateResult(
   lines.push(`Symbol: ${input.symbol} | Side: ${input.side.toUpperCase()} | Qty: ${input.quantity}`)
   lines.push('')
 
-  for (const check of result.checks) {
+  // Separate circuit breaker, standard checks, and ATR advisor
+  const circuitChecks = result.checks.filter(c => c.name.startsWith('Circuit:'))
+  const atrChecks = result.checks.filter(c => c.name === 'ATR Stop')
+  const standardChecks = result.checks.filter(
+    c => !c.name.startsWith('Circuit:') && c.name !== 'ATR Stop',
+  )
+
+  // Circuit breaker section (only show if any are non-pass)
+  if (circuitChecks.some(c => c.status !== 'pass')) {
+    lines.push('─── Circuit Breaker ────────────────────────')
+    for (const check of circuitChecks) {
+      const tag = `[${statusIcon[check.status]}]`
+      lines.push(`${tag} ${check.name}: ${check.message}`)
+    }
+    lines.push('')
+  }
+
+  // Standard checks
+  for (const check of standardChecks) {
     const tag = `[${statusIcon[check.status]}]`
     lines.push(`${tag} ${check.name}: ${check.message}`)
+  }
+
+  // ATR advisor section (always show if has recommendation)
+  for (const check of atrChecks) {
+    if (check.recommendation || check.message.includes('ATR')) {
+      lines.push('')
+      lines.push('─── ATR Stop Advisor ───────────────────────')
+      lines.push(`[INFO] ${check.name}: ${check.message}`)
+      if (check.recommendation) {
+        lines.push(`  → ${check.recommendation}`)
+      }
+    }
   }
 
   lines.push('')
