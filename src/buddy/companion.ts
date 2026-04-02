@@ -134,12 +134,37 @@ export function companionUserId(): string {
   return config.oauthAccount?.accountUuid ?? config.userID ?? 'anon'
 }
 
-// Get the user's assigned master guardian
+// Get the user's assigned master guardian.
+// For masters (unlike original animal companions), we auto-initialize
+// because the master's identity is deterministic and known — no AI generation needed.
 export function getCompanion(): Companion | undefined {
-  const stored = getGlobalConfig().companion
-  if (!stored) return undefined
-  const { bones } = roll(companionUserId())
-  return { ...stored, ...bones }
+  const config = getGlobalConfig()
+  const userId = companionUserId()
+  const { bones } = roll(userId)
+
+  // If companion already stored, merge with fresh bones
+  if (config.companion) {
+    return { ...config.companion, ...bones }
+  }
+
+  // Auto-initialize: master identity is known from types.ts
+  const masterName = MASTER_NAMES[bones.species as Master] ?? bones.species
+  const masterQuote = MASTER_QUOTES[bones.species as Master] ?? ''
+  const autoSoul = {
+    name: masterName,
+    personality: masterQuote,
+    hatchedAt: Date.now(),
+  }
+
+  // Persist so CompanionSprite and other consumers find it
+  try {
+    const { saveGlobalConfig } = require('../utils/config.js') as { saveGlobalConfig: (patch: Record<string, unknown>) => void }
+    saveGlobalConfig({ companion: autoSoul })
+  } catch {
+    // Config save failed — still return the companion for this session
+  }
+
+  return { ...autoSoul, ...bones }
 }
 
 // Get display name for current master
