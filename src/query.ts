@@ -48,6 +48,7 @@ import {
   createUserInterruptionMessage,
   normalizeMessagesForAPI,
   createSystemMessage,
+  createAssistantMessage,
   createAssistantAPIErrorMessage,
   getMessagesAfterCompactBoundary,
   createToolUseSummaryMessage,
@@ -1410,6 +1411,35 @@ async function* queryLoop(
       }
     }
     queryCheckpoint('query_tool_execution_end')
+
+    // Guardian risk observer — evaluates after trade tool calls
+    try {
+      const tradeToolNames = toolUseBlocks.map(b => b.name)
+      const { isTradeRelatedTool, evaluateAfterToolCall } = await import(
+        './services/trading/guardian-observer.js'
+      )
+      const hasTradeTools = tradeToolNames.some(isTradeRelatedTool)
+      if (hasTradeTools) {
+        // Evaluate using the first trade tool name for cache/cooldown keying
+        const tradeTool = tradeToolNames.find(isTradeRelatedTool)!
+        const alertText = await evaluateAfterToolCall(tradeTool)
+        if (alertText) {
+          const guardianMsg = createAssistantMessage({
+            content: alertText,
+            isVirtual: true,
+          })
+          yield guardianMsg
+          toolResults.push(
+            ...normalizeMessagesForAPI(
+              [guardianMsg],
+              toolUseContext.options.tools,
+            ).filter(_ => _.type === 'user'),
+          )
+        }
+      }
+    } catch {
+      // Guardian failure must never break the query loop
+    }
 
     // Generate tool use summary after tool batch completes — passed to next recursive call
     let nextPendingToolUseSummary:
