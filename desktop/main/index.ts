@@ -1,10 +1,13 @@
 import { app, BrowserWindow, Menu, ipcMain, dialog, shell } from 'electron'
 import { execSync } from 'child_process'
+import { unlinkSync } from 'fs'
 import * as path from 'path'
+import * as os from 'os'
 import Store from 'electron-store'
 import { PtyManager } from './pty-manager'
+import { DesktopBridge } from './desktop-bridge'
 import { IPC } from '../shared/ipc-channels'
-import { setupIpcRouter } from './ipc-router'
+import { setupIpcRouter, handleBridgeMessage } from './ipc-router'
 import { createTray, destroyTray } from './tray'
 import { createMenu } from './menu'
 import { registerShortcuts, unregisterShortcuts } from './shortcuts'
@@ -36,6 +39,13 @@ const store = new Store<{ windowState: WindowState }>({
 
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
+let desktopBridge: DesktopBridge | null = null
+
+// Bridge file lives in the OS temp directory — unique per session via PID
+const bridgeFilePath = path.join(
+  os.tmpdir(),
+  `vibe-sensei-bridge-${process.pid}.jsonl`,
+)
 
 const isDev = !app.isPackaged
 const isMac = process.platform === 'darwin'
@@ -156,6 +166,9 @@ function createWindow(): void {
 function setupPty(): void {
   ptyManager = new PtyManager()
 
+  // Pass bridge file path to the Bun child process via env
+  ptyManager.setEnv({ VIBE_SENSEI_BRIDGE_FILE: bridgeFilePath })
+
   ptyManager.onData((data: string) => {
     mainWindow?.webContents.send(IPC.PTY_DATA, data)
   })
@@ -178,6 +191,16 @@ function setupPty(): void {
   })
 
   ptyManager.spawn()
+}
+
+function setupBridge(): void {
+  desktopBridge = new DesktopBridge(bridgeFilePath)
+
+  desktopBridge.onData((message) => {
+    handleBridgeMessage(() => mainWindow, message)
+  })
+
+  desktopBridge.start()
 }
 
 const UDF_PORT = 3456
@@ -234,6 +257,7 @@ app.whenReady().then(async () => {
 
   createWindow()
   setupIpcHandlers()
+  setupBridge()
   setupPty()
 
   // Desktop UX: tray, menu, shortcuts
@@ -264,6 +288,16 @@ app.on('will-quit', () => {
 app.on('window-all-closed', () => {
   ptyManager?.kill()
   ptyManager = null
+
+  desktopBridge?.stop()
+  desktopBridge = null
+
+  // Clean up bridge file
+  try {
+    unlinkSync(bridgeFilePath)
+  } catch {
+    // File may not exist — that's fine
+  }
 
   if (process.platform !== 'darwin') {
     app.quit()

@@ -17,10 +17,16 @@ export class PtyManager {
   private onDataCallback: ((data: string) => void) | null = null
   private onExitCallback: ((exitCode: number) => void) | null = null
   private onReadyCallback: (() => void) | null = null
+  private extraEnv: Record<string, string> = {}
 
   private restartAttempts = 0
   private lastSpawnTime = 0
   private restartTimer: ReturnType<typeof setTimeout> | null = null
+
+  /** Set additional environment variables to pass to the Bun child process. */
+  setEnv(env: Record<string, string>): void {
+    this.extraEnv = env
+  }
 
   spawn(): void {
     const projectRoot = path.resolve(__dirname, '..', '..')
@@ -39,6 +45,7 @@ export class PtyManager {
         ...process.env,
         VIBE_SENSEI_DESKTOP: '1',
         TERM: 'xterm-256color',
+        ...this.extraEnv,
       },
     })
 
