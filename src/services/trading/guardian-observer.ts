@@ -22,6 +22,32 @@ let cachedGuardian: {
   companion: import('../../buddy/types.js').Companion
 } | null = null
 
+// Module-level cache for dynamic imports — resolved once, reused thereafter.
+let cachedModules: {
+  guardianMod: typeof import('../../buddy/guardian.js')
+  companionMod: typeof import('../../buddy/companion.js')
+  personaMod: typeof import('../../buddy/persona.js')
+  exchangeMod: typeof import('../exchange/singleton.js')
+} | null = null
+
+/**
+ * Resolve and cache dynamic imports. Returns the cached result on subsequent calls.
+ */
+async function getModules() {
+  if (cachedModules) return cachedModules
+
+  const [guardianMod, companionMod, personaMod, exchangeMod] =
+    await Promise.all([
+      import('../../buddy/guardian.js'),
+      import('../../buddy/companion.js'),
+      import('../../buddy/persona.js'),
+      import('../exchange/singleton.js'),
+    ])
+
+  cachedModules = { guardianMod, companionMod, personaMod, exchangeMod }
+  return cachedModules
+}
+
 /**
  * Evaluate risk after a trade-related tool call.
  *
@@ -36,13 +62,8 @@ export async function evaluateAfterToolCall(
 
   try {
     // Dynamic imports — non-fatal if any module is missing
-    const [guardianMod, companionMod, personaMod, exchangeMod] =
-      await Promise.all([
-        import('../../buddy/guardian.js'),
-        import('../../buddy/companion.js'),
-        import('../../buddy/persona.js'),
-        import('../exchange/singleton.js'),
-      ])
+    const { guardianMod, companionMod, personaMod, exchangeMod } =
+      await getModules()
 
     // Resolve companion — if none assigned, nothing to evaluate
     const companion = companionMod.getCompanion()

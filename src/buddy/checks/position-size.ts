@@ -4,21 +4,7 @@
 
 import type { Position, Balance } from '../../services/exchange/types.js'
 import type { RiskAlert } from '../guardian.js'
-
-/**
- * Calculate total portfolio value from balances.
- * Uses the `total` field on each balance entry (free + used).
- */
-function totalPortfolioValue(balances: Balance[]): number {
-  return balances.reduce((sum, b) => sum + b.total, 0)
-}
-
-/**
- * Calculate notional value of a position (quantity * currentPrice).
- */
-function positionNotional(pos: Position): number {
-  return Math.abs(pos.quantity) * pos.currentPrice
-}
+import { totalPortfolioValue, positionNotional } from './utils.js'
 
 const THRESHOLD = 0.3 // 30%
 
