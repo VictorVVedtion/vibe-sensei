@@ -6,6 +6,8 @@
 import type { Master, StatName } from './types.js'
 import { MASTER_NAMES, MASTER_QUOTES } from './types.js'
 import type { RiskAlert } from './guardian.js'
+import type { GuardianDiary, EnhancedDiarySummary } from './diary.js'
+import type { ExchangeInterface, Position, Balance } from '../services/exchange/types.js'
 
 // ─── Archetypes ───────────────────────────────────────────────────────────────
 
@@ -114,6 +116,54 @@ const ARCHETYPE_PHILOSOPHY: Record<Archetype, string> = {
   scientist: 'data over narrative, model the system, quantify uncertainty',
 }
 
+// ─── Archetype recovery guidance (hardcoded, no LLM) ───────────────────────
+
+export const ARCHETYPE_RECOVERY_GUIDANCE: Record<Archetype, { shallow: string; deep: string }> = {
+  value_investor: {
+    shallow: 'Hold conviction. Weakness is opportunity.',
+    deep: 'Mr. Market is offering discounts. But only buy if your thesis holds.',
+  },
+  trend_follower: {
+    shallow: 'The trend broke. Cut losses and wait for new signals.',
+    deep: 'Preservation comes first. Step away. The trend will return.',
+  },
+  macro_trader: {
+    shallow: 'Regime shift detected. Reduce exposure until the picture clears.',
+    deep: 'Capital is ammunition. Retreat, reload, and wait for the next macro setup.',
+  },
+  quant: {
+    shallow: 'Model drawdown within parameters. Trust the system, not your fear.',
+    deep: 'Review model assumptions. If edge has decayed, halt and recalibrate.',
+  },
+  strategist: {
+    shallow: 'Tactical retreat is not defeat. Preserve forces for the decisive battle.',
+    deep: 'The terrain has changed. Abandon the position and find higher ground.',
+  },
+  philosopher: {
+    shallow: 'Pain is data. Use this drawdown to test your convictions.',
+    deep: 'Survival is the only strategy that matters. Cut everything non-essential.',
+  },
+  first_principles: {
+    shallow: 'Question your assumptions. Has the fundamental thesis changed?',
+    deep: 'Strip it down to atoms. If the core thesis is broken, exit completely.',
+  },
+  crypto_native: {
+    shallow: 'Drawdowns are the fee for outsized returns. Stay liquid.',
+    deep: 'Capitulation phase. Reduce to core conviction positions only.',
+  },
+  scientist: {
+    shallow: 'Drawdown is noise until proven otherwise. Check your error bars.',
+    deep: 'The experiment has failed. Record observations, close the lab, redesign.',
+  },
+}
+
+// ─── Context layer builder types ────────────────────────────────────────────
+
+interface RegimeInfo {
+  regime: string
+  confidence: number
+}
+
 // ─── Stat-based tone modifiers ───────────────────────────────────────────────
 
 function buildToneModifiers(stats: Record<StatName, number>): string {
@@ -219,4 +269,251 @@ function dominantStat(stats: Record<StatName, number>): StatName {
     }
   }
   return best
+}
+
+
+// ─── Context-aware alert system ─────────────────────────────────────────────
+
+// Token budget: base ~150 + context ~260 = ~410 total
+const CONTEXT_TOKEN_BUDGET = 260
+// Approximate 1 token ~ 4 chars for budget enforcement
+const CHARS_PER_TOKEN = 4
+
+/**
+ * Layer 1: Market regime context (~50 tokens).
+ * Returns null when regime data is unavailable.
+ */
+export function buildRegimeContext(
+  regime: RegimeInfo | null,
+  archetype: Archetype,
+): string | null {
+  if (!regime) return null
+
+  const archetypeGuidance = getRegimeArchetypeGuidance(regime.regime, archetype)
+  return `Market: ${regime.regime} (${regime.confidence}% confidence). ${archetypeGuidance}`
+}
+
+function getRegimeArchetypeGuidance(regime: string, archetype: Archetype): string {
+  const lower = regime.toLowerCase()
+  if (lower.includes('trend') || lower.includes('bull')) {
+    if (archetype === 'trend_follower') return 'This trending market favors your style.'
+    if (archetype === 'value_investor') return 'Momentum is strong. Be patient for pullbacks.'
+    return 'Trend in play. Align or stand aside.'
+  }
+  if (lower.includes('range') || lower.includes('sideways')) {
+    if (archetype === 'strategist') return 'Range-bound. Your patience is an edge here.'
+    if (archetype === 'trend_follower') return 'No clear trend. Reduce size or sit out.'
+    return 'Choppy waters. Tight stops recommended.'
+  }
+  if (lower.includes('bear') || lower.includes('crash') || lower.includes('volatile')) {
+    if (archetype === 'philosopher') return 'Chaos is opportunity for the antifragile.'
+    if (archetype === 'crypto_native') return 'Bear market. Build positions slowly.'
+    return 'Risk-off environment. Preserve capital.'
+  }
+  return 'Adapt your sizing to current conditions.'
+}
+
+/**
+ * Layer 2: Diary behavior context (~80 tokens).
+ * Returns null when diary has insufficient data (< 20 entries).
+ */
+export function buildDiaryContext(
+  diary: GuardianDiary | null,
+): string | null {
+  if (!diary) return null
+
+  let summary: EnhancedDiarySummary | null
+  try {
+    summary = diary.getEnhancedSummary()
+  } catch {
+    return null
+  }
+  if (!summary) return null
+
+  const parts: string[] = []
+  if (summary.topPattern) {
+    parts.push(`Your patterns: ${summary.topPattern} (${summary.topPatternCount}x)`)
+  }
+  if (summary.worstInstrument) {
+    parts.push(`${summary.worstInstrument} has ${summary.worstInstrumentLosses} losses`)
+  }
+  if (summary.bestSession) {
+    parts.push(`Best session: ${summary.bestSession}`)
+  }
+
+  if (parts.length === 0) return null
+  return parts.join('. ') + '.'
+}
+
+/**
+ * Layer 3: Portfolio state context (~60 tokens).
+ * Computes heat, drawdown from peak, position count, and correlation risk.
+ */
+export function buildPortfolioContext(
+  positions: Position[],
+  balances: Balance[],
+): string | null {
+  if (positions.length === 0 && balances.length === 0) return null
+
+  // Compute total portfolio value
+  let totalValue = 0
+  for (const b of balances) {
+    totalValue += b.total
+  }
+
+  // Portfolio heat = percentage allocated to positions
+  let positionValue = 0
+  for (const p of positions) {
+    positionValue += Math.abs(p.currentPrice * p.quantity)
+  }
+  const heat = totalValue > 0 ? Math.round((positionValue / totalValue) * 100) : 0
+
+  // Drawdown from peak: use sum of unrealized PnL percent
+  const drawdown = positions.length > 0
+    ? Math.abs(Math.min(0, positions.reduce((s, p) => s + p.unrealizedPnlPercent, 0)))
+    : 0
+
+  // Correlation risk estimate based on asset composition
+  const corrRisk = estimateCorrelationRisk(positions, balances)
+
+  return `Portfolio: ${heat}% heat, ${drawdown.toFixed(1)}% from peak, ${positions.length} positions, ${corrRisk} corr risk.`
+}
+
+function estimateCorrelationRisk(
+  positions: Position[],
+  balances: Balance[],
+): string {
+  if (positions.length <= 1) return 'low'
+
+  const stablecoins = new Set(['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'FDUSD'])
+  const symbols = positions.map(p => p.symbol.split('/')[0]?.toUpperCase() ?? '')
+
+  // Check for stablecoin exposure
+  const hasStablecoinBalance = balances.some(
+    b => stablecoins.has(b.currency.toUpperCase()) && b.total > 0,
+  )
+
+  // Check if all positions are L1/major crypto tokens (high correlation)
+  const l1Tokens = new Set(['BTC', 'ETH', 'SOL', 'BNB', 'ADA', 'AVAX', 'DOT', 'MATIC', 'ATOM', 'NEAR'])
+  const allL1 = symbols.every(s => l1Tokens.has(s))
+
+  if (allL1 && !hasStablecoinBalance) return 'high'
+  if (hasStablecoinBalance) return 'low'
+  return 'moderate'
+}
+
+/**
+ * Layer 4: Recovery context (~70 tokens, only when drawdown > 5%).
+ * Uses ARCHETYPE_RECOVERY_GUIDANCE constant.
+ */
+export function buildRecoveryContext(
+  archetype: Archetype,
+  drawdownPercent: number,
+): string | null {
+  if (drawdownPercent <= 5) return null
+
+  const guidance = ARCHETYPE_RECOVERY_GUIDANCE[archetype]
+  if (!guidance) return null
+
+  if (drawdownPercent > 15) return guidance.deep
+  return guidance.shallow
+}
+
+/**
+ * Context-aware alert generation.
+ * Builds all available context layers and appends them to the base alert.
+ * Falls back to getPersonalizedAlert() if exchange/diary are unavailable.
+ *
+ * Token budget: base ~150 + context ~260 = ~410 total.
+ * Priority truncation order: regime > portfolio > diary > recovery.
+ */
+export async function getPersonalizedAlertWithContext(
+  master: { species: string; stats: Record<string, number> },
+  alert: RiskAlert,
+  exchange: ExchangeInterface,
+  diary: GuardianDiary | null,
+  positions: Position[],
+  balances: Balance[],
+): Promise<string> {
+  const masterId = master.species as Master
+  const stats = master.stats as Record<StatName, number>
+
+  // Base alert (always available, ~150 tokens)
+  const baseAlert = getPersonalizedAlert(masterId, stats, alert)
+
+  try {
+    const archetype = getMasterArchetype(masterId)
+
+    // Try to get regime context via dynamic import (module may not exist)
+    let regimeInfo: RegimeInfo | null = null
+    try {
+      const regimeMod = await import('../services/market/regime.js')
+      if (typeof regimeMod.getLatestRegime === 'function') {
+        // Extract symbol from alert context if available
+        const symbol = extractSymbolFromAlert(alert)
+        if (symbol) {
+          const regime = regimeMod.getLatestRegime(symbol)
+          if (regime && regime.regime && typeof regime.confidence === 'number') {
+            regimeInfo = { regime: regime.regime, confidence: regime.confidence }
+          }
+        }
+      }
+    } catch {
+      // Regime module not available — skip this layer
+    }
+
+    // Compute drawdown for recovery context
+    const totalDrawdown = positions.length > 0
+      ? Math.abs(Math.min(0, positions.reduce((s, p) => s + p.unrealizedPnlPercent, 0)))
+      : 0
+
+    // Build all context layers (ordered by priority)
+    const layers: { text: string; priority: number }[] = []
+
+    const regimeCtx = buildRegimeContext(regimeInfo, archetype)
+    if (regimeCtx) layers.push({ text: regimeCtx, priority: 1 })
+
+    const portfolioCtx = buildPortfolioContext(positions, balances)
+    if (portfolioCtx) layers.push({ text: portfolioCtx, priority: 2 })
+
+    const diaryCtx = buildDiaryContext(diary)
+    if (diaryCtx) layers.push({ text: diaryCtx, priority: 3 })
+
+    const recoveryCtx = buildRecoveryContext(archetype, totalDrawdown)
+    if (recoveryCtx) layers.push({ text: recoveryCtx, priority: 4 })
+
+    if (layers.length === 0) return baseAlert
+
+    // Sort by priority (lower = higher priority)
+    layers.sort((a, b) => a.priority - b.priority)
+
+    // Enforce token budget via character-based truncation
+    const budgetChars = CONTEXT_TOKEN_BUDGET * CHARS_PER_TOKEN
+    const included: string[] = []
+    let usedChars = 0
+
+    for (const layer of layers) {
+      if (usedChars + layer.text.length <= budgetChars) {
+        included.push(layer.text)
+        usedChars += layer.text.length
+      }
+    }
+
+    if (included.length === 0) return baseAlert
+
+    return baseAlert + '\n' + included.join(' ')
+  } catch {
+    // Any failure in context building falls back to base alert
+    return baseAlert
+  }
+}
+
+/**
+ * Extract trading symbol from an alert message.
+ * Looks for common patterns like "BTC/USDT" or standalone symbols.
+ */
+function extractSymbolFromAlert(alert: RiskAlert): string | null {
+  const symbolPattern = /\b([A-Z]{2,10}\/[A-Z]{2,10})\b/
+  const match = alert.message.match(symbolPattern)
+  return match ? match[1]! : null
 }
