@@ -22,6 +22,12 @@ export type PatternType =
   | 'good_discipline'
   | 'fomo'
   | 'general'
+  | 'time_of_day_bias'
+  | 'holding_period_bias'
+  | 'instrument_bias'
+  | 'position_size_bad'
+  | 'averaging_down_bad'
+  | 'pyramid_good'
 
 export interface DiaryEntry {
   id: string
@@ -32,6 +38,14 @@ export interface DiaryEntry {
   observation: string
   patternType: PatternType
   outcome?: 'profit' | 'loss' | 'pending'
+  /** UTC hour of the trade (0-23) */
+  tradeUtcHour?: number
+  /** Hold duration in milliseconds */
+  holdDurationMs?: number
+  /** Position size percentile relative to user average (0-100) */
+  positionSizePercentile?: number
+  /** Realized or unrealized profit/loss percentage */
+  profitPercent?: number
 }
 
 export interface TradeEvent {
@@ -50,6 +64,37 @@ export interface TradeEvent {
   samePairBuysLastHour: number // count of buys in same pair within last hour
 }
 
+
+// ─── Enhanced summary types ─────────────────────────────────────────────────
+
+export interface SessionAnalysis {
+  session: string
+  winRate: number
+  totalTrades: number
+}
+
+export interface HoldingPeriodAnalysis {
+  period: string
+  winRate: number
+  totalTrades: number
+}
+
+export interface InstrumentBiasInfo {
+  symbol: string
+  winRate: number
+  totalTrades: number
+}
+
+export interface EnhancedPatternSummary {
+  topPattern: { type: PatternType; count: number; label: string; advice: string } | null
+  timeOfDayAnalysis: SessionAnalysis[]
+  holdingPeriodAnalysis: HoldingPeriodAnalysis[]
+  instrumentBiases: InstrumentBiasInfo[]
+  positionSizeBias: string | null
+  averagingDownStats: { total: number; emotional: number; planned: number; mixed: number }
+  pyramidStats: { total: number; profitable: number; unprofitable: number }
+}
+
 // ─── Serialization shapes ────────────────────────────────────────────────────
 
 interface SerializedEntry {
@@ -61,6 +106,10 @@ interface SerializedEntry {
   observation: string
   patternType: PatternType
   outcome?: 'profit' | 'loss' | 'pending'
+  tradeUtcHour?: number
+  holdDurationMs?: number
+  positionSizePercentile?: number
+  profitPercent?: number
 }
 
 interface DiaryFile {
@@ -161,6 +210,268 @@ function classifyTrade(
   }
 }
 
+// ─── Behavioral pattern detectors (v2) ──────────────────────────────────────
+
+type SessionName = 'Asian' | 'European' | 'American'
+
+const SESSION_RANGES: Record<SessionName, [number, number]> = {
+  Asian: [0, 8],
+  European: [8, 16],
+  American: [16, 24],
+}
+
+const TIME_BIAS_WIN_THRESHOLD = 0.35
+const TIME_BIAS_MIN_TRADES = 5
+
+/** Detect UTC time-of-day sessions with poor win rates. */
+export function detectTimeOfDayBias(entries: DiaryEntry[]): string[] {
+  const sessions: Record<SessionName, { wins: number; total: number }> = {
+    Asian: { wins: 0, total: 0 },
+    European: { wins: 0, total: 0 },
+    American: { wins: 0, total: 0 },
+  }
+
+  for (const e of entries) {
+    if (e.tradeUtcHour === undefined || e.outcome === 'pending') continue
+    const hour = e.tradeUtcHour
+    for (const [name, [lo, hi]] of Object.entries(SESSION_RANGES) as [SessionName, [number, number]][]) {
+      if (hour >= lo && hour < hi) {
+        sessions[name].total++
+        if (e.outcome === 'profit') sessions[name].wins++
+        break
+      }
+    }
+  }
+
+  const alerts: string[] = []
+  for (const [name, { wins, total }] of Object.entries(sessions) as [SessionName, { wins: number; total: number }][]) {
+    if (total < TIME_BIAS_MIN_TRADES) continue
+    const winRate = wins / total
+    if (winRate < TIME_BIAS_WIN_THRESHOLD) {
+      const pct = (winRate * 100).toFixed(0)
+      alerts.push(`${name} session (UTC ${SESSION_RANGES[name][0]}-${SESSION_RANGES[name][1]}): ${pct}% win rate across ${total} trades.`)
+    }
+  }
+  return alerts
+}
+
+type HoldBucket = 'scalp' | 'swing' | 'position' | 'invest'
+
+const HOLD_BUCKET_LABELS: Record<HoldBucket, string> = {
+  scalp: 'Scalps (<1h)',
+  swing: 'Swings (1-24h)',
+  position: 'Positions (1-7d)',
+  invest: 'Investments (>7d)',
+}
+
+const HOLD_BIAS_WIN_THRESHOLD = 0.30
+const HOLD_BIAS_MIN_TRADES = 5
+const MS_1H = 3_600_000
+const MS_24H = 86_400_000
+const MS_7D = 604_800_000
+
+function classifyHoldDuration(ms: number): HoldBucket {
+  if (ms < MS_1H) return 'scalp'
+  if (ms < MS_24H) return 'swing'
+  if (ms < MS_7D) return 'position'
+  return 'invest'
+}
+
+/** Detect holding periods with poor win rates. */
+export function detectHoldingPeriodBias(entries: DiaryEntry[]): string[] {
+  const buckets: Record<HoldBucket, { wins: number; total: number }> = {
+    scalp: { wins: 0, total: 0 },
+    swing: { wins: 0, total: 0 },
+    position: { wins: 0, total: 0 },
+    invest: { wins: 0, total: 0 },
+  }
+
+  for (const e of entries) {
+    if (e.holdDurationMs === undefined || e.outcome === 'pending') continue
+    const bucket = classifyHoldDuration(e.holdDurationMs)
+    buckets[bucket].total++
+    if (e.outcome === 'profit') buckets[bucket].wins++
+  }
+
+  const alerts: string[] = []
+  for (const [bucket, { wins, total }] of Object.entries(buckets) as [HoldBucket, { wins: number; total: number }][]) {
+    if (total < HOLD_BIAS_MIN_TRADES) continue
+    const winRate = wins / total
+    if (winRate < HOLD_BIAS_WIN_THRESHOLD) {
+      const pct = (winRate * 100).toFixed(0)
+      alerts.push(`${HOLD_BUCKET_LABELS[bucket]}: ${pct}% win rate across ${total} trades.`)
+    }
+  }
+  return alerts
+}
+
+const INSTRUMENT_BIAS_WIN_THRESHOLD = 0.35
+const INSTRUMENT_BIAS_MIN_TRADES = 5
+
+/** Detect instruments with consistently poor win rates. */
+export function detectInstrumentBias(entries: DiaryEntry[]): string[] {
+  const symbols = new Map<string, { wins: number; total: number }>()
+
+  for (const e of entries) {
+    if (e.outcome === 'pending') continue
+    const stats = symbols.get(e.tradeSymbol) ?? { wins: 0, total: 0 }
+    stats.total++
+    if (e.outcome === 'profit') stats.wins++
+    symbols.set(e.tradeSymbol, stats)
+  }
+
+  const alerts: string[] = []
+  for (const [symbol, { wins, total }] of symbols) {
+    if (total < INSTRUMENT_BIAS_MIN_TRADES) continue
+    const winRate = wins / total
+    if (winRate < INSTRUMENT_BIAS_WIN_THRESHOLD) {
+      const pct = (winRate * 100).toFixed(0)
+      alerts.push(`${symbol}: ${pct}% win rate across ${total} trades.`)
+    }
+  }
+  return alerts
+}
+
+const LARGE_POSITION_PERCENTILE = 67
+const POSITION_SIZE_MIN_LARGE = 3
+const POSITION_SIZE_PENALTY_GAP = 20
+
+/** Detect if large positions perform worse than average. */
+export function detectPositionSizeCorrelation(entries: DiaryEntry[]): string | null {
+  const resolved = entries.filter(e =>
+    e.positionSizePercentile !== undefined && e.outcome !== 'pending',
+  )
+  if (resolved.length === 0) return null
+
+  let totalWins = 0
+  let totalCount = 0
+  let largeWins = 0
+  let largeCount = 0
+
+  for (const e of resolved) {
+    totalCount++
+    if (e.outcome === 'profit') totalWins++
+    if (e.positionSizePercentile! >= LARGE_POSITION_PERCENTILE) {
+      largeCount++
+      if (e.outcome === 'profit') largeWins++
+    }
+  }
+
+  if (largeCount < POSITION_SIZE_MIN_LARGE) return null
+
+  const avgWinRate = totalWins / totalCount
+  const largeWinRate = largeWins / largeCount
+
+  if (largeWinRate < 0.30 || (avgWinRate - largeWinRate) * 100 >= POSITION_SIZE_PENALTY_GAP) {
+    const avgPct = (avgWinRate * 100).toFixed(0)
+    const largePct = (largeWinRate * 100).toFixed(0)
+    return `Large positions (top 33%): ${largePct}% win rate vs ${avgPct}% overall across ${largeCount} large trades.`
+  }
+  return null
+}
+
+export interface AveragingDownResult {
+  symbol: string
+  buyCount: number
+  outcome: 'emotional' | 'planned' | 'mixed'
+}
+
+const AVERAGING_DOWN_WINDOW_MS = 2 * 3_600_000 // 2 hours
+const EMOTIONAL_THRESHOLD_MS = 15 * 60_000     // 15 minutes
+const PLANNED_THRESHOLD_MS = 30 * 60_000       // 30 minutes
+
+/** Detect averaging-down patterns: same symbol, sequential buys, decreasing prices. */
+export function detectAveragingDown(entries: DiaryEntry[]): AveragingDownResult[] {
+  const sorted = [...entries]
+    .filter(e => e.tradeSide === 'buy')
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+  const results: AveragingDownResult[] = []
+  let i = 0
+
+  while (i < sorted.length) {
+    const chain: DiaryEntry[] = [sorted[i]!]
+    let j = i + 1
+
+    while (j < sorted.length) {
+      const prev = chain[chain.length - 1]!
+      const curr = sorted[j]!
+      const gap = curr.timestamp.getTime() - prev.timestamp.getTime()
+      if (curr.tradeSymbol !== prev.tradeSymbol || gap > AVERAGING_DOWN_WINDOW_MS) break
+      chain.push(curr)
+      j++
+    }
+
+    if (chain.length >= 2) {
+      const gaps = chain.slice(1).map((e, idx) =>
+        e.timestamp.getTime() - chain[idx]!.timestamp.getTime(),
+      )
+      const allEmotional = gaps.every(g => g < EMOTIONAL_THRESHOLD_MS)
+      const allPlanned = gaps.every(g => g >= PLANNED_THRESHOLD_MS)
+
+      results.push({
+        symbol: chain[0]!.tradeSymbol,
+        buyCount: chain.length,
+        outcome: allEmotional ? 'emotional' : allPlanned ? 'planned' : 'mixed',
+      })
+    }
+
+    i = j
+  }
+  return results
+}
+
+export interface PyramidResult {
+  symbol: string
+  buyCount: number
+  outcome: 'profit' | 'loss' | 'mixed'
+}
+
+/** Detect pyramid patterns: same symbol, sequential buys, increasing prices. */
+export function detectPyramidSuccess(entries: DiaryEntry[]): PyramidResult[] {
+  const sorted = [...entries]
+    .filter(e => e.tradeSide === 'buy' && e.profitPercent !== undefined)
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+  const results: PyramidResult[] = []
+  let i = 0
+
+  while (i < sorted.length) {
+    const chain: DiaryEntry[] = [sorted[i]!]
+    let j = i + 1
+
+    while (j < sorted.length) {
+      const prev = chain[chain.length - 1]!
+      const curr = sorted[j]!
+      if (curr.tradeSymbol !== prev.tradeSymbol) break
+      // Price increasing = pyramid (profitPercent of later buys is positive)
+      if (curr.profitPercent !== undefined && curr.profitPercent > (prev.profitPercent ?? 0)) {
+        chain.push(curr)
+      } else {
+        break
+      }
+      j++
+    }
+
+    if (chain.length >= 2) {
+      const profits = chain.filter(e => e.outcome === 'profit').length
+      const losses = chain.filter(e => e.outcome === 'loss').length
+      let outcome: 'profit' | 'loss' | 'mixed' = 'mixed'
+      if (profits > 0 && losses === 0) outcome = 'profit'
+      else if (losses > 0 && profits === 0) outcome = 'loss'
+
+      results.push({
+        symbol: chain[0]!.tradeSymbol,
+        buyCount: chain.length,
+        outcome,
+      })
+    }
+
+    i = Math.max(i + 1, j)
+  }
+  return results
+}
+
 // ─── Pattern summary ─────────────────────────────────────────────────────────
 
 const PATTERN_LABELS: Record<PatternType, string> = {
@@ -171,6 +482,12 @@ const PATTERN_LABELS: Record<PatternType, string> = {
   good_discipline: 'hold through drawdowns with discipline',
   fomo: 'FOMO-stack buys on the same asset',
   general: 'trade without a strong pattern',
+  time_of_day_bias: 'trade poorly during certain hours',
+  holding_period_bias: 'lose on certain holding periods',
+  instrument_bias: 'lose consistently on certain instruments',
+  position_size_bad: 'lose more on larger positions',
+  averaging_down_bad: 'average down into losing positions',
+  pyramid_good: 'successfully pyramid into winners',
 }
 
 const PATTERN_ADVICE: Record<PatternType, string> = {
@@ -181,6 +498,12 @@ const PATTERN_ADVICE: Record<PatternType, string> = {
   good_discipline: 'Keep this up. Patience is your edge.',
   fomo: 'Set your position once and walk away.',
   general: 'Keep building your trade journal for deeper insights.',
+  time_of_day_bias: 'Avoid trading during your weakest session.',
+  holding_period_bias: 'Adjust your strategy for the timeframe that loses.',
+  instrument_bias: 'Stop trading the instruments where you consistently lose.',
+  position_size_bad: 'Scale down position sizes until discipline improves.',
+  averaging_down_bad: 'Set a hard rule: no adding to losers within 2 hours.',
+  pyramid_good: 'Keep pyramiding winners — this is working for you.',
 }
 
 function buildPatternSummary(entries: DiaryEntry[], masterId: string): string | null {
@@ -189,6 +512,8 @@ function buildPatternSummary(entries: DiaryEntry[], masterId: string): string | 
   const counts: Record<PatternType, number> = {
     early_exit: 0, late_entry: 0, oversize: 0,
     revenge_trade: 0, good_discipline: 0, fomo: 0, general: 0,
+    time_of_day_bias: 0, holding_period_bias: 0, instrument_bias: 0,
+    position_size_bad: 0, averaging_down_bad: 0, pyramid_good: 0,
   }
   for (const entry of entries) {
     counts[entry.patternType]++
@@ -207,12 +532,171 @@ function buildPatternSummary(entries: DiaryEntry[], masterId: string): string | 
   return `${masterName} has noticed: You tend to ${label} (seen ${top[1]} times). ${advice}`
 }
 
+
+function buildEnhancedSummary(entries: DiaryEntry[]): EnhancedPatternSummary {
+  // Top pattern
+  const counts: Partial<Record<PatternType, number>> = {}
+  for (const e of entries) {
+    counts[e.patternType] = (counts[e.patternType] ?? 0) + 1
+  }
+  let topPattern: EnhancedPatternSummary['topPattern'] = null
+  let maxCount = 0
+  for (const [type, count] of Object.entries(counts) as [PatternType, number][]) {
+    if (type === 'general') continue
+    if (count > maxCount) {
+      maxCount = count
+      topPattern = {
+        type,
+        count,
+        label: PATTERN_LABELS[type],
+        advice: PATTERN_ADVICE[type],
+      }
+    }
+  }
+
+  // Time-of-day analysis
+  const timeOfDayAnalysis: SessionAnalysis[] = buildSessionAnalysis(entries)
+
+  // Holding period analysis
+  const holdingPeriodAnalysis: HoldingPeriodAnalysis[] = buildHoldingAnalysis(entries)
+
+  // Instrument biases
+  const instrumentBiases: InstrumentBiasInfo[] = buildInstrumentAnalysis(entries)
+
+  // Position size bias
+  const positionSizeBias = detectPositionSizeCorrelation(entries)
+
+  // Averaging down stats
+  const avgDown = detectAveragingDown(entries)
+  const averagingDownStats = {
+    total: avgDown.length,
+    emotional: avgDown.filter(r => r.outcome === 'emotional').length,
+    planned: avgDown.filter(r => r.outcome === 'planned').length,
+    mixed: avgDown.filter(r => r.outcome === 'mixed').length,
+  }
+
+  // Pyramid stats
+  const pyramids = detectPyramidSuccess(entries)
+  const pyramidStats = {
+    total: pyramids.length,
+    profitable: pyramids.filter(r => r.outcome === 'profit').length,
+    unprofitable: pyramids.filter(r => r.outcome === 'loss').length,
+  }
+
+  return {
+    topPattern,
+    timeOfDayAnalysis,
+    holdingPeriodAnalysis,
+    instrumentBiases,
+    positionSizeBias,
+    averagingDownStats,
+    pyramidStats,
+  }
+}
+
+function buildSessionAnalysis(entries: DiaryEntry[]): SessionAnalysis[] {
+  const sessions: Record<string, { wins: number; total: number }> = {
+    Asian: { wins: 0, total: 0 },
+    European: { wins: 0, total: 0 },
+    American: { wins: 0, total: 0 },
+  }
+
+  for (const e of entries) {
+    if (e.tradeUtcHour === undefined || e.outcome === 'pending') continue
+    for (const [name, [lo, hi]] of Object.entries(SESSION_RANGES) as [SessionName, [number, number]][]) {
+      if (e.tradeUtcHour >= lo && e.tradeUtcHour < hi) {
+        sessions[name].total++
+        if (e.outcome === 'profit') sessions[name].wins++
+        break
+      }
+    }
+  }
+
+  return Object.entries(sessions)
+    .filter(([, s]) => s.total > 0)
+    .map(([session, s]) => ({
+      session,
+      winRate: s.total > 0 ? s.wins / s.total : 0,
+      totalTrades: s.total,
+    }))
+}
+
+function buildHoldingAnalysis(entries: DiaryEntry[]): HoldingPeriodAnalysis[] {
+  const buckets: Record<string, { wins: number; total: number }> = {
+    'Scalps (<1h)': { wins: 0, total: 0 },
+    'Swings (1-24h)': { wins: 0, total: 0 },
+    'Positions (1-7d)': { wins: 0, total: 0 },
+    'Investments (>7d)': { wins: 0, total: 0 },
+  }
+
+  const bucketMap: Record<HoldBucket, string> = {
+    scalp: 'Scalps (<1h)',
+    swing: 'Swings (1-24h)',
+    position: 'Positions (1-7d)',
+    invest: 'Investments (>7d)',
+  }
+
+  for (const e of entries) {
+    if (e.holdDurationMs === undefined || e.outcome === 'pending') continue
+    const bucket = classifyHoldDuration(e.holdDurationMs)
+    const label = bucketMap[bucket]
+    buckets[label].total++
+    if (e.outcome === 'profit') buckets[label].wins++
+  }
+
+  return Object.entries(buckets)
+    .filter(([, s]) => s.total > 0)
+    .map(([period, s]) => ({
+      period,
+      winRate: s.total > 0 ? s.wins / s.total : 0,
+      totalTrades: s.total,
+    }))
+}
+
+function buildInstrumentAnalysis(entries: DiaryEntry[]): InstrumentBiasInfo[] {
+  const symbols = new Map<string, { wins: number; total: number }>()
+
+  for (const e of entries) {
+    if (e.outcome === 'pending') continue
+    const stats = symbols.get(e.tradeSymbol) ?? { wins: 0, total: 0 }
+    stats.total++
+    if (e.outcome === 'profit') stats.wins++
+    symbols.set(e.tradeSymbol, stats)
+  }
+
+  return Array.from(symbols)
+    .filter(([, s]) => s.total >= INSTRUMENT_BIAS_MIN_TRADES && (s.wins / s.total) < INSTRUMENT_BIAS_WIN_THRESHOLD)
+    .map(([symbol, s]) => ({
+      symbol,
+      winRate: s.wins / s.total,
+      totalTrades: s.total,
+    }))
+}
+
 // ─── Outcome determination ───────────────────────────────────────────────────
 
 function determineOutcome(trade: TradeEvent): 'profit' | 'loss' | 'pending' {
   if (trade.profitPercent === undefined) return 'pending'
   if (trade.exitPrice === undefined) return 'pending'
   return trade.profitPercent > 0 ? 'profit' : 'loss'
+}
+
+// ─── Position percentile helper ─────────────────────────────────────────────
+
+function computePositionPercentile(portfolioPercent: number, entries: DiaryEntry[]): number {
+  const sizes = entries
+    .filter(e => e.positionSizePercentile !== undefined)
+    .map(e => e.positionSizePercentile!)
+
+  if (sizes.length === 0) return 50 // first trade defaults to median
+
+  const sorted = [...sizes].sort((a, b) => a - b)
+  let rank = 0
+  for (const s of sorted) {
+    if (s < portfolioPercent) rank++
+    else break
+  }
+  return Math.round((rank / sorted.length) * 100)
 }
 
 // ─── Diary class ─────────────────────────────────────────────────────────────
@@ -223,6 +707,7 @@ const DEFAULT_STORE_PATH = join(DEFAULT_STORE_DIR, 'diary.json')
 export class GuardianDiary {
   private entries: DiaryEntry[] = []
   private readonly storePath: string
+  private enhancedCache: { hash: number; summary: EnhancedPatternSummary } | null = null
 
   constructor(storePath?: string) {
     this.storePath = storePath ?? DEFAULT_STORE_PATH
@@ -234,15 +719,20 @@ export class GuardianDiary {
     const recent = this.getRecentEntries(20)
     const { patternType, observation } = classifyTrade(trade, recent)
 
+    const now = new Date()
     const entry: DiaryEntry = {
       id: randomUUID(),
       masterId,
-      timestamp: new Date(),
+      timestamp: now,
       tradeSymbol: trade.symbol,
       tradeSide: trade.side,
       observation,
       patternType,
       outcome: determineOutcome(trade),
+      tradeUtcHour: now.getUTCHours(),
+      holdDurationMs: trade.timeSinceLastClose,
+      positionSizePercentile: computePositionPercentile(trade.portfolioPercent, this.entries),
+      profitPercent: trade.profitPercent,
     }
 
     this.entries.push(entry)
@@ -260,6 +750,25 @@ export class GuardianDiary {
   getRecentEntries(limit: number = 10): DiaryEntry[] {
     const start = Math.max(0, this.entries.length - limit)
     return this.entries.slice(start).reverse()
+  }
+
+  /** Get all entries (for external analysis). */
+  getAllEntries(): DiaryEntry[] {
+    return [...this.entries]
+  }
+
+  /** Enhanced behavioral summary. Requires 20+ entries. Cached until new entries arrive. */
+  getEnhancedSummary(): EnhancedPatternSummary | null {
+    if (this.entries.length < 20) return null
+
+    const hash = this.entries.length
+    if (this.enhancedCache && this.enhancedCache.hash === hash) {
+      return this.enhancedCache.summary
+    }
+
+    const summary = buildEnhancedSummary(this.entries)
+    this.enhancedCache = { hash, summary }
+    return summary
   }
 
   /** Persist diary to JSON file. */
@@ -319,6 +828,10 @@ function serializeEntry(entry: DiaryEntry): SerializedEntry {
     observation: entry.observation,
     patternType: entry.patternType,
     outcome: entry.outcome,
+    tradeUtcHour: entry.tradeUtcHour,
+    holdDurationMs: entry.holdDurationMs,
+    positionSizePercentile: entry.positionSizePercentile,
+    profitPercent: entry.profitPercent,
   }
 }
 
@@ -332,12 +845,18 @@ function deserializeEntry(raw: SerializedEntry): DiaryEntry {
     observation: raw.observation,
     patternType: raw.patternType,
     outcome: raw.outcome,
+    tradeUtcHour: raw.tradeUtcHour,
+    holdDurationMs: raw.holdDurationMs,
+    positionSizePercentile: raw.positionSizePercentile,
+    profitPercent: raw.profitPercent,
   }
 }
 
 const VALID_PATTERN_TYPES = new Set<string>([
   'early_exit', 'late_entry', 'oversize',
   'revenge_trade', 'good_discipline', 'fomo', 'general',
+  'time_of_day_bias', 'holding_period_bias', 'instrument_bias',
+  'position_size_bad', 'averaging_down_bad', 'pyramid_good',
 ])
 
 function isValidDiaryFile(data: unknown): data is DiaryFile {
