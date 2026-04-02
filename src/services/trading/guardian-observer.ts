@@ -59,6 +59,7 @@ async function getModules() {
 
 /**
  * Emit trading state to the desktop bridge (positions + balances).
+ * Computes actual portfolio heat for the riskScore field.
  * Silently swallows all errors.
  */
 async function emitTradingState(
@@ -69,9 +70,10 @@ async function emitTradingState(
     if (!bridgeMod.isDesktopMode()) return
 
     const exchange = await exchangeMod.getConnectedExchange()
-    const [positions, balances] = await Promise.all([
+    const [positions, balances, openOrders] = await Promise.all([
       exchange.getPositions(),
       exchange.getBalance(),
+      exchange.getOpenOrders(),
     ])
 
     // Compute total portfolio value from USDT balance + position values
@@ -82,6 +84,12 @@ async function emitTradingState(
     for (const p of positions) {
       totalValue += p.currentPrice * p.quantity
     }
+
+    // Compute actual risk score from portfolio heat
+    const { calculatePortfolioHeat } = await import(
+      '../portfolio/heat-calculator.js'
+    )
+    const heat = calculatePortfolioHeat(positions, balances, openOrders)
 
     bridgeMod.emitToDesktop('trading_state', {
       positions: positions.map((p) => ({
@@ -100,7 +108,7 @@ async function emitTradingState(
         total: b.total,
       })),
       totalPortfolioValue: totalValue,
-      riskScore: 0,
+      riskScore: heat.riskScore,
       timestamp: Date.now(),
     })
   } catch {
