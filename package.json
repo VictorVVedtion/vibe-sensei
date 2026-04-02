@@ -1,6 +1,7 @@
 {
     "name": "vibe-sensei",
     "version": "0.1.0",
+    "description": "AI trading terminal with 52 master guardians",
     "type": "module",
     "workspaces": [
         "packages/*",
