@@ -9,6 +9,7 @@ import type { ExchangeConfig } from './types.js'
 
 let instance: ExchangeInterface | null = null
 let connected = false
+let connectionPromise: Promise<ExchangeInterface> | null = null
 
 export function getExchange(): ExchangeInterface {
   if (!instance) {
@@ -19,14 +20,18 @@ export function getExchange(): ExchangeInterface {
 
 export async function getConnectedExchange(): Promise<ExchangeInterface> {
   const exchange = getExchange()
-  if (!connected) {
-    await exchange.connect()
-    connected = true
+  if (connected) return exchange
+  if (!connectionPromise) {
+    connectionPromise = exchange.connect().then(() => {
+      connected = true
+      return exchange
+    })
   }
-  return exchange
+  return connectionPromise
 }
 
 export function resetExchange(config?: ExchangeConfig): void {
   instance = createExchange(config ?? { mode: 'paper' })
   connected = false
+  connectionPromise = null
 }
