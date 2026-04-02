@@ -5,7 +5,7 @@
 
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import { createExchange } from '../../services/exchange/index.js'
+import { getConnectedExchange } from '../../services/exchange/singleton.js'
 import type { Position } from '../../services/exchange/types.js'
 
 const inputSchema = z.strictObject({
@@ -89,8 +89,7 @@ export const PositionTool = buildTool({
   },
 
   async call(input) {
-    const exchange = createExchange({ mode: 'paper' })
-    await exchange.connect()
+    const exchange = await getConnectedExchange()
 
     const allPositions = await exchange.getPositions()
     const filtered = input.symbol

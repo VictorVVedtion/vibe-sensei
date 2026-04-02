@@ -6,10 +6,10 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import {
-  createExchange,
   InsufficientFundsError,
   InvalidSymbolError,
 } from '../../services/exchange/index.js'
+import { getConnectedExchange } from '../../services/exchange/singleton.js'
 import type { Order } from '../../services/exchange/types.js'
 
 const inputSchema = z.strictObject({
@@ -103,8 +103,7 @@ export const OrderTool = buildTool({
   },
 
   async call(input) {
-    const exchange = createExchange({ mode: 'paper' })
-    await exchange.connect()
+    const exchange = await getConnectedExchange()
 
     try {
       const order = await exchange.placeOrder({

@@ -5,7 +5,7 @@
 
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
-import { createExchange } from '../../services/exchange/index.js'
+import { getConnectedExchange } from '../../services/exchange/singleton.js'
 import type { Balance } from '../../services/exchange/types.js'
 
 const inputSchema = z.strictObject({})
@@ -77,8 +77,7 @@ export const BalanceTool = buildTool({
   },
 
   async call() {
-    const exchange = createExchange({ mode: 'paper' })
-    await exchange.connect()
+    const exchange = await getConnectedExchange()
 
     const balances = await exchange.getBalance()
     return { data: formatBalancesTable(balances) }
