@@ -15,6 +15,7 @@ import { OrderTool } from './tools/OrderTool/OrderTool.js'
 import { PositionTool } from './tools/PositionTool/PositionTool.js'
 import { BalanceTool } from './tools/BalanceTool/BalanceTool.js'
 import { StrategyTool } from './tools/StrategyTool/StrategyTool.js'
+import { AutoResearchTool } from './tools/AutoResearchTool/AutoResearchTool.js'
 // Dead code elimination: conditional import for ant-only tools
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const REPLTool =
@@ -244,6 +245,7 @@ export function getAllBaseTools(): Tools {
     PositionTool,
     BalanceTool,
     StrategyTool,
+    AutoResearchTool,
     ...(SendUserFileTool ? [SendUserFileTool] : []),
     ...(PushNotificationTool ? [PushNotificationTool] : []),
     ...(SubscribePRTool ? [SubscribePRTool] : []),
