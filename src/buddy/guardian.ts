@@ -5,8 +5,11 @@
 
 import type { Companion } from './types.js'
 import type { ExchangeInterface, Position, Balance } from '../services/exchange/types.js'
+import type { ThresholdConfig } from './thresholds.js'
 import { createExchange } from '../services/exchange/index.js'
 import { getMasterName, getMasterQuote } from './companion.js'
+import { getMasterArchetype } from './persona.js'
+import { getThresholds } from './thresholds.js'
 import { ALL_CHECKS } from './checks/index.js'
 
 export type Severity = 'INFO' | 'WARNING' | 'CRITICAL' | 'EMERGENCY'
@@ -26,6 +29,7 @@ export type CheckFn = (
   masterId: string,
   masterName: string,
   masterQuote: string,
+  thresholds?: ThresholdConfig,
 ) => RiskAlert | null
 
 const SEVERITY_RANK: Record<Severity, number> = {
@@ -58,10 +62,24 @@ export class RiskGuardian {
     const masterName = getMasterName(masterId)
     const masterQuote = getMasterQuote(masterId)
 
+    // Compute dynamic thresholds based on archetype + stats
+    const archetype = getMasterArchetype(masterId)
+    const thresholdMap = getThresholds(archetype, this.companion.stats, null)
+
     const candidates: RiskAlert[] = []
     for (const check of ALL_CHECKS) {
       if (!this.shouldAlert(check.name)) continue
-      const alert = check.fn(positions, balances, masterId, masterName, masterQuote)
+      const checkThresholds = check.thresholdKey
+        ? thresholdMap[check.thresholdKey]
+        : undefined
+      const alert = check.fn(
+        positions,
+        balances,
+        masterId,
+        masterName,
+        masterQuote,
+        checkThresholds,
+      )
       if (alert) candidates.push(alert)
     }
 
