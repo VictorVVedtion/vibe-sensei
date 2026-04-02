@@ -1,15 +1,17 @@
 /**
- * Leverage check — warns when effective leverage exceeds 2x.
+ * Leverage check — warns when effective leverage exceeds threshold.
  * Effective leverage = total notional value / total portfolio value.
- * WARNING at >2x, CRITICAL at >5x.
+ * Default: WARNING at >2x, CRITICAL at >5x.
+ * With ThresholdConfig: uses dynamic values from archetype/stat/regime system.
  */
 
 import type { Position, Balance } from '../../services/exchange/types.js'
 import type { RiskAlert, Severity } from '../guardian.js'
+import type { ThresholdConfig } from '../thresholds.js'
 import { totalPortfolioValue, totalNotionalValue } from './utils.js'
 
-const WARNING_THRESHOLD = 2
-const CRITICAL_THRESHOLD = 5
+const DEFAULT_WARNING = 2
+const DEFAULT_CRITICAL = 5
 
 export function checkLeverage(
   positions: Position[],
@@ -17,6 +19,7 @@ export function checkLeverage(
   masterId: string,
   masterName: string,
   masterQuote: string,
+  thresholds?: ThresholdConfig,
 ): RiskAlert | null {
   if (positions.length === 0) return null
 
@@ -26,10 +29,13 @@ export function checkLeverage(
   const notional = totalNotionalValue(positions)
   const leverage = notional / portfolio
 
+  const warnAt = thresholds?.warn ?? DEFAULT_WARNING
+  const critAt = thresholds?.critical ?? DEFAULT_CRITICAL
+
   let severity: Severity | null = null
-  if (leverage >= CRITICAL_THRESHOLD) {
+  if (leverage >= critAt) {
     severity = 'CRITICAL'
-  } else if (leverage >= WARNING_THRESHOLD) {
+  } else if (leverage >= warnAt) {
     severity = 'WARNING'
   }
 
