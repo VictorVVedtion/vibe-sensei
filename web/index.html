@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Sensei -- Chart Terminal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Controls bar -->
+  <div class="controls">
+    <span class="logo">Vibe Sensei</span>
+    <div class="separator"></div>
+    <select class="symbol-select" id="symbolSelect"></select>
+    <div class="separator"></div>
+    <div class="tf-group" id="tfGroup">
+      <button class="tf-btn" data-resolution="1">1m</button>
+      <button class="tf-btn" data-resolution="5">5m</button>
+      <button class="tf-btn" data-resolution="15">15m</button>
+      <button class="tf-btn active" data-resolution="60">1H</button>
+      <button class="tf-btn" data-resolution="240">4H</button>
+      <button class="tf-btn" data-resolution="1D">1D</button>
+    </div>
+    <span class="loading-indicator" id="loadingIndicator">Loading...</span>
+  </div>
+
+  <!-- Chart area -->
+  <div class="chart-container" id="chartContainer"></div>
+
+  <!-- Info panel -->
+  <div class="info-panel">
+    <div class="brand"><strong>Vibe Sensei</strong> &mdash; powered by TradingView Lightweight Charts</div>
+    <div class="price-info">
+      <div class="ohlc-bar" id="ohlcBar"></div>
+      <span class="symbol-label" id="symbolLabel"></span>
+      <span class="last-price neutral" id="lastPrice">--</span>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
