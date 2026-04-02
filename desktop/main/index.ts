@@ -1,4 +1,5 @@
-import { app, BrowserWindow, Menu, ipcMain } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain, dialog, shell } from 'electron'
+import { execSync } from 'child_process'
 import * as path from 'path'
 import Store from 'electron-store'
 import { PtyManager } from './pty-manager'
@@ -38,6 +39,36 @@ let ptyManager: PtyManager | null = null
 
 const isDev = !app.isPackaged
 const isMac = process.platform === 'darwin'
+
+function checkBunRuntime(): boolean {
+  try {
+    execSync('bun --version', { stdio: 'pipe', timeout: 5000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function showBunMissingDialog(): Promise<void> {
+  const result = await dialog.showMessageBox({
+    type: 'error',
+    title: 'Bun Runtime Required',
+    message: 'Vibe Sensei requires Bun to run.',
+    detail:
+      'The Bun JavaScript runtime was not found on your system. ' +
+      'Vibe Sensei uses Bun to power its AI trading terminal.\n\n' +
+      'Install Bun from https://bun.sh',
+    buttons: ['Install Now', 'Quit'],
+    defaultId: 0,
+    cancelId: 1,
+  })
+
+  if (result.response === 0) {
+    await shell.openExternal('https://bun.sh')
+  }
+
+  app.quit()
+}
 
 function getSavedWindowState(): WindowState {
   return store.get('windowState')
@@ -168,7 +199,13 @@ function setupIpcHandlers(): void {
   setupIpcRouter(() => mainWindow)
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Check Bun availability before proceeding
+  if (!checkBunRuntime()) {
+    await showBunMissingDialog()
+    return
+  }
+
   createWindow()
   setupIpcHandlers()
   setupPty()

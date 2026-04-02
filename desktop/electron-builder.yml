@@ -1,0 +1,60 @@
+appId: com.vibesensei.desktop
+productName: Vibe Sensei
+copyright: Copyright 2026 Vibe Sensei
+
+directories:
+  output: release
+
+files:
+  - main/
+  - shared/
+  - renderer/dist/
+  - node_modules/
+  - package.json
+
+extraResources:
+  - from: resources/bun-cli/
+    to: bun-cli
+    filter:
+      - "**/*"
+
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.finance
+  darkModeSupport: true
+  icon: assets/icon.png
+  entitlements: null
+  entitlementsInherit: null
+
+dmg:
+  title: "${productName} ${version}"
+  artifactName: "${productName}-${version}-mac.${ext}"
+
+win:
+  target:
+    - nsis
+    - portable
+  icon: assets/icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: "${productName}-${version}-setup.${ext}"
+
+portable:
+  artifactName: "${productName}-${version}-portable.${ext}"
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Finance
+  icon: assets/icon.png
+
+appImage:
+  artifactName: "${productName}-${version}.${ext}"
+
+deb:
+  artifactName: "${productName}-${version}.${ext}"

@@ -18,3 +18,8 @@ dist/
 !.selfmodel/state/.gitkeep
 !.selfmodel/artifacts/.gitkeep
 .claude/worktrees/
+
+# desktop build outputs
+desktop/release/
+desktop/dist/
+desktop/resources/bun-cli/
