@@ -22,6 +22,12 @@ export type PatternType =
   | 'good_discipline'
   | 'fomo'
   | 'general'
+  | 'time_of_day_bias'
+  | 'holding_period_bias'
+  | 'instrument_bias'
+  | 'position_size_bad'
+  | 'averaging_down_bad'
+  | 'pyramid_good'
 
 export interface DiaryEntry {
   id: string
@@ -32,6 +38,14 @@ export interface DiaryEntry {
   observation: string
   patternType: PatternType
   outcome?: 'profit' | 'loss' | 'pending'
+  /** UTC hour of the trade (0-23) */
+  tradeUtcHour?: number
+  /** Hold duration in milliseconds */
+  holdDurationMs?: number
+  /** Position size percentile relative to user average (0-100) */
+  positionSizePercentile?: number
+  /** Realized or unrealized profit/loss percentage */
+  profitPercent?: number
 }
 
 export interface TradeEvent {
@@ -61,6 +75,10 @@ interface SerializedEntry {
   observation: string
   patternType: PatternType
   outcome?: 'profit' | 'loss' | 'pending'
+  tradeUtcHour?: number
+  holdDurationMs?: number
+  positionSizePercentile?: number
+  profitPercent?: number
 }
 
 interface DiaryFile {
@@ -171,6 +189,12 @@ const PATTERN_LABELS: Record<PatternType, string> = {
   good_discipline: 'hold through drawdowns with discipline',
   fomo: 'FOMO-stack buys on the same asset',
   general: 'trade without a strong pattern',
+  time_of_day_bias: 'trade poorly during certain hours',
+  holding_period_bias: 'lose on certain holding periods',
+  instrument_bias: 'lose consistently on certain instruments',
+  position_size_bad: 'lose more on larger positions',
+  averaging_down_bad: 'average down into losing positions',
+  pyramid_good: 'successfully pyramid into winners',
 }
 
 const PATTERN_ADVICE: Record<PatternType, string> = {
@@ -181,6 +205,12 @@ const PATTERN_ADVICE: Record<PatternType, string> = {
   good_discipline: 'Keep this up. Patience is your edge.',
   fomo: 'Set your position once and walk away.',
   general: 'Keep building your trade journal for deeper insights.',
+  time_of_day_bias: 'Avoid trading during your weakest session.',
+  holding_period_bias: 'Adjust your strategy for the timeframe that loses.',
+  instrument_bias: 'Stop trading the instruments where you consistently lose.',
+  position_size_bad: 'Scale down position sizes until discipline improves.',
+  averaging_down_bad: 'Set a hard rule: no adding to losers within 2 hours.',
+  pyramid_good: 'Keep pyramiding winners — this is working for you.',
 }
 
 function buildPatternSummary(entries: DiaryEntry[], masterId: string): string | null {
@@ -189,6 +219,8 @@ function buildPatternSummary(entries: DiaryEntry[], masterId: string): string | 
   const counts: Record<PatternType, number> = {
     early_exit: 0, late_entry: 0, oversize: 0,
     revenge_trade: 0, good_discipline: 0, fomo: 0, general: 0,
+    time_of_day_bias: 0, holding_period_bias: 0, instrument_bias: 0,
+    position_size_bad: 0, averaging_down_bad: 0, pyramid_good: 0,
   }
   for (const entry of entries) {
     counts[entry.patternType]++
@@ -215,6 +247,24 @@ function determineOutcome(trade: TradeEvent): 'profit' | 'loss' | 'pending' {
   return trade.profitPercent > 0 ? 'profit' : 'loss'
 }
 
+// ─── Position percentile helper ─────────────────────────────────────────────
+
+function computePositionPercentile(portfolioPercent: number, entries: DiaryEntry[]): number {
+  const sizes = entries
+    .filter(e => e.positionSizePercentile !== undefined)
+    .map(e => e.positionSizePercentile!)
+
+  if (sizes.length === 0) return 50 // first trade defaults to median
+
+  const sorted = [...sizes].sort((a, b) => a - b)
+  let rank = 0
+  for (const s of sorted) {
+    if (s < portfolioPercent) rank++
+    else break
+  }
+  return Math.round((rank / sorted.length) * 100)
+}
+
 // ─── Diary class ─────────────────────────────────────────────────────────────
 
 const DEFAULT_STORE_DIR = join(homedir(), '.vibe-sensei')
@@ -234,15 +284,20 @@ export class GuardianDiary {
     const recent = this.getRecentEntries(20)
     const { patternType, observation } = classifyTrade(trade, recent)
 
+    const now = new Date()
     const entry: DiaryEntry = {
       id: randomUUID(),
       masterId,
-      timestamp: new Date(),
+      timestamp: now,
       tradeSymbol: trade.symbol,
       tradeSide: trade.side,
       observation,
       patternType,
       outcome: determineOutcome(trade),
+      tradeUtcHour: now.getUTCHours(),
+      holdDurationMs: trade.timeSinceLastClose,
+      positionSizePercentile: computePositionPercentile(trade.portfolioPercent, this.entries),
+      profitPercent: trade.profitPercent,
     }
 
     this.entries.push(entry)
@@ -319,6 +374,10 @@ function serializeEntry(entry: DiaryEntry): SerializedEntry {
     observation: entry.observation,
     patternType: entry.patternType,
     outcome: entry.outcome,
+    tradeUtcHour: entry.tradeUtcHour,
+    holdDurationMs: entry.holdDurationMs,
+    positionSizePercentile: entry.positionSizePercentile,
+    profitPercent: entry.profitPercent,
   }
 }
 
@@ -332,12 +391,18 @@ function deserializeEntry(raw: SerializedEntry): DiaryEntry {
     observation: raw.observation,
     patternType: raw.patternType,
     outcome: raw.outcome,
+    tradeUtcHour: raw.tradeUtcHour,
+    holdDurationMs: raw.holdDurationMs,
+    positionSizePercentile: raw.positionSizePercentile,
+    profitPercent: raw.profitPercent,
   }
 }
 
 const VALID_PATTERN_TYPES = new Set<string>([
   'early_exit', 'late_entry', 'oversize',
   'revenge_trade', 'good_discipline', 'fomo', 'general',
+  'time_of_day_bias', 'holding_period_bias', 'instrument_bias',
+  'position_size_bad', 'averaging_down_bad', 'pyramid_good',
 ])
 
 function isValidDiaryFile(data: unknown): data is DiaryFile {
