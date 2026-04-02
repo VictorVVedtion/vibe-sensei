@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, ipcMain, dialog, shell } from 'electron'
+import { app, BrowserWindow, Menu, ipcMain, dialog, shell, net } from 'electron'
 import { execSync } from 'child_process'
 import { unlinkSync } from 'fs'
 import * as path from 'path'
@@ -40,6 +40,8 @@ const store = new Store<{ windowState: WindowState }>({
 let mainWindow: BrowserWindow | null = null
 let ptyManager: PtyManager | null = null
 let desktopBridge: DesktopBridge | null = null
+let ptyReady = false
+let ptyReadyPollTimer: ReturnType<typeof setInterval> | null = null
 
 // Bridge file lives in the OS temp directory — unique per session via PID
 const bridgeFilePath = path.join(
@@ -163,6 +165,34 @@ function createWindow(): void {
   })
 }
 
+const UDF_PORT = 3456
+
+function pollUdfReady(): void {
+  if (ptyReadyPollTimer) {
+    clearInterval(ptyReadyPollTimer)
+    ptyReadyPollTimer = null
+  }
+  ptyReady = false
+
+  ptyReadyPollTimer = setInterval(() => {
+    const request = net.request(`http://localhost:${UDF_PORT}/time`)
+    request.on('response', (response) => {
+      if (response.statusCode === 200) {
+        ptyReady = true
+        if (ptyReadyPollTimer) {
+          clearInterval(ptyReadyPollTimer)
+          ptyReadyPollTimer = null
+        }
+        mainWindow?.webContents.send(IPC.PTY_READY)
+      }
+    })
+    request.on('error', () => {
+      // UDF server not up yet — keep polling
+    })
+    request.end()
+  }, 500)
+}
+
 function setupPty(): void {
   ptyManager = new PtyManager()
 
@@ -187,7 +217,8 @@ function setupPty(): void {
   })
 
   ptyManager.onReady(() => {
-    mainWindow?.webContents.send(IPC.PTY_READY)
+    // PTY process started — begin polling UDF server for true readiness
+    pollUdfReady()
   })
 
   ptyManager.spawn()
@@ -203,45 +234,88 @@ function setupBridge(): void {
   desktopBridge.start()
 }
 
-const UDF_PORT = 3456
-
 function setupIpcHandlers(): void {
   // PTY handlers
   ipcMain.on(IPC.PTY_INPUT, (_event, data: string) => {
-    ptyManager?.write(data)
+    try {
+      ptyManager?.write(data)
+    } catch (err) {
+      console.error('[IPC] PTY input error:', err)
+    }
   })
 
   ipcMain.on(IPC.PTY_RESIZE, (_event, cols: number, rows: number) => {
-    ptyManager?.resize(cols, rows)
+    try {
+      ptyManager?.resize(cols, rows)
+    } catch (err) {
+      console.error('[IPC] PTY resize error:', err)
+    }
   })
 
   ipcMain.on(IPC.PTY_RESTART, () => {
-    if (!ptyManager) return
-    ptyManager.kill()
-    setupPty()
+    try {
+      if (!ptyManager) return
+      ptyManager.kill()
+      setupPty()
+    } catch (err) {
+      console.error('[IPC] PTY restart error:', err)
+    }
   })
 
-  ipcMain.handle(IPC.UDF_PORT, () => UDF_PORT)
+  ipcMain.handle(IPC.UDF_PORT, () => {
+    try {
+      return UDF_PORT
+    } catch (err) {
+      console.error('[IPC] UDF port error:', err)
+      return null
+    }
+  })
+
+  ipcMain.handle(IPC.PTY_IS_READY, () => {
+    try {
+      return ptyReady
+    } catch (err) {
+      console.error('[IPC] PTY isReady error:', err)
+      return false
+    }
+  })
 
   // Window control handlers
   ipcMain.on(IPC.WINDOW_MINIMIZE, () => {
-    mainWindow?.minimize()
+    try {
+      mainWindow?.minimize()
+    } catch (err) {
+      console.error('[IPC] Window minimize error:', err)
+    }
   })
 
   ipcMain.on(IPC.WINDOW_MAXIMIZE, () => {
-    if (mainWindow?.isMaximized()) {
-      mainWindow.unmaximize()
-    } else {
-      mainWindow?.maximize()
+    try {
+      if (mainWindow?.isMaximized()) {
+        mainWindow.unmaximize()
+      } else {
+        mainWindow?.maximize()
+      }
+    } catch (err) {
+      console.error('[IPC] Window maximize error:', err)
     }
   })
 
   ipcMain.on(IPC.WINDOW_CLOSE, () => {
-    mainWindow?.close()
+    try {
+      mainWindow?.close()
+    } catch (err) {
+      console.error('[IPC] Window close error:', err)
+    }
   })
 
   ipcMain.handle(IPC.WINDOW_IS_MAXIMIZED, () => {
-    return mainWindow?.isMaximized() ?? false
+    try {
+      return mainWindow?.isMaximized() ?? false
+    } catch (err) {
+      console.error('[IPC] Window isMaximized error:', err)
+      return false
+    }
   })
 
   // Guardian & Trading IPC router
@@ -268,8 +342,12 @@ app.whenReady().then(async () => {
   }
 
   // Guardian alert notifications
-  ipcMain.on('guardian:alert:notify', (_event, alert: { severity: string; masterName: string; message: string }) => {
-    showGuardianNotification(alert)
+  ipcMain.on(IPC.GUARDIAN_ALERT_NOTIFY, (_event, alert: { severity: string; masterName: string; message: string }) => {
+    try {
+      showGuardianNotification(alert)
+    } catch (err) {
+      console.error('[IPC] Guardian alert notify error:', err)
+    }
   })
 
   app.on('activate', () => {
@@ -286,6 +364,11 @@ app.on('will-quit', () => {
 })
 
 app.on('window-all-closed', () => {
+  if (ptyReadyPollTimer) {
+    clearInterval(ptyReadyPollTimer)
+    ptyReadyPollTimer = null
+  }
+
   ptyManager?.kill()
   ptyManager = null
 
