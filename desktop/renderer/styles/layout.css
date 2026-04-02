@@ -1,0 +1,289 @@
+/* Vibe Sensei Desktop — Multi-Panel Trading Terminal Layout */
+
+/* ── Root Layout Grid ── */
+
+.layout-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #0a1a14;
+  color: #e0e0e0;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+}
+
+/* ── Panel Grid (middle row) ── */
+
+.panel-grid {
+  display: grid;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Panel Containers ── */
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  transition: box-shadow 0.2s ease;
+}
+
+.panel.focused {
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 136, 0.35);
+}
+
+.panel-terminal {
+  background: #0a0a0a;
+}
+
+.panel-chart {
+  background: #0a2a1f;
+}
+
+.panel-sidebar {
+  background: #0d1a14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Sidebar Placeholder ── */
+
+.sidebar-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #3a5a4a;
+  font-size: 13px;
+  user-select: none;
+}
+
+.sidebar-placeholder .icon {
+  font-size: 24px;
+  opacity: 0.5;
+}
+
+.sidebar-placeholder .label {
+  font-size: 11px;
+  color: #2a4a3a;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ── Dividers ── */
+
+.divider {
+  position: relative;
+  background: #1a3a2a;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.divider::after {
+  content: '';
+  position: absolute;
+  transition: background 0.15s ease;
+}
+
+.divider-horizontal {
+  width: 4px;
+  cursor: col-resize;
+}
+
+.divider-horizontal::after {
+  top: 0;
+  bottom: 0;
+  left: 1px;
+  width: 2px;
+  background: #1a4a3a;
+}
+
+.divider-horizontal:hover::after,
+.divider-horizontal.active::after {
+  background: #00ff88;
+}
+
+.divider-vertical {
+  height: 4px;
+  cursor: row-resize;
+}
+
+.divider-vertical::after {
+  left: 0;
+  right: 0;
+  top: 1px;
+  height: 2px;
+  background: #1a4a3a;
+}
+
+.divider-vertical:hover::after,
+.divider-vertical.active::after {
+  background: #00ff88;
+}
+
+/* ── Title Bar ── */
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  background: #0d1a14;
+  border-bottom: 1px solid #1a3a2a;
+  -webkit-app-region: drag;
+  user-select: none;
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+
+.title-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+/* macOS: add left padding for traffic lights */
+.title-bar.macos .title-bar-left {
+  padding-left: 68px;
+}
+
+.title-bar .app-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #00ff88;
+  letter-spacing: 0.5px;
+}
+
+.title-bar .app-icon {
+  font-size: 16px;
+}
+
+/* ── Window Controls (Windows/Linux) ── */
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  -webkit-app-region: no-drag;
+}
+
+.window-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  color: #809088;
+  cursor: pointer;
+  font-size: 10px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.window-control-btn:hover {
+  background: #1a3a2a;
+  color: #e0e0e0;
+}
+
+.window-control-btn.close:hover {
+  background: #c42b1c;
+  color: #ffffff;
+}
+
+.window-control-btn svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+}
+
+/* ── Status Bar ── */
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  background: #0d1a14;
+  border-top: 1px solid #1a3a2a;
+  padding: 0 12px;
+  font-size: 11px;
+  color: #608070;
+  gap: 16px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.status-bar .status-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-bar .connection-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-bar .connection-dot.connected {
+  background: #00ff88;
+  box-shadow: 0 0 4px rgba(0, 255, 136, 0.4);
+}
+
+.status-bar .connection-dot.reconnecting {
+  background: #f1fa8c;
+  box-shadow: 0 0 4px rgba(241, 250, 140, 0.4);
+  animation: pulse-dot 1.5s infinite;
+}
+
+.status-bar .connection-dot.disconnected {
+  background: #ff4444;
+  box-shadow: 0 0 4px rgba(255, 68, 68, 0.4);
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.status-bar .mode-badge {
+  background: #143d2e;
+  border: 1px solid #1a5a42;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  color: #00d4aa;
+  letter-spacing: 0.3px;
+}
+
+.status-bar .shortcuts {
+  margin-left: auto;
+  color: #3a5a4a;
+  font-size: 10px;
+}
+
+.status-bar .shortcut-key {
+  color: #506860;
+}
+
+.status-bar .pair-info {
+  color: #809088;
+}
+
+.status-bar .last-price-val {
+  font-weight: 600;
+}
+
+.status-bar .last-price-val.up {
+  color: #00ff88;
+}
+
+.status-bar .last-price-val.down {
+  color: #ff4444;
+}
