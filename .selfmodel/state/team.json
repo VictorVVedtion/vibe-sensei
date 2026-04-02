@@ -1,0 +1,99 @@
+{
+  "current_sprint": 0,
+  "session_count": 0,
+  "created": "2026-04-01T17:30:00Z",
+  "agents": {
+    "gemini": {
+      "status": "idle",
+      "role": "frontend_colleague",
+      "sprints_completed": 0,
+      "avg_score": 0,
+      "last_sprint": null,
+      "last_score": null
+    },
+    "codex": {
+      "status": "idle",
+      "role": "backend_intern",
+      "sprints_completed": 0,
+      "avg_score": 0,
+      "last_sprint": null,
+      "last_score": null
+    },
+    "opus": {
+      "status": "idle",
+      "role": "senior_fullstack",
+      "sprints_completed": 0,
+      "avg_score": 0,
+      "last_sprint": null,
+      "last_score": null
+    },
+    "researcher": {
+      "status": "idle",
+      "role": "researcher",
+      "sprints_completed": 0,
+      "avg_score": 0,
+      "last_sprint": null,
+      "last_score": null,
+      "config": {
+        "engine": "gemini-cli",
+        "model": "gemini-3.1-pro-preview",
+        "timeout": 300,
+        "requires_worktree": false
+      }
+    },
+    "evaluator": {
+      "status": "idle",
+      "role": "independent_evaluator",
+      "evaluations_completed": 0,
+      "avg_score_given": 0,
+      "last_sprint": null,
+      "channel": "opus-agent",
+      "fallback_channel": "gemini",
+      "config": {
+        "timeout": 120,
+        "requires_worktree": false,
+        "skeptical_prompt": true
+      }
+    },
+    "e2e": {
+      "status": "idle",
+      "role": "e2e_verifier",
+      "verifications_completed": 0,
+      "pass_rate": 0,
+      "last_sprint": null,
+      "config": {
+        "engine": "opus-agent",
+        "timeout": 300,
+        "requires_worktree": true,
+        "fallback_engine": "gemini-cli",
+        "protocol_version": "2.0"
+      },
+      "flaky_registry": [],
+      "baseline_metrics": {
+        "build_time_seconds": null,
+        "test_count": null,
+        "bundle_size_kb": null,
+        "coverage_percent": null,
+        "npm_audit_critical": null,
+        "recorded_at_sprint": null
+      }
+    }
+  },
+  "evolution": {
+    "last_review_sprint": 0,
+    "protocol_version": "2.0.0",
+    "experiments_active": []
+  },
+  "detected_stack": {
+    "type": "typescript",
+    "stacks": ["bun", "typescript", "react", "ink"],
+    "frameworks": ["anthropic-sdk", "react-ink", "commander"],
+    "test_tools": []
+  },
+  "worktrees_active": [],
+  "meta": {
+    "state_version": 1,
+    "last_modified": "2026-04-01T17:30:00Z",
+    "last_modified_by": "selfmodel-init"
+  }
+}

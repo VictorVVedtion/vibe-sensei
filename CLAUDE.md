@@ -113,3 +113,18 @@ All `feature('FLAG_NAME')` calls come from `bun:bundle` (a build-time API). In t
 - **React Compiler output** — Components have decompiled memoization boilerplate (`const $ = _c(N)`). This is normal.
 - **`bun:bundle` import** — In `src/main.tsx` and other files, `import { feature } from 'bun:bundle'` works at build time. At dev-time, the polyfill in `cli.tsx` provides it.
 - **`src/` path alias** — tsconfig maps `src/*` to `./src/*`. Imports like `import { ... } from 'src/utils/...'` are valid.
+
+## Selfmodel — Multi-AI Agent Orchestration
+
+This project uses [selfmodel](https://github.com/VictorVVedtion/selfmodel) for multi-agent development.
+
+**Commands:**
+- `/selfmodel:sprint` — Create a Sprint contract and dispatch an agent
+- `/selfmodel:review` — Review delivered work (Quick Scan + Evaluator + E2E)
+- `/selfmodel:status` — View team status and active sprints
+- `/selfmodel:plan` — Create multi-phase orchestration plan
+- `/selfmodel:loop` — Auto-orchestration loop
+
+**Agents:** Leader (Opus), Gemini (frontend), Codex (single-file), Opus (multi-file), Researcher, Evaluator, E2E
+
+**Iron Rules:** No TODOs, no mocks, no empty catch blocks, no hardcoded secrets, complete error handling, functions <50 lines.
