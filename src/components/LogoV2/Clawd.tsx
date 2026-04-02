@@ -31,45 +31,47 @@ type Segments = {
   /** row 2 right (no bg): body curve + arm */
   r2R: string;
 };
-// Vibe Sensei: trading-themed mascot (candlestick-inspired)
+// Vibe Sensei: torii gate (⛩️) — the gateway to trading wisdom
+// 3 rows: top beam, gate pillars with kanji-style center, base
 const POSES: Record<ClawdPose, Segments> = {
   default: {
-    r1L: ' ╱',
-    r1E: '█▓▒░█',
-    r1R: '╲',
-    r2L: '▕▎',
-    r2R: '▎▏'
+    r1L: ' ▄',
+    r1E: '▀▀▀▀▀',
+    r1R: '▄',
+    r2L: ' █',
+    r2R: '█ '
   },
   'look-left': {
-    r1L: ' ╱',
-    r1E: '◀▓▒░█',
-    r1R: '╲',
-    r2L: '▕▎',
-    r2R: '▎▏'
+    r1L: ' ▄',
+    r1E: '▀▀▀▀▀',
+    r1R: '▄',
+    r2L: '▐█',
+    r2R: '█ '
   },
   'look-right': {
-    r1L: ' ╱',
-    r1E: '█▓▒░▶',
-    r1R: '╲',
-    r2L: '▕▎',
-    r2R: '▎▏'
+    r1L: ' ▄',
+    r1E: '▀▀▀▀▀',
+    r1R: '▄',
+    r2L: ' █',
+    r2R: '█▌'
   },
   'arms-up': {
-    r1L: '╱╱',
-    r1E: '█▓▒░█',
-    r1R: '╲╲',
-    r2L: ' ▎',
-    r2R: '▎ '
+    r1L: '▗▄',
+    r1E: '▀▀▀▀▀',
+    r1R: '▄▖',
+    r2L: ' █',
+    r2R: '█ '
   }
 };
 
 // Apple Terminal uses a bg-fill trick (see below), so only eye poses make
 // sense. Arm poses fall back to default.
+// Apple Terminal: simplified torii
 const APPLE_EYES: Record<ClawdPose, string> = {
-  default: ' ▗   ▖ ',
-  'look-left': ' ▘   ▘ ',
-  'look-right': ' ▝   ▝ ',
-  'arms-up': ' ▗   ▖ '
+  default: ' ▄▀▀▀▄ ',
+  'look-left': ' ▄▀▀▀▄ ',
+  'look-right': ' ▄▀▀▀▄ ',
+  'arms-up': ' ▄▀▀▀▄ '
 };
 export function Clawd(t0) {
   const $ = _c(26);
@@ -141,7 +143,7 @@ export function Clawd(t0) {
   }
   let t8;
   if ($[16] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = <Text color="clawd_body" backgroundColor="clawd_background">█████</Text>;
+    t8 = <Text color="clawd_body" backgroundColor="clawd_background"> 師 </Text>;
     $[16] = t8;
   } else {
     t8 = $[16];
@@ -165,7 +167,7 @@ export function Clawd(t0) {
   }
   let t11;
   if ($[22] === Symbol.for("react.memo_cache_sentinel")) {
-    t11 = <Text color="clawd_body">{"  "}╲╱ ╲╱{"  "}</Text>;
+    t11 = <Text color="clawd_body">{"  "}▀▀ ▀▀{"  "}</Text>;
     $[22] = t11;
   } else {
     t11 = $[22];
@@ -220,8 +222,8 @@ function AppleTerminalClawd(t0) {
   let t6;
   let t7;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t6 = <Text backgroundColor="clawd_body">{" ".repeat(7)}</Text>;
-    t7 = <Text color="clawd_body">▘▘ ▝▝</Text>;
+    t6 = <Text backgroundColor="clawd_body">{" 師  "}</Text>;
+    t7 = <Text color="clawd_body">▀▀ ▀▀</Text>;
     $[6] = t6;
     $[7] = t7;
   } else {
