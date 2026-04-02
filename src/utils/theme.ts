@@ -158,8 +158,8 @@ const lightTheme: Theme = {
   // Chrome colors
   chromeYellow: 'rgb(251,188,4)', // Chrome yellow
   // TUI V2 colors
-  clawd_body: 'rgb(0,200,120)',
-  clawd_background: 'rgb(0,0,0)',
+  clawd_body: 'rgb(14,77,100)', // Abyss: octopus deep teal
+  clawd_background: 'rgb(10,22,40)', // Abyss: deepest background
   userMessageBackground: 'rgb(240, 240, 240)', // Slightly darker grey for optimal contrast
   userMessageBackgroundHover: 'rgb(252, 252, 252)', // ≥250 to quantize distinct from base at 256-color level
   messageActionsBackground: 'rgb(232, 236, 244)', // cool gray — darker than userMsg 240 (visible on white), slight blue toward `suggestion`
@@ -240,8 +240,8 @@ const lightAnsiTheme: Theme = {
   // Chrome colors
   chromeYellow: 'ansi:yellow', // Chrome yellow
   // TUI V2 colors
-  clawd_body: 'ansi:greenBright',
-  clawd_background: 'ansi:black',
+  clawd_body: 'ansi:cyan', // Abyss: closest ANSI to deep teal
+  clawd_background: 'ansi:black', // Abyss: deepest background (ANSI limit)
   userMessageBackground: 'ansi:white',
   userMessageBackgroundHover: 'ansi:whiteBright',
   messageActionsBackground: 'ansi:white',
@@ -321,8 +321,8 @@ const darkAnsiTheme: Theme = {
   // Chrome colors
   chromeYellow: 'ansi:yellowBright', // Chrome yellow
   // TUI V2 colors
-  clawd_body: 'ansi:greenBright',
-  clawd_background: 'ansi:black',
+  clawd_body: 'ansi:cyanBright', // Abyss: closest ANSI to deep teal
+  clawd_background: 'ansi:black', // Abyss: deepest background (ANSI limit)
   userMessageBackground: 'ansi:blackBright',
   userMessageBackgroundHover: 'ansi:white',
   messageActionsBackground: 'ansi:blackBright',
@@ -402,8 +402,8 @@ const lightDaltonizedTheme: Theme = {
   // Chrome colors
   chromeYellow: 'rgb(251,188,4)', // Chrome yellow
   // TUI V2 colors
-  clawd_body: 'rgb(0,200,120)',
-  clawd_background: 'rgb(0,0,0)',
+  clawd_body: 'rgb(14,77,100)', // Abyss: octopus deep teal
+  clawd_background: 'rgb(10,22,40)', // Abyss: deepest background
   userMessageBackground: 'rgb(220, 220, 220)', // Slightly darker grey for optimal contrast
   userMessageBackgroundHover: 'rgb(232, 232, 232)', // ≥230 to quantize distinct from base at 256-color level
   messageActionsBackground: 'rgb(210, 216, 226)', // cool gray — darker than userMsg 220, slight blue
@@ -458,9 +458,9 @@ const darkTheme: Theme = {
   suggestion: 'rgb(177,185,249)', // Light blue-purple
   remember: 'rgb(177,185,249)', // Light blue-purple
   background: 'rgb(0,204,204)', // Bright cyan
-  success: 'rgb(78,186,101)', // Bright green
-  error: 'rgb(255,107,128)', // Bright red
-  warning: 'rgb(255,193,7)', // Bright amber
+  success: 'rgb(0,229,160)', // Abyss: reef green (profit)
+  error: 'rgb(255,77,106)', // Abyss: coral red (loss)
+  warning: 'rgb(255,187,51)', // Abyss: angler light
   merged: 'rgb(175,135,255)', // Electric violet (matches autoAccept)
   warningShimmer: 'rgb(255,223,57)', // Lighter amber for shimmer
   diffAdded: 'rgb(34,92,43)', // Dark green
@@ -483,21 +483,21 @@ const darkTheme: Theme = {
   // Chrome colors
   chromeYellow: 'rgb(251,188,4)', // Chrome yellow
   // TUI V2 colors
-  clawd_body: 'rgb(0,200,120)',
-  clawd_background: 'rgb(0,0,0)',
-  userMessageBackground: 'rgb(55, 55, 55)', // Lighter grey for better visual contrast
-  userMessageBackgroundHover: 'rgb(70, 70, 70)',
-  messageActionsBackground: 'rgb(44, 50, 62)', // cool gray, slight blue
-  selectionBg: 'rgb(38, 79, 120)', // classic dark-mode selection blue (VS Code dark default); light fgs stay readable
-  bashMessageBackgroundColor: 'rgb(65, 60, 65)',
+  clawd_body: 'rgb(14,77,100)', // Abyss: octopus deep teal
+  clawd_background: 'rgb(10,22,40)', // Abyss: deepest background
+  userMessageBackground: 'rgb(15, 25, 36)', // Abyss: bg-surface
+  userMessageBackgroundHover: 'rgb(24, 34, 51)', // Abyss: bg-elevated
+  messageActionsBackground: 'rgb(24, 34, 51)', // Abyss: bg-elevated
+  selectionBg: 'rgb(0, 212, 255)', // Abyss: accent-primary with transparency handled at use-site
+  bashMessageBackgroundColor: 'rgb(15, 25, 36)', // Abyss: bg-surface
 
-  memoryBackgroundColor: 'rgb(55, 65, 70)',
-  rate_limit_fill: 'rgb(177,185,249)', // Light blue-purple
-  rate_limit_empty: 'rgb(80,83,112)', // Medium blue-purple
+  memoryBackgroundColor: 'rgb(24, 34, 51)', // Abyss: bg-elevated
+  rate_limit_fill: 'rgb(0,212,255)', // Abyss: bioluminescent cyan
+  rate_limit_empty: 'rgb(37,53,80)', // Abyss: border
   fastMode: 'rgb(255,120,20)', // Electric orange for dark bg
   fastModeShimmer: 'rgb(255,165,70)', // Lighter orange for shimmer
-  briefLabelYou: 'rgb(122,180,232)', // Light blue
-  briefLabelClaude: 'rgb(215,119,87)', // Brand orange
+  briefLabelYou: 'rgb(0,212,255)', // Abyss: bioluminescent cyan
+  briefLabelClaude: 'rgb(212,168,67)', // Abyss: sensei gold
   rainbow_red: 'rgb(235,95,87)',
   rainbow_orange: 'rgb(245,139,87)',
   rainbow_yellow: 'rgb(250,195,95)',
@@ -564,17 +564,17 @@ const darkDaltonizedTheme: Theme = {
   // Chrome colors
   chromeYellow: 'rgb(251,188,4)', // Chrome yellow
   // TUI V2 colors
-  clawd_body: 'rgb(0,200,120)',
-  clawd_background: 'rgb(0,0,0)',
-  userMessageBackground: 'rgb(55, 55, 55)', // Lighter grey for better visual contrast
-  userMessageBackgroundHover: 'rgb(70, 70, 70)',
-  messageActionsBackground: 'rgb(44, 50, 62)', // cool gray, slight blue
-  selectionBg: 'rgb(38, 79, 120)', // classic dark-mode selection blue (VS Code dark default); light fgs stay readable
-  bashMessageBackgroundColor: 'rgb(65, 60, 65)',
+  clawd_body: 'rgb(14,77,100)', // Abyss: octopus deep teal
+  clawd_background: 'rgb(10,22,40)', // Abyss: deepest background
+  userMessageBackground: 'rgb(15, 25, 36)', // Abyss: bg-surface
+  userMessageBackgroundHover: 'rgb(24, 34, 51)', // Abyss: bg-elevated
+  messageActionsBackground: 'rgb(24, 34, 51)', // Abyss: bg-elevated
+  selectionBg: 'rgb(0, 212, 255)', // Abyss: accent-primary
+  bashMessageBackgroundColor: 'rgb(15, 25, 36)', // Abyss: bg-surface
 
-  memoryBackgroundColor: 'rgb(55, 65, 70)',
-  rate_limit_fill: 'rgb(153,204,255)', // Light blue
-  rate_limit_empty: 'rgb(69,92,115)', // Dark blue
+  memoryBackgroundColor: 'rgb(24, 34, 51)', // Abyss: bg-elevated
+  rate_limit_fill: 'rgb(0,212,255)', // Abyss: bioluminescent cyan
+  rate_limit_empty: 'rgb(37,53,80)', // Abyss: border
   fastMode: 'rgb(255,120,20)', // Electric orange for dark bg (color-blind safe)
   fastModeShimmer: 'rgb(255,165,70)', // Lighter orange for shimmer
   briefLabelYou: 'rgb(122,180,232)', // Light blue

@@ -112,7 +112,7 @@
       result.push({
         time: udf.t[i],
         value: udf.v[i],
-        color: isUp ? 'rgba(34, 197, 94, 0.35)' : 'rgba(239, 68, 68, 0.35)',
+        color: isUp ? 'rgba(0, 229, 160, 0.35)' : 'rgba(255, 77, 106, 0.35)',
       });
     }
     return result;
@@ -125,24 +125,24 @@
       width: chartContainer.clientWidth,
       height: chartContainer.clientHeight,
       layout: {
-        background: { type: 'solid', color: '#1a1a2e' },
-        textColor: '#e0e0e0',
+        background: { type: 'solid', color: '#0A1628' },
+        textColor: '#E2E4ED',
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#2a2a4a' },
-        horzLines: { color: '#2a2a4a' },
+        vertLines: { color: '#253550' },
+        horzLines: { color: '#253550' },
       },
       crosshair: {
         mode: LightweightCharts.CrosshairMode.Normal,
-        vertLine: { color: '#4a4a7a', width: 1, style: LightweightCharts.LineStyle.Dashed },
-        horzLine: { color: '#4a4a7a', width: 1, style: LightweightCharts.LineStyle.Dashed },
+        vertLine: { color: '#7B8AA0', width: 1, style: LightweightCharts.LineStyle.Dashed },
+        horzLine: { color: '#7B8AA0', width: 1, style: LightweightCharts.LineStyle.Dashed },
       },
       rightPriceScale: {
-        borderColor: '#2a2a4a',
+        borderColor: '#253550',
       },
       timeScale: {
-        borderColor: '#2a2a4a',
+        borderColor: '#253550',
         timeVisible: true,
         secondsVisible: false,
       },
@@ -150,12 +150,12 @@
     });
 
     candleSeries = chart.addCandlestickSeries({
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderUpColor: '#22c55e',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      upColor: '#00E5A0',
+      downColor: '#FF4D6A',
+      borderUpColor: '#00E5A0',
+      borderDownColor: '#FF4D6A',
+      wickUpColor: '#00E5A0',
+      wickDownColor: '#FF4D6A',
     });
 
     volumeSeries = chart.addHistogramSeries({
@@ -195,7 +195,7 @@
       return;
     }
     var isUp = candle.close >= candle.open;
-    var color = isUp ? '#22c55e' : '#ef4444';
+    var color = isUp ? '#00E5A0' : '#FF4D6A';
     ohlcBar.innerHTML =
       '<span><span class="label">O</span> <span style="color:' + color + '">' + formatPrice(candle.open) + '</span></span>' +
       '<span><span class="label">H</span> <span style="color:' + color + '">' + formatPrice(candle.high) + '</span></span>' +
@@ -444,7 +444,7 @@
     var marker = {
       time: time,
       position: isBuy ? 'belowBar' : 'aboveBar',
-      color: isBuy ? '#22c55e' : '#ef4444',
+      color: isBuy ? '#00E5A0' : '#FF4D6A',
       shape: isBuy ? 'arrowUp' : 'arrowDown',
       text: text || (isBuy ? 'BUY' : 'SELL') + ' @ ' + formatPrice(price),
     };
