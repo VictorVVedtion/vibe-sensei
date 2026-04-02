@@ -1,18 +1,51 @@
 /**
- * Native Installer - Public API
+ * Native Installer — Stubbed for Vibe Sensei
  *
- * This is the barrel file that exports only the functions actually used by external modules.
- * External modules should only import from this file.
+ * The native installer handled Anthropic's binary distribution.
+ * All exports are no-op stubs to keep import sites intact.
  */
 
-// Re-export only the functions that are actually used
-export {
-  checkInstall,
-  cleanupNpmInstallations,
-  cleanupOldVersions,
-  cleanupShellAliases,
-  installLatest,
-  lockCurrentVersion,
-  removeInstalledSymlink,
-  type SetupMessage,
-} from './installer.js'
+export type SetupMessage = {
+  message: string
+  userActionRequired: boolean
+  type: 'path' | 'alias' | 'info' | 'error'
+}
+
+export async function checkInstall(
+  _force: boolean = false,
+): Promise<SetupMessage[]> {
+  return []
+}
+
+export async function cleanupNpmInstallations(): Promise<{
+  removed: number
+  errors: string[]
+  warnings: string[]
+}> {
+  return { removed: 0, errors: [], warnings: [] }
+}
+
+export async function cleanupOldVersions(): Promise<void> {}
+
+export async function cleanupShellAliases(): Promise<SetupMessage[]> {
+  return []
+}
+
+export function installLatest(
+  _channelOrVersion: string,
+  _forceReinstall: boolean = false,
+): Promise<{
+  latestVersion: string | null
+  wasUpdated: boolean
+  lockFailed?: boolean
+  lockHolderPid?: number
+}> {
+  return Promise.resolve({
+    latestVersion: null,
+    wasUpdated: false,
+  })
+}
+
+export async function lockCurrentVersion(): Promise<void> {}
+
+export async function removeInstalledSymlink(): Promise<void> {}
