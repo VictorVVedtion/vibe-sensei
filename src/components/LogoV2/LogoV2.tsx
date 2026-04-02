@@ -476,7 +476,7 @@ export function LogoV2() {
   }
   let t23;
   if ($[56] !== leftWidth || $[57] !== t18 || $[58] !== t22) {
-    t23 = <Box flexDirection="column" width={leftWidth} justifyContent="space-between" alignItems="center" minHeight={9}>{t18}{t19}{t22}</Box>;
+    t23 = <Box flexDirection="column" width={leftWidth} justifyContent="space-between" alignItems="center" minHeight={12}>{t18}{t19}{t22}</Box>;
     $[56] = leftWidth;
     $[57] = t18;
     $[58] = t22;
