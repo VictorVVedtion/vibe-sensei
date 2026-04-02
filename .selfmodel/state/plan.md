@@ -89,7 +89,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 9: TradingView UDF Server
 - Agent: opus
 - Dependencies: Sprint 1
-- Status: PENDING
+- Status: MERGED
 - Priority: P1
 - Timeout: 180
 - Description: Create src/services/chart/udf-server.ts using Express. Implement TradingView UDF endpoints: /config, /symbol_info, /search, /symbols, /history, /time. Serve OHLCV data from CCXT. Support BTC/ETH/SOL on Binance. Run on port 3456 when --web flag is passed.
@@ -97,7 +97,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 10: Web Frontend with Lightweight Charts
 - Agent: gemini
 - Dependencies: Sprint 9
-- Status: PENDING
+- Status: ACTIVE
 - Priority: P1
 - Timeout: 180
 - Description: Create web/ directory with React frontend. Integrate TradingView Lightweight Charts (install lightweight-charts npm). Connect to UDF server for candle data. Add trade markers on chart (buy = green arrow, sell = red arrow). Include basic chat panel that mirrors terminal conversation. Serve as static files from Express server.
@@ -105,7 +105,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 11: Trade Card Screenshot Generator
 - Agent: codex
 - Dependencies: Sprint 2, Sprint 5
-- Status: PENDING
+- Status: ACTIVE
 - Priority: P2
 - Timeout: 120
 - Description: Create a /share command that generates a shareable trade card as a text block. Format: "Symbol | Side | Price | Guardian: Name (Rarity) | Thesis: [AI 1-liner] | R:R ratio". Output as copyable text suitable for Twitter/X. No image generation — pure text card that looks good when pasted.
@@ -113,7 +113,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 12: Guardian Evolution Diary
 - Agent: opus
 - Dependencies: Sprint 4, Sprint 5
-- Status: PENDING
+- Status: ACTIVE
 - Priority: P2
 - Timeout: 180
 - Description: Create src/buddy/diary.ts. After each trade (success or failure), guardian records an observation in SQLite (better-sqlite3). Schema: diary(id, master, timestamp, trade_id, observation, pattern_type). After 10+ entries, guardian can summarize observed patterns: "I've noticed you tend to exit winners too early." Surface diary insights as periodic guardian comments during quiet moments.
