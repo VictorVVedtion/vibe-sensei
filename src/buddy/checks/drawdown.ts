@@ -1,13 +1,15 @@
 /**
  * Drawdown check — warns when total unrealized PnL exceeds loss thresholds.
- * WARNING at >10% drawdown, CRITICAL at >20%.
+ * Default: WARNING at >10% drawdown, CRITICAL at >20%.
+ * With ThresholdConfig: uses dynamic values from archetype/stat/regime system.
  */
 
 import type { Position } from '../../services/exchange/types.js'
 import type { RiskAlert, Severity } from '../guardian.js'
+import type { ThresholdConfig } from '../thresholds.js'
 
-const WARNING_THRESHOLD = -10
-const CRITICAL_THRESHOLD = -20
+const DEFAULT_WARNING = -10
+const DEFAULT_CRITICAL = -20
 
 export function checkDrawdown(
   positions: Position[],
@@ -15,6 +17,7 @@ export function checkDrawdown(
   masterId: string,
   masterName: string,
   masterQuote: string,
+  thresholds?: ThresholdConfig,
 ): RiskAlert | null {
   if (positions.length === 0) return null
 
@@ -23,10 +26,13 @@ export function checkDrawdown(
     0,
   )
 
+  const warnAt = thresholds?.warn ?? DEFAULT_WARNING
+  const critAt = thresholds?.critical ?? DEFAULT_CRITICAL
+
   let severity: Severity | null = null
-  if (totalPnlPct <= CRITICAL_THRESHOLD) {
+  if (totalPnlPct <= critAt) {
     severity = 'CRITICAL'
-  } else if (totalPnlPct <= WARNING_THRESHOLD) {
+  } else if (totalPnlPct <= warnAt) {
     severity = 'WARNING'
   }
 
