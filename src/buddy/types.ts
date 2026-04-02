@@ -255,6 +255,10 @@ export const GHOST_WARNINGS = [
   { id: 'do_kwon', name: 'Do Kwon', trigger: 'arrogance', quote: "I don't debate the poor." },
   { id: 'su_zhu', name: 'Su Zhu / 3AC', trigger: 'excessive_leverage', quote: 'The supercycle never ends.' },
   { id: 'newton_ghost', name: 'Isaac Newton (Ghost)', trigger: 'fomo_buying', quote: 'I can calculate the motion of heavenly bodies, but not the madness of people.' },
+  { id: 'ltcm', name: 'Long-Term Capital Management', trigger: 'correlation_collapse', quote: "We thought diversification would save us. It didn't." },
+  { id: 'lehman', name: 'Lehman Brothers', trigger: 'cascade_liquidation', quote: 'The music stopped. We were still dancing.' },
+  { id: 'enron', name: 'Enron', trigger: 'concentrated_loser', quote: 'We believed our own story too deeply.' },
+  { id: 'svb', name: 'Silicon Valley Bank', trigger: 'duration_mismatch', quote: 'We held too long, hoping the rates would turn.' },
 ] as const
 
 // Eyes kept — universal across all masters
