@@ -1,6 +1,7 @@
 /**
  * Vibe Sensei -- Chart Terminal
  * Vanilla JS frontend for TradingView Lightweight Charts + UDF server.
+ * Includes WebSocket client for real-time market data push.
  */
 
 (function () {
@@ -15,6 +16,11 @@
   var candleSeries = null;
   var volumeSeries = null;
   var lastCandleData = null;
+
+  // --- WebSocket state ---
+  var ws = null;
+  var wsReconnectTimer = null;
+  var WS_RECONNECT_DELAY = 3000;
 
   // --- DOM refs ---
   var chartContainer = document.getElementById('chartContainer');
@@ -298,6 +304,125 @@
     });
   }
 
+  // --- WebSocket Live Price Feed ---
+
+  /**
+   * Convert a CCXT-style symbol (BTC/USDT) to the chart symbol format (BTCUSDT).
+   */
+  function tickerSymbolToChart(symbol) {
+    return symbol.replace('/', '');
+  }
+
+  /**
+   * Handle an incoming ticker update from the WebSocket feed.
+   * Updates the info panel price display for the currently selected symbol.
+   */
+  function handleTickerUpdate(data) {
+    var chartSymbol = tickerSymbolToChart(data.symbol);
+
+    // Only update the display if this ticker matches the currently viewed symbol.
+    if (chartSymbol !== currentSymbol) return;
+
+    // Update last price with direction coloring.
+    var prevPrice = parseFloat(lastPriceEl.textContent) || 0;
+    var isUp = data.last >= prevPrice;
+
+    lastPriceEl.textContent = formatPrice(data.last);
+    lastPriceEl.className = 'last-price ' + (isUp ? 'up' : 'down');
+
+    // Update bid/ask spread display in the info panel.
+    updateBidAskDisplay(data);
+  }
+
+  /**
+   * Show live bid/ask spread below the price info.
+   * Creates or updates the bid-ask element in the info panel.
+   */
+  function updateBidAskDisplay(data) {
+    var infoPanel = document.querySelector('.price-info');
+    if (!infoPanel) return;
+
+    var bidAskEl = document.getElementById('bidAskSpread');
+    if (!bidAskEl) {
+      bidAskEl = document.createElement('span');
+      bidAskEl.id = 'bidAskSpread';
+      bidAskEl.style.cssText = 'font-size:11px; color:#888; margin-left:8px;';
+      infoPanel.appendChild(bidAskEl);
+    }
+
+    var spread = data.ask - data.bid;
+    bidAskEl.textContent =
+      'B: ' + formatPrice(data.bid) +
+      ' / A: ' + formatPrice(data.ask) +
+      ' (spread: ' + formatPrice(spread) + ')';
+  }
+
+  /**
+   * Connect to the WebSocket server for live price updates.
+   * Falls back gracefully if WebSocket is not available or the server
+   * does not support it -- existing HTTP behavior is unaffected.
+   */
+  function connectWebSocket() {
+    if (typeof WebSocket === 'undefined') {
+      console.log('[Vibe Sensei] WebSocket not supported, using HTTP only');
+      return;
+    }
+
+    // Build the ws:// URL from the page origin.
+    var wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var wsUrl = wsProtocol + '//' + window.location.host;
+
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (err) {
+      console.warn('[Vibe Sensei] WebSocket connection failed:', err);
+      scheduleReconnect();
+      return;
+    }
+
+    ws.onopen = function () {
+      console.log('[Vibe Sensei] WebSocket connected');
+      // Clear any pending reconnect.
+      if (wsReconnectTimer) {
+        clearTimeout(wsReconnectTimer);
+        wsReconnectTimer = null;
+      }
+    };
+
+    ws.onmessage = function (event) {
+      try {
+        var msg = JSON.parse(event.data);
+        if (msg.type === 'ticker' && msg.data) {
+          handleTickerUpdate(msg.data);
+        }
+      } catch (err) {
+        console.warn('[Vibe Sensei] Failed to parse WebSocket message:', err);
+      }
+    };
+
+    ws.onclose = function () {
+      console.log('[Vibe Sensei] WebSocket disconnected');
+      ws = null;
+      scheduleReconnect();
+    };
+
+    ws.onerror = function () {
+      // onclose will fire after onerror, so reconnect is handled there.
+      // Avoid duplicate logging -- onclose covers it.
+    };
+  }
+
+  /**
+   * Schedule a WebSocket reconnection attempt after a delay.
+   */
+  function scheduleReconnect() {
+    if (wsReconnectTimer) return;
+    wsReconnectTimer = setTimeout(function () {
+      wsReconnectTimer = null;
+      connectWebSocket();
+    }, WS_RECONNECT_DELAY);
+  }
+
   // --- Trade Markers (public API for future WebSocket integration) ---
 
   /**
@@ -352,6 +477,7 @@
     populateSymbolSelector();
     bindEvents();
     loadData();
+    connectWebSocket();
   }
 
   // Wait for DOM if needed (script is at bottom, so usually ready)
