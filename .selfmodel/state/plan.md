@@ -52,7 +52,7 @@ Phase 0 complete. Paper trading loop works end-to-end. Guardian alerts display i
 ### Sprint 5: Guardian Persona Prompt System
 - Agent: codex
 - Dependencies: Sprint 4
-- Status: ACTIVE
+- Status: MERGED
 - Priority: P0
 - Timeout: 120
 - Description: Wire getGuardianPrompt() into the AI query loop. Before each AI call, prepend the master's persona instruction to the system prompt. The AI should respond in character as the assigned master when discussing trades. Test: same trade question yields different responses for Buffett vs Soros vs Taleb.
