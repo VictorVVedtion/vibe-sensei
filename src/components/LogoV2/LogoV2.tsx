@@ -44,6 +44,80 @@ import { getEffortSuffix } from '../../utils/effort.js';
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js';
 import { renderModelSetting } from '../../utils/model/model.js';
 const LEFT_PANEL_MAX_WIDTH = 50;
+
+// Guardian welcome info — dynamically loaded to avoid hard dependency on buddy modules
+function GuardianInfo() {
+  const [info, setInfo] = useState<{
+    name: string;
+    rarity: string;
+    stars: string;
+    quote: string;
+  } | null>(null);
+  const [balance, setBalance] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Sync: load companion data via dynamic import
+    try {
+      const buddyMod = require('../../buddy/companion.js') as {
+        getCompanion: () => { name?: string; rarity?: string; personality?: string } | undefined;
+      };
+      const typesMod = require('../../buddy/types.js') as {
+        RARITY_STARS: Record<string, string>;
+      };
+      const companion = buddyMod.getCompanion();
+      if (companion?.name && companion?.rarity) {
+        const stars = typesMod.RARITY_STARS[companion.rarity] ?? '';
+        const rarityLabel = companion.rarity.charAt(0).toUpperCase() + companion.rarity.slice(1);
+        setInfo({
+          name: companion.name,
+          rarity: rarityLabel,
+          stars,
+          quote: companion.personality ?? '',
+        });
+      }
+    } catch {
+      // Buddy modules not available — silent
+    }
+
+    // Async: load paper balance
+    (async () => {
+      try {
+        const exchangeMod = await import('../../services/exchange/singleton.js') as {
+          getConnectedExchange: () => Promise<{
+            getBalance: () => Promise<Array<{ currency: string; total: number }>>;
+          }>;
+        };
+        const exchange = await exchangeMod.getConnectedExchange();
+        const balances = await exchange.getBalance();
+        const usdt = balances.find((b: { currency: string }) => b.currency === 'USDT');
+        if (usdt) {
+          setBalance(usdt.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        }
+      } catch {
+        // Exchange not available — silent
+      }
+    })();
+  }, []);
+
+  if (!info) return null;
+
+  return (
+    <Box flexDirection="column" paddingLeft={2}>
+      <Text>
+        <Text>{"\u{1F6E1}\uFE0F"} Guardian: </Text>
+        <Text bold>{info.name}</Text>
+        <Text> ({info.rarity} {info.stars})</Text>
+      </Text>
+      {info.quote && (
+        <Text dimColor>   &quot;{info.quote}&quot;</Text>
+      )}
+      {balance !== null && (
+        <Text>{"\u{1F4B0}"} Paper: {balance} USDT</Text>
+      )}
+    </Box>
+  );
+}
+
 export function LogoV2() {
   const $ = _c(94);
   const activities = getRecentActivitySync();
@@ -238,7 +312,7 @@ export function LogoV2() {
     }
     let t23;
     if ($[29] !== t18) {
-      t23 = <>{t11}{t12}{t13}{t14}{t15}{t16}{t17}{t18}{t19}{t20}{t21}{t22}</>;
+      t23 = <>{t11}{t12}{t13}{t14}{t15}{t16}{t17}<GuardianInfo />{t18}{t19}{t20}{t21}{t22}</>;
       $[29] = t18;
       $[30] = t23;
     } else {
@@ -326,7 +400,7 @@ export function LogoV2() {
       t18 = $[42];
       t19 = $[43];
     }
-    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t17}{t18}{t19}</>;
+    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze><GuardianInfo />{t14}{t15}{t16}{t17}{t18}{t19}</>;
   }
   const welcomeMessage_0 = formatWelcomeMessage(username);
   const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
@@ -515,7 +589,7 @@ export function LogoV2() {
   }
   let t41;
   if ($[90] !== t28 || $[91] !== t35 || $[92] !== t36) {
-    t41 = <>{t28}{t29}{t30}{t31}{t32}{t33}{t34}{t35}{t36}{t37}{t38}{t39}{t40}</>;
+    t41 = <>{t28}<GuardianInfo />{t29}{t30}{t31}{t32}{t33}{t34}{t35}{t36}{t37}{t38}{t39}{t40}</>;
     $[90] = t28;
     $[91] = t35;
     $[92] = t36;
