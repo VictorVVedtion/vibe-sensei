@@ -5,7 +5,7 @@
 - Total Sprints: 12
 - Created: 2026-04-01T17:45:00Z
 - Last Updated: 2026-04-01T17:45:00Z
-- Current Phase: 1
+- Current Phase: 2
 
 ## Phase 0: Core Trading Loop
 
@@ -68,7 +68,7 @@ Phase 0 complete. Paper trading loop works end-to-end. Guardian alerts display i
 ### Sprint 7: Guardian Debates (dual-master adversarial analysis)
 - Agent: opus
 - Dependencies: Sprint 5
-- Status: ACTIVE
+- Status: MERGED
 - Priority: P1
 - Timeout: 180
 - Description: Before trades exceeding 5% of portfolio, automatically trigger a debate between 2 masters. Pick the user's assigned guardian + a contrarian (e.g., if guardian is Buffett, pick Soros or Taleb). Each makes a case for/against. Display as a structured dialog in the terminal. User decides after seeing both perspectives. This is 2 sequential AI calls with different persona prompts.
