@@ -5,7 +5,7 @@
 - Total Sprints: 12
 - Created: 2026-04-01T17:45:00Z
 - Last Updated: 2026-04-01T17:45:00Z
-- Current Phase: 0
+- Current Phase: 1
 
 ## Phase 0: Core Trading Loop
 
@@ -39,7 +39,7 @@ CCXT paper trading works. "buy 0.1 BTC" in terminal → AI parses → guardian c
 ### Sprint 4: Guardian Risk Engine (Phase 0 — 2 checks)
 - Agent: opus
 - Dependencies: Sprint 1, Sprint 2
-- Status: PENDING
+- Status: MERGED
 - Priority: P0
 - Timeout: 180
 - Description: Create src/buddy/guardian.ts with RiskGuardian class. Implements 2 initial checks: position_size (alert when single position > 30% of portfolio) and drawdown (alert when total drawdown > 10%). Guardian observes tool call results from the query loop. Uses master personality (getGuardianPrompt) for alert messages. Integrates with CompanionSprite.tsx speech bubble for display. Policy engine: max 1 alert per 30 seconds, severity threshold.
