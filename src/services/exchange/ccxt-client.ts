@@ -96,6 +96,9 @@ function translateCcxtError(error: unknown): never {
   throw new Error(String(error));
 }
 
+const MARKETS_TTL_MS = 60 * 60 * 1000; // 1 hour
+let marketsLoadedAt: number = 0;
+
 export class CcxtClient implements ExchangeInterface {
   private exchange: Exchange;
   private connected = false;
@@ -122,7 +125,11 @@ export class CcxtClient implements ExchangeInterface {
 
   async connect(): Promise<void> {
     try {
-      await this.exchange.loadMarkets();
+      const now = Date.now();
+      if (now - marketsLoadedAt > MARKETS_TTL_MS) {
+        await this.exchange.loadMarkets();
+        marketsLoadedAt = now;
+      }
       this.connected = true;
     } catch (error: unknown) {
       translateCcxtError(error);
