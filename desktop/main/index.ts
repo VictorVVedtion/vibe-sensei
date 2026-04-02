@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, ipcMain, dialog, shell } from 'electron'
 import { execSync } from 'child_process'
+import { unlinkSync } from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 import Store from 'electron-store'
@@ -269,7 +270,7 @@ app.on('window-all-closed', () => {
 
   // Clean up bridge file
   try {
-    require('fs').unlinkSync(bridgeFilePath)
+    unlinkSync(bridgeFilePath)
   } catch {
     // File may not exist — that's fine
   }

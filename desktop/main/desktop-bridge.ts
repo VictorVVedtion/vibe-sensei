@@ -9,7 +9,7 @@
  * of sockets or custom IPC protocols.
  */
 
-import { readFileSync, statSync, writeFileSync } from 'fs'
+import { openSync, readSync, closeSync, statSync, writeFileSync } from 'fs'
 
 export interface BridgeMessage {
   type: 'trading_state' | 'guardian_alert' | 'master_info'
@@ -83,11 +83,11 @@ export class DesktopBridge {
 
       // Read only the new bytes
       const buffer = Buffer.alloc(currentSize - this.lastReadPosition)
-      const fd = require('fs').openSync(this.filePath, 'r')
+      const fd = openSync(this.filePath, 'r')
       try {
-        require('fs').readSync(fd, buffer, 0, buffer.length, this.lastReadPosition)
+        readSync(fd, buffer, 0, buffer.length, this.lastReadPosition)
       } finally {
-        require('fs').closeSync(fd)
+        closeSync(fd)
       }
 
       this.lastReadPosition = currentSize
