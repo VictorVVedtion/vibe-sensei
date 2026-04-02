@@ -167,6 +167,9 @@ function emitGuardianAlert(
  * Returns a personalized alert string from the master guardian,
  * or null when there are no alerts (healthy state) or when any
  * dependency is unavailable.
+ *
+ * Always emits trading_state to desktop bridge after every trade tool call,
+ * regardless of whether the guardian fires an alert.
  */
 export async function evaluateAfterToolCall(
   toolName: string,
@@ -177,6 +180,9 @@ export async function evaluateAfterToolCall(
     // Dynamic imports — non-fatal if any module is missing
     const { guardianMod, companionMod, personaMod, exchangeMod, bridgeMod } =
       await getModules()
+
+    // Always emit trading state to desktop — even if companion is unresolved
+    await emitTradingState(exchangeMod, bridgeMod)
 
     // Resolve companion — if none assigned, nothing to evaluate
     const companion = companionMod.getCompanion()
@@ -200,9 +206,6 @@ export async function evaluateAfterToolCall(
 
     // Run evaluation — returns at most 1 alert (highest severity)
     const alerts = await guardian.evaluate()
-
-    // Always emit trading state to desktop after evaluation
-    emitTradingState(exchangeMod, bridgeMod)
 
     if (alerts.length === 0) return null
 
