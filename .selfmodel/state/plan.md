@@ -97,7 +97,7 @@ Phase 1 complete. Guardian personas work. Debates trigger on big trades. Ghosts 
 ### Sprint 10: Web Frontend with Lightweight Charts
 - Agent: gemini
 - Dependencies: Sprint 9
-- Status: ACTIVE
+- Status: MERGED
 - Priority: P1
 - Timeout: 180
 - Description: Create web/ directory with React frontend. Integrate TradingView Lightweight Charts (install lightweight-charts npm). Connect to UDF server for candle data. Add trade markers on chart (buy = green arrow, sell = red arrow). Include basic chat panel that mirrors terminal conversation. Serve as static files from Express server.
