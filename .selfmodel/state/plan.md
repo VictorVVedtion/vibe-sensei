@@ -60,7 +60,7 @@ Phase 0 complete. Paper trading loop works end-to-end. Guardian alerts display i
 ### Sprint 6: Cross-Guardian Consultation ("What would X do?")
 - Agent: codex
 - Dependencies: Sprint 5
-- Status: PENDING
+- Status: MERGED
 - Priority: P1
 - Timeout: 120
 - Description: Add a command/tool that lets users query any of the 52 masters, not just their assigned guardian. Parse "what would soros do?" or "ask buffett about this" patterns. Temporarily switch the guardian persona for one response, then revert. Minimal implementation — just a system prompt swap per query.
@@ -68,7 +68,7 @@ Phase 0 complete. Paper trading loop works end-to-end. Guardian alerts display i
 ### Sprint 7: Guardian Debates (dual-master adversarial analysis)
 - Agent: opus
 - Dependencies: Sprint 5
-- Status: PENDING
+- Status: ACTIVE
 - Priority: P1
 - Timeout: 180
 - Description: Before trades exceeding 5% of portfolio, automatically trigger a debate between 2 masters. Pick the user's assigned guardian + a contrarian (e.g., if guardian is Buffett, pick Soros or Taleb). Each makes a case for/against. Display as a structured dialog in the terminal. User decides after seeing both perspectives. This is 2 sequential AI calls with different persona prompts.
