@@ -6,7 +6,7 @@
  * Appended to the end of gate results as supplementary information.
  */
 
-import type { Candle, ExchangeInterface } from '../../services/exchange/types.js'
+import type { ExchangeInterface } from '../../services/exchange/types.js'
 import type { CheckResult, GateInput } from '../../tools/PreTradeGateTool/types.js'
 import { computeATRAdvisor } from '../../services/market/atr-advisor.js'
 
