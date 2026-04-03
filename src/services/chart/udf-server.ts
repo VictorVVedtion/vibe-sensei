@@ -99,7 +99,8 @@ function handleTime(_req: Request, res: Response): void {
 /** GET /search — Search symbols by query string */
 function handleSearch(req: Request, res: Response): void {
   const query = String(req.query.query ?? '').toUpperCase();
-  const limit = Math.min(Number(req.query.limit) || 10, 30);
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isNaN(rawLimit) || rawLimit < 0 ? 10 : Math.min(rawLimit, 30);
 
   const matches = POPULAR_PAIRS
     .filter((pair) => pair.includes(query))
@@ -176,8 +177,16 @@ async function fetchCandles(
 async function handleHistory(req: Request, res: Response): Promise<void> {
   const symbol = String(req.query.symbol ?? '');
   const resolution = String(req.query.resolution ?? '60');
-  const from = Number(req.query.from) || 0;
-  const to = Number(req.query.to) || Math.floor(Date.now() / 1000);
+  const from = Number(req.query.from);
+  const to = Number(req.query.to);
+
+  if (Number.isNaN(from) || Number.isNaN(to)) {
+    res.status(400).json({ s: 'error', errmsg: 'Invalid timestamp parameter' });
+    return;
+  }
+
+  const fromSafe = from || 0;
+  const toSafe = to || Math.floor(Date.now() / 1000);
 
   if (!symbol) {
     res.status(400).json({ s: 'error', errmsg: 'Missing symbol parameter' });
@@ -190,7 +199,7 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const cacheKey = `${symbol}:${resolution}:${from}:${to}`;
+  const cacheKey = `${symbol}:${resolution}:${fromSafe}:${toSafe}`;
 
   const cached = candleCache.get(cacheKey);
   if (cached) {
@@ -201,7 +210,7 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
   try {
     let pending = inflight.get(cacheKey);
     if (!pending) {
-      pending = fetchCandles(symbol, resolution, timeframe, from, to).finally(() => {
+      pending = fetchCandles(symbol, resolution, timeframe, fromSafe, toSafe).finally(() => {
         inflight.delete(cacheKey);
       });
       inflight.set(cacheKey, pending);
@@ -305,7 +314,16 @@ function handleScreenshotPost(req: Request, res: Response): void {
       res.status(400).json({ error: 'Empty screenshot body' });
       return;
     }
-    latestScreenshot = Buffer.concat(chunks);
+    const buf = Buffer.concat(chunks);
+
+    // Validate PNG magic bytes: \x89PNG\r\n\x1a\n
+    const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    if (buf.length < 8 || !buf.subarray(0, 8).equals(PNG_MAGIC)) {
+      res.status(400).json({ error: 'Invalid image: not a PNG file' });
+      return;
+    }
+
+    latestScreenshot = buf;
     screenshotTimestamp = Date.now();
     res.json({ ok: true, size: latestScreenshot.byteLength });
   });
@@ -332,11 +350,20 @@ export function mountUdfRoutes(app: Express): void {
   app.get('/marks', handleMarks);
   app.get('/api/screenshot', handleScreenshotGet);
   app.post('/api/screenshot', handleScreenshotPost);
+
+  // 405 Method Not Allowed for defined GET-only paths
+  const getOnlyPaths = ['/config', '/time', '/search', '/symbols', '/history', '/marks'];
+  for (const path of getOnlyPaths) {
+    app.all(path, (_req: Request, res: Response) => {
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+  }
 }
 
 /** Create a configured Express app with CORS and UDF routes */
 export function createUdfApp(): Express {
   const app = express();
+  app.disable('x-powered-by');
 
   app.use((_req: Request, res: Response, next: () => void) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -350,6 +377,11 @@ export function createUdfApp(): Express {
   });
 
   mountUdfRoutes(app);
+
+  // Custom 404 handler — must be last (after all route registrations)
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({ error: 'Not found' });
+  });
 
   return app;
 }
