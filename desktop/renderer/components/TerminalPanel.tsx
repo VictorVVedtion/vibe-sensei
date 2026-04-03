@@ -39,16 +39,16 @@ export function TerminalPanel() {
         selectionBackground: '#253550',
         selectionForeground: '#ffffff',
         black: '#0A1628',
-        red: '#FF4D6A',
-        green: '#00E5A0',
+        red: '#C850C0',
+        green: '#00FFA3',
         yellow: '#FFBB33',
         blue: '#6B4CF0',
         magenta: '#ff79c6',
         cyan: '#00D4FF',
         white: '#E2E4ED',
         brightBlack: '#7B8AA0',
-        brightRed: '#FF4D6A',
-        brightGreen: '#00E5A0',
+        brightRed: '#C850C0',
+        brightGreen: '#00FFA3',
         brightYellow: '#FFBB33',
         brightBlue: '#6B4CF0',
         brightMagenta: '#ff92df',
@@ -162,7 +162,7 @@ function TerminalOverlay({
       <div style={overlayCardStyle}>
         {overlay.kind === 'disconnected' && (
           <>
-            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#C850C0', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
             <div style={{ color: '#7B8AA0', fontSize: 12 }}>
@@ -185,7 +185,7 @@ function TerminalOverlay({
 
         {overlay.kind === 'failed' && (
           <>
-            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#C850C0', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
             <div style={{ color: '#7B8AA0', fontSize: 12 }}>

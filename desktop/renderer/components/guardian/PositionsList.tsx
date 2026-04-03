@@ -24,8 +24,8 @@ function formatPct(n: number): string {
 
 function PositionRow({ position }: { position: TradingPosition }) {
   const isProfit = position.unrealizedPnl >= 0
-  const pnlColor = isProfit ? '#00E5A0' : '#FF4D6A'
-  const sideColor = position.side === 'buy' ? '#00D4FF' : '#FF4D6A'
+  const pnlColor = isProfit ? '#00FFA3' : '#C850C0'
+  const sideColor = position.side === 'buy' ? '#00D4FF' : '#C850C0'
 
   return (
     <div

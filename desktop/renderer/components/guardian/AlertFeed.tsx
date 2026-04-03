@@ -16,7 +16,7 @@ const SEVERITY_COLORS: Record<AlertSeverity, string> = {
   info: '#7B8AA0',
   warning: '#FFBB33',
   critical: '#D4A843',
-  emergency: '#FF4D6A',
+  emergency: '#C850C0',
 }
 
 function formatTimestamp(ts: number): string {

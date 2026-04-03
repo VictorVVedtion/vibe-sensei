@@ -10,10 +10,10 @@ function getSeverityLabel(score: number): string {
 }
 
 function getSeverityColor(score: number): string {
-  if (score <= 20) return '#00E5A0'
+  if (score <= 20) return '#00FFA3'
   if (score <= 50) return '#FFBB33'
   if (score <= 75) return '#D4A843'
-  return '#FF4D6A'
+  return '#C850C0'
 }
 
 export function RiskGauge({ score }: RiskGaugeProps) {
@@ -23,7 +23,7 @@ export function RiskGauge({ score }: RiskGaugeProps) {
 
   // Build gradient stops for the track background
   const trackGradient =
-    'linear-gradient(to right, #00E5A0 0%, #FFBB33 35%, #D4A843 65%, #FF4D6A 100%)'
+    'linear-gradient(to right, #00FFA3 0%, #FFBB33 35%, #D4A843 65%, #C850C0 100%)'
 
   return (
     <div

@@ -228,7 +228,7 @@
 }
 
 .status-bar .connection-dot.connected {
-  background: #00E5A0;
+  background: #00FFA3;
 }
 
 .status-bar .connection-dot.reconnecting {
@@ -237,7 +237,7 @@
 }
 
 .status-bar .connection-dot.disconnected {
-  background: #FF4D6A;
+  background: #C850C0;
 }
 
 @keyframes pulse-dot {
@@ -273,11 +273,11 @@
 }
 
 .status-bar .last-price-val.up {
-  color: #00E5A0;
+  color: #00FFA3;
 }
 
 .status-bar .last-price-val.down {
-  color: #FF4D6A;
+  color: #C850C0;
 }
 
 /* ── PTY Reconnect Spinner ── */

@@ -123,7 +123,7 @@ const styles: Record<string, React.CSSProperties> = {
   totalValue: {
     fontSize: 18,
     fontWeight: 700,
-    color: '#00E5A0',
+    color: '#00FFA3',
     fontVariantNumeric: 'tabular-nums',
   },
   list: {

@@ -67,7 +67,7 @@ function mapVolumeData(udf: UdfHistoryResponse): HistogramData<Time>[] {
     result.push({
       time: udf.t[i] as Time,
       value: udf.v[i],
-      color: isUp ? 'rgba(0, 229, 160, 0.35)' : 'rgba(255, 77, 106, 0.35)',
+      color: isUp ? 'rgba(0, 255, 163, 0.35)' : 'rgba(200, 80, 192, 0.35)',
     })
   }
   return result
@@ -151,12 +151,12 @@ export function ChartPanel({
     })
 
     const candleSeries = chart.addCandlestickSeries({
-      upColor: '#00E5A0',
-      downColor: '#FF4D6A',
-      borderUpColor: '#00E5A0',
-      borderDownColor: '#FF4D6A',
-      wickUpColor: '#00E5A0',
-      wickDownColor: '#FF4D6A',
+      upColor: '#00FFA3',
+      downColor: '#C850C0',
+      borderUpColor: '#00FFA3',
+      borderDownColor: '#C850C0',
+      wickUpColor: '#00FFA3',
+      wickDownColor: '#C850C0',
     })
 
     const volumeSeries = chart.addHistogramSeries({

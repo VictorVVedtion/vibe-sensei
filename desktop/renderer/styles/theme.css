@@ -129,7 +129,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(10, 22, 40, 0.95);
-  border: 1px solid #FF4D6A;
+  border: 1px solid #C850C0;
   padding: 24px 32px;
   text-align: center;
   max-width: 400px;
@@ -137,7 +137,7 @@
 }
 
 .chart-container .error-overlay h3 {
-  color: #FF4D6A;
+  color: #C850C0;
   margin-bottom: 8px;
   font-size: 14px;
 }
@@ -178,11 +178,11 @@
 }
 
 .ohlc-bar-panel .last-price.up {
-  color: #00E5A0;
+  color: #00FFA3;
 }
 
 .ohlc-bar-panel .last-price.down {
-  color: #FF4D6A;
+  color: #C850C0;
 }
 
 .ohlc-bar-panel .ohlc-values {
