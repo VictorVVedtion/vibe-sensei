@@ -275,13 +275,25 @@ function isValidArticle(item: unknown): item is WikiArticle {
 
 let consecutiveLLMFailures = 0
 
+/** Collect existing wiki content to pass as LLM context. */
+function collectExistingWikiContext(): string | undefined {
+  const sections: string[] = []
+  const index = readArticle('INDEX.md')
+  if (index) sections.push('## INDEX.md\n' + index)
+  const profile = readArticle('self/profile.md')
+  if (profile) sections.push('## self/profile.md\n' + profile)
+  const overview = readArticle('patterns/overview.md')
+  if (overview) sections.push('## patterns/overview.md\n' + overview)
+  return sections.length > 0 ? sections.join('\n\n') : undefined
+}
+
 /** Compile events using the LLM. Returns articles or null on failure. */
 async function compileWithLLM(
   events: KBEventUnion[],
   apiKey: string,
 ): Promise<{ articles: WikiArticle[]; warnings: string[] } | null> {
-  const existingIndex = readArticle('INDEX.md')
-  const prompt = buildCompilationPrompt(events, existingIndex)
+  const existingWiki = collectExistingWikiContext()
+  const prompt = buildCompilationPrompt(events, existingWiki)
 
   const responseText = await callLLM(prompt, apiKey)
   if (!responseText) {
@@ -508,7 +520,9 @@ export async function compile(opts?: { full?: boolean }): Promise<CompileResult>
 
   if (hasKey && hasConsent) {
     mode = 'gemini'
-    const llmResult = await compileWithLLM(newEvents, apiKey)
+    // Pass ALL events to LLM so it has full context for analysis.
+    // The LLM prompt includes existing wiki content for incremental updates.
+    const llmResult = await compileWithLLM(allEvents, apiKey)
     if (llmResult) {
       articles = llmResult.articles
       warnings.push(...llmResult.warnings)
@@ -518,10 +532,14 @@ export async function compile(opts?: { full?: boolean }): Promise<CompileResult>
       if (consecutiveLLMFailures >= 3) {
         warnings.push('WARNING: 3+ consecutive LLM failures — check API key and quota')
       }
-      articles = compileWithTemplate(newEvents)
+      // Template mode does statistical aggregation — must use ALL events
+      // to avoid erasing historical data with only new events.
+      articles = compileWithTemplate(allEvents)
     }
   } else {
-    articles = compileWithTemplate(newEvents)
+    // Template mode does statistical aggregation — must use ALL events
+    // to avoid erasing historical data with only new events.
+    articles = compileWithTemplate(allEvents)
   }
 
   for (const article of articles) writeArticle(article.path, article.content)
