@@ -280,7 +280,7 @@ export class STTService {
    * @returns Transcribed text, or null on failure
    */
   private async transcribe(audioBase64: string): Promise<string | null> {
-    const url = `${API_BASE}/${STT_MODEL}:generateContent?key=${this.apiKey}`
+    const url = `${API_BASE}/${STT_MODEL}:generateContent`
 
     const body = {
       contents: [
@@ -306,7 +306,7 @@ export class STTService {
     try {
       response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(TRANSCRIPTION_TIMEOUT_MS),
       })

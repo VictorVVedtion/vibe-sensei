@@ -212,7 +212,7 @@ export class TTSService {
     // Prepend style prompt and truncate if needed
     const styledText = `${voice.stylePrompt}\n\n${text.slice(0, MAX_TEXT_LENGTH)}`
 
-    const url = `${API_BASE}/${this.model}:generateContent?key=${this.apiKey}`
+    const url = `${API_BASE}/${this.model}:generateContent`
 
     const body = {
       contents: [
@@ -236,7 +236,7 @@ export class TTSService {
     try {
       response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
