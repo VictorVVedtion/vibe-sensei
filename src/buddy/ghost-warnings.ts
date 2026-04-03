@@ -112,7 +112,7 @@ export class GhostEngine {
    */
   formatForTerminal(warning: GhostWarning): string {
     if (process.env.NO_COLOR) {
-      return `WARNING GHOST: ${warning.ghostName} -- "${warning.quote}" [${warning.triggerReason}]`
+      return `...${warning.quote.toLowerCase()}... - ${warning.ghostName} [${warning.triggerReason}]`
     }
 
     const dim = '\x1b[2m'
@@ -120,8 +120,8 @@ export class GhostEngine {
     const reset = '\x1b[0m'
 
     return (
-      `${dim}\u26a0\ufe0f GHOST: ${warning.ghostName}${reset}\n` +
-      `${dimItalic}"${warning.quote}"${reset}\n` +
+      `${dimItalic}...${warning.quote.toLowerCase()}...${reset}\n` +
+      `${dim}- ${warning.ghostName}${reset}\n` +
       `${dim}[${warning.triggerReason}]${reset}`
     )
   }

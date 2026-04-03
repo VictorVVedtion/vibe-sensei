@@ -62,20 +62,19 @@ export function formatGhostWarningWithPersona(warning: GhostWarning): string {
   const persona = GHOST_PERSONAS[warning.ghostId]
 
   if (process.env.NO_COLOR) {
-    const base = `GHOST: ${warning.ghostName}\n"${warning.quote}"\n[${warning.triggerReason}]`
+    const base = `...${warning.quote.toLowerCase()}... - ${warning.ghostName}\n[${warning.triggerReason}]`
     if (!persona) return base
     return `${base}\nRecovery: ${persona.recovery}`
   }
 
-  const bold = '\x1b[1m'
   const dim = '\x1b[2m'
   const italic = '\x1b[3m'
   const dimItalic = '\x1b[2;3m'
   const reset = '\x1b[0m'
 
   const lines: string[] = [
-    `${bold}\u26a0\ufe0f GHOST: ${warning.ghostName}${reset}`,
-    `${dimItalic}"${warning.quote}"${reset}`,
+    `${dimItalic}...${warning.quote.toLowerCase()}...${reset}`,
+    `${dim}- ${warning.ghostName}${reset}`,
     `${dim}[${warning.triggerReason}]${reset}`,
   ]
 
