@@ -99,7 +99,8 @@ function handleTime(_req: Request, res: Response): void {
 /** GET /search — Search symbols by query string */
 function handleSearch(req: Request, res: Response): void {
   const query = String(req.query.query ?? '').toUpperCase();
-  const limit = Math.min(Number(req.query.limit) || 10, 30);
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isNaN(rawLimit) || rawLimit < 0 ? 10 : Math.min(rawLimit, 30);
 
   const matches = POPULAR_PAIRS
     .filter((pair) => pair.includes(query))
