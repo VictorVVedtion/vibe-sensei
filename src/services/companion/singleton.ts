@@ -50,7 +50,8 @@ export function initCompanionEngine(
   const companion = getCompanion()
   if (!companion) return // no companion assigned
 
-  const archetype = getMasterArchetype(companion.species as Master)
+  const masterSpecies = companion.species as Master
+  const archetype = getMasterArchetype(masterSpecies)
 
   const fullConfig: CompanionConfig = {
     enabled: true,
@@ -67,7 +68,7 @@ export function initCompanionEngine(
     })
   }
 
-  engineInstance = new CompanionEngine(fullConfig, archetype, pushMessage)
+  engineInstance = new CompanionEngine(fullConfig, archetype, pushMessage, masterSpecies)
   engineInstance.start()
 }
 

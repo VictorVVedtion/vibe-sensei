@@ -5,21 +5,25 @@
  *   - ProactiveMonitor (4 trigger types for unprompted master interjections)
  *   - ExpressionEngine (emotion state management from Sprint 50)
  *   - CooldownManager (prevents message spam)
+ *   - AsyncCouncil (background debates when risk rises, Sprint 52)
  *
  * The engine runs a 60-second polling loop that checks all triggers,
  * respects cooldown, and pushes messages via a callback. Emergency/urgent
- * messages bypass cooldown.
+ * messages bypass cooldown. The council has its own independent 30-minute
+ * cooldown — it does not share the ProactiveMonitor's cooldown.
  *
  * Usage:
- *   const engine = new CompanionEngine(config, archetype, pushMessage)
+ *   const engine = new CompanionEngine(config, archetype, pushMessage, userMaster)
  *   engine.start()
  *   // ... later ...
  *   engine.stop()
  */
 
 import type { Archetype } from '../../buddy/persona.js'
+import type { Master } from '../../buddy/types.js'
 import { ExpressionEngine, type TradingEventType } from './expression.js'
 import { CooldownManager, ProactiveMonitor } from './proactive-monitor.js'
+import { AsyncCouncil } from './council.js'
 import type {
   CompanionConfig,
   CompanionStatus,
@@ -41,8 +45,10 @@ export class CompanionEngine {
   private readonly monitor: ProactiveMonitor
   private readonly expression: ExpressionEngine
   private readonly cooldown: CooldownManager
+  private readonly council: AsyncCouncil
   private readonly config: CompanionConfig
   private readonly pushMessage: (message: string) => void
+  private readonly userMaster: Master | null
 
   private intervalId: ReturnType<typeof setInterval> | null = null
   private running: boolean = false
@@ -53,12 +59,15 @@ export class CompanionEngine {
     config: CompanionConfig,
     archetype: Archetype,
     pushMessage: (message: string) => void,
+    userMaster?: Master,
   ) {
     this.config = config
     this.pushMessage = pushMessage
+    this.userMaster = userMaster ?? null
     this.monitor = new ProactiveMonitor(archetype, config.sessionStartTime)
     this.expression = new ExpressionEngine()
     this.cooldown = new CooldownManager(config.cooldownMs)
+    this.council = new AsyncCouncil()
   }
 
   /** Start the polling loop and async market checks. */
@@ -137,6 +146,11 @@ export class CompanionEngine {
     return this.expression
   }
 
+  /** Get the AsyncCouncil instance (for external queries). */
+  getCouncil(): AsyncCouncil {
+    return this.council
+  }
+
   // ── Private ─────────────────────────────────────────────────────────────
 
   private runCheck(): void {
@@ -155,6 +169,9 @@ export class CompanionEngine {
 
     // Async market check (portfolio heat, etc.)
     this.runAsyncCheck()
+
+    // Async council check (background debates)
+    this.runCouncilCheck()
   }
 
   private runAsyncCheck(): void {
@@ -165,6 +182,31 @@ export class CompanionEngine {
     }).catch((err: unknown) => {
       console.error(
         '[CompanionEngine] Async check error:',
+        err instanceof Error ? err.message : err,
+      )
+    })
+  }
+
+  /**
+   * Check whether the AsyncCouncil should convene.
+   * The council has its own 30-minute cooldown, independent of the
+   * ProactiveMonitor's cooldown managed by CooldownManager.
+   * Council messages bypass the regular cooldown — they are delivered directly.
+   */
+  private runCouncilCheck(): void {
+    if (!this.userMaster) return
+
+    this.council.buildContext(this.userMaster).then((context) => {
+      if (!context) return
+      if (!this.council.shouldConvene(context)) return
+
+      return this.council.convene(context).then((result) => {
+        const message = this.council.formatMessage(result)
+        this.deliverCouncilMessage(message)
+      })
+    }).catch((err: unknown) => {
+      console.error(
+        '[CompanionEngine] Council check error:',
         err instanceof Error ? err.message : err,
       )
     })
@@ -184,6 +226,18 @@ export class CompanionEngine {
 
     // Record delivery
     this.cooldown.recordSpeak()
+    this.messagesDelivered++
+    this.lastMessageAt = Date.now()
+  }
+
+  /**
+   * Deliver a council message. Council messages bypass the regular cooldown
+   * since the council has its own 30-minute cooldown. Expression is set to
+   * 'stern' since council messages are always serious risk discussions.
+   */
+  private deliverCouncilMessage(message: string): void {
+    this.pushMessage(message)
+    this.expression.setEmotion('stern', PROACTIVE_EMOTION_DURATION_MS)
     this.messagesDelivered++
     this.lastMessageAt = Date.now()
   }
