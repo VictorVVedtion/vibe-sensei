@@ -9,6 +9,7 @@
  *   - VisionService (chart screenshot analysis via multimodal AI, Sprint 53)
  *   - TTSService (text-to-speech voice output for masters, Sprint 54)
  *   - STTService (speech-to-text voice input via sox + API, Sprint 55)
+ *   - LiveSession (full-duplex voice conversation via WebSocket, Sprint 56)
  *
  * The engine runs a 60-second polling loop that checks all triggers,
  * respects cooldown, and pushes messages via a callback. Emergency/urgent
@@ -30,6 +31,7 @@ import { AsyncCouncil } from './council.js'
 import { VisionService } from './vision.js'
 import { TTSService } from './tts.js'
 import { STTService } from './stt.js'
+import { LiveSession, type LiveSessionState } from './live-session.js'
 import { ARCHETYPE_VOICES } from './voice-config.js'
 import type {
   CompanionConfig,
@@ -62,6 +64,7 @@ export class CompanionEngine {
   private readonly pushMessage: (message: string) => void
   private readonly userMaster: Master | null
 
+  private liveSession: LiveSession | null = null
   private intervalId: ReturnType<typeof setInterval> | null = null
   private running: boolean = false
   private messagesDelivered: number = 0
@@ -116,6 +119,7 @@ export class CompanionEngine {
       this.intervalId = null
     }
 
+    this.stopLiveSession()
     this.tts.stop()
     this.expression.dispose()
   }
@@ -301,6 +305,100 @@ export class CompanionEngine {
   /** Whether STT is available (has API key and sox installed). */
   isSTTAvailable(): boolean {
     return this.stt.isAvailable()
+  }
+
+  // ── Live Session (Sprint 56) ────────────────────────────────────────────
+
+  /**
+   * Start a full-duplex voice conversation with the master.
+   * The user speaks via microphone and the master responds with both text
+   * and audio in real-time over WebSocket.
+   *
+   * No-op if a session is already active or if the feature is unavailable
+   * (missing API key or sox).
+   */
+  async startLiveSession(): Promise<void> {
+    if (this.liveSession?.getState() === 'active') return
+
+    const voice = ARCHETYPE_VOICES[this.archetype]
+    if (!voice) return
+
+    const apiKey = process.env.GEMINI_API_KEY ?? ''
+    if (apiKey.length === 0) return
+
+    this.liveSession = new LiveSession({
+      apiKey,
+      masterName: this.masterName,
+      archetype: this.archetype,
+      voiceName: voice.voiceName,
+      systemInstruction: this.buildLiveSessionPrompt(),
+      onTranscript: (text: string) => {
+        // User speech transcript — could be displayed in the UI
+        this.pushMessage(`[you] ${text}`)
+      },
+      onResponse: (text: string) => {
+        this.pushMessage(text)
+      },
+      onStateChange: (state: LiveSessionState) => {
+        if (state === 'error') {
+          console.error('[CompanionEngine] Live session entered error state')
+        }
+      },
+    })
+
+    // Stop TTS to avoid conflicts with live audio
+    this.tts.stop()
+
+    await this.liveSession.start()
+  }
+
+  /** Stop the current live voice session. */
+  stopLiveSession(): void {
+    if (this.liveSession) {
+      this.liveSession.stop()
+      this.liveSession = null
+    }
+  }
+
+  /** Get the current live session state, or null if no session exists. */
+  getLiveSessionState(): LiveSessionState | null {
+    return this.liveSession?.getState() ?? null
+  }
+
+  /** Whether the live session feature is available (API key + sox). */
+  isLiveSessionAvailable(): boolean {
+    const apiKey = process.env.GEMINI_API_KEY ?? ''
+    if (apiKey.length === 0) return false
+
+    // Create a temporary instance to check availability
+    const probe = new LiveSession({
+      apiKey,
+      masterName: '',
+      archetype: '',
+      voiceName: '',
+      systemInstruction: '',
+      onTranscript: () => {},
+      onResponse: () => {},
+      onStateChange: () => {},
+    })
+    return probe.isAvailable()
+  }
+
+  /**
+   * Build the system instruction prompt for the live session.
+   * Defines the master's personality, style, and conversation rules.
+   */
+  private buildLiveSessionPrompt(): string {
+    return [
+      `You are ${this.masterName}, a trading master.`,
+      `Your trading style archetype is "${this.archetype}".`,
+      'The user is having a real-time voice conversation with you.',
+      'Respond in character using your philosophy and personality.',
+      'Keep responses concise — 1 to 3 sentences.',
+      `Speak as ${this.masterName}. Never say "as an AI".`,
+      'If the user asks about market conditions, give your honest opinion.',
+      'If the user describes a trade idea, evaluate it from your perspective.',
+    ].join(' ')
   }
 
   // ── Private ─────────────────────────────────────────────────────────────
