@@ -5,13 +5,14 @@
  *   - ProactiveMonitor (4 trigger types for unprompted master interjections)
  *   - ExpressionEngine (emotion state management from Sprint 50)
  *   - CooldownManager (prevents message spam)
+ *   - VisionService (chart screenshot analysis via multimodal AI)
  *
  * The engine runs a 60-second polling loop that checks all triggers,
  * respects cooldown, and pushes messages via a callback. Emergency/urgent
  * messages bypass cooldown.
  *
  * Usage:
- *   const engine = new CompanionEngine(config, archetype, pushMessage)
+ *   const engine = new CompanionEngine(config, archetype, masterName, pushMessage)
  *   engine.start()
  *   // ... later ...
  *   engine.stop()
@@ -20,6 +21,7 @@
 import type { Archetype } from '../../buddy/persona.js'
 import { ExpressionEngine, type TradingEventType } from './expression.js'
 import { CooldownManager, ProactiveMonitor } from './proactive-monitor.js'
+import { VisionService } from './vision.js'
 import type {
   CompanionConfig,
   CompanionStatus,
@@ -41,7 +43,10 @@ export class CompanionEngine {
   private readonly monitor: ProactiveMonitor
   private readonly expression: ExpressionEngine
   private readonly cooldown: CooldownManager
+  private readonly vision: VisionService
   private readonly config: CompanionConfig
+  private readonly archetype: Archetype
+  private readonly masterName: string
   private readonly pushMessage: (message: string) => void
 
   private intervalId: ReturnType<typeof setInterval> | null = null
@@ -53,12 +58,16 @@ export class CompanionEngine {
     config: CompanionConfig,
     archetype: Archetype,
     pushMessage: (message: string) => void,
+    masterName?: string,
   ) {
     this.config = config
+    this.archetype = archetype
+    this.masterName = masterName ?? 'Trading Master'
     this.pushMessage = pushMessage
     this.monitor = new ProactiveMonitor(archetype, config.sessionStartTime)
     this.expression = new ExpressionEngine()
     this.cooldown = new CooldownManager(config.cooldownMs)
+    this.vision = new VisionService()
   }
 
   /** Start the polling loop and async market checks. */
@@ -135,6 +144,86 @@ export class CompanionEngine {
   /** Get the ExpressionEngine instance (for external emotion queries). */
   getExpressionEngine(): ExpressionEngine {
     return this.expression
+  }
+
+  /**
+   * Analyze the current chart displayed on the :3456 web server.
+   * The master comments in character based on their archetype.
+   *
+   * Returns null if:
+   *   - GEMINI_API_KEY is not set
+   *   - The chart web server is not running
+   *   - The screenshot capture or analysis fails
+   *
+   * Can be called externally (e.g. from a user command or trade event).
+   */
+  async analyzeChart(): Promise<string | null> {
+    if (!this.vision.isAvailable()) {
+      return null
+    }
+
+    try {
+      const analysis = await this.vision.analyzeChart(
+        this.archetype,
+        this.masterName,
+      )
+
+      if (analysis) {
+        // Update expression to reflect chart analysis activity
+        this.expression.setEmotion('stern', PROACTIVE_EMOTION_DURATION_MS)
+      }
+
+      return analysis
+    } catch (err: unknown) {
+      console.error(
+        '[CompanionEngine] Chart analysis error:',
+        err instanceof Error ? err.message : err,
+      )
+      return null
+    }
+  }
+
+  /**
+   * Analyze a chart from a user-provided image file.
+   * Fallback for when the web server is not running.
+   *
+   * @param filePath - Absolute path to a chart image (PNG/JPEG)
+   * @returns The master's chart analysis text, or null
+   */
+  async analyzeChartFromFile(filePath: string): Promise<string | null> {
+    if (!this.vision.isAvailable()) {
+      return null
+    }
+
+    try {
+      const analysis = await this.vision.analyzeChartFromFile(
+        filePath,
+        this.archetype,
+        this.masterName,
+      )
+
+      if (analysis) {
+        this.expression.setEmotion('stern', PROACTIVE_EMOTION_DURATION_MS)
+      }
+
+      return analysis
+    } catch (err: unknown) {
+      console.error(
+        '[CompanionEngine] File chart analysis error:',
+        err instanceof Error ? err.message : err,
+      )
+      return null
+    }
+  }
+
+  /** Check if chart vision is available (has API key). */
+  isVisionAvailable(): boolean {
+    return this.vision.isAvailable()
+  }
+
+  /** Check if the chart web server is running. */
+  async isChartServerAvailable(): Promise<boolean> {
+    return this.vision.isChartServerAvailable()
   }
 
   // ── Private ─────────────────────────────────────────────────────────────

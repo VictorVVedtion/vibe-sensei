@@ -12,6 +12,15 @@ import type { Candle } from '../exchange/types.js';
 
 type CandleResponse = { s: string; t: number[]; o: number[]; h: number[]; l: number[]; c: number[]; v: number[] };
 
+// ── Screenshot Buffer ────────────────────────────────────────────────────
+// The browser-side chart periodically POSTs a PNG screenshot here.
+// GET /api/screenshot returns the latest stored image.
+
+let latestScreenshot: Buffer | null = null;
+let screenshotTimestamp: number = 0;
+const SCREENSHOT_MAX_AGE_MS = 60_000; // 1 minute staleness threshold
+const SCREENSHOT_MAX_SIZE = 5 * 1024 * 1024; // 5MB max
+
 const candleCache = new LRUCache<string, CandleResponse>({
   max: 200,
   ttl: 3 * 60 * 1000, // 3 minutes
@@ -256,6 +265,57 @@ function handleMarks(_req: Request, res: Response): void {
   res.json([]);
 }
 
+/** GET /api/screenshot — Return the latest chart screenshot as PNG */
+function handleScreenshotGet(_req: Request, res: Response): void {
+  if (!latestScreenshot) {
+    res.status(404).json({ error: 'No screenshot available. Is the chart frontend open?' });
+    return;
+  }
+
+  // Check staleness
+  const age = Date.now() - screenshotTimestamp;
+  if (age > SCREENSHOT_MAX_AGE_MS) {
+    res.status(404).json({ error: 'Screenshot is stale. Open the chart frontend to refresh.' });
+    return;
+  }
+
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Length', String(latestScreenshot.byteLength));
+  res.setHeader('X-Screenshot-Age-Ms', String(age));
+  res.send(latestScreenshot);
+}
+
+/** POST /api/screenshot — Receive a chart screenshot from the browser frontend */
+function handleScreenshotPost(req: Request, res: Response): void {
+  const chunks: Buffer[] = [];
+  let totalSize = 0;
+
+  req.on('data', (chunk: Buffer) => {
+    totalSize += chunk.length;
+    if (totalSize > SCREENSHOT_MAX_SIZE) {
+      res.status(413).json({ error: 'Screenshot too large' });
+      req.destroy();
+      return;
+    }
+    chunks.push(chunk);
+  });
+
+  req.on('end', () => {
+    if (totalSize === 0) {
+      res.status(400).json({ error: 'Empty screenshot body' });
+      return;
+    }
+    latestScreenshot = Buffer.concat(chunks);
+    screenshotTimestamp = Date.now();
+    res.json({ ok: true, size: latestScreenshot.byteLength });
+  });
+
+  req.on('error', (err: Error) => {
+    console.error(`[UDF] Screenshot upload error: ${err.message}`);
+    res.status(500).json({ error: 'Upload failed' });
+  });
+}
+
 /** Attach all UDF routes to an Express app instance */
 export function mountUdfRoutes(app: Express): void {
   app.get('/config', handleConfig);
@@ -270,6 +330,8 @@ export function mountUdfRoutes(app: Express): void {
     });
   });
   app.get('/marks', handleMarks);
+  app.get('/api/screenshot', handleScreenshotGet);
+  app.post('/api/screenshot', handleScreenshotPost);
 }
 
 /** Create a configured Express app with CORS and UDF routes */
