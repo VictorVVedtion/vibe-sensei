@@ -208,7 +208,7 @@ function Spinner() {
         height: 20,
         border: '2px solid #253550',
         borderTopColor: '#00D4FF',
-        animation: 'pty-spinner 0.8s linear infinite',
+        animation: 'pty-spinner 0.8s step-end infinite',
       }}
     />
   )
