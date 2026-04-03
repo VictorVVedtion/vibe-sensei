@@ -323,32 +323,18 @@ export async function evaluateAfterToolCall(
     const master = companion.species as import('../../buddy/types.js').Master
     const stats = companion.stats
 
-    // Try context-aware alert (with exchange, diary, positions, balances, wiki)
+    // Try context-aware alert (with exchange, diary, positions, balances)
     try {
       const diary = getDiary(diaryMod)
       const exchange = guardian.getExchange()
-
-      // Fetch wiki knowledge context (fire-and-forget on failure)
-      let knowledgeContext: string | null = null
-      try {
-        const { queryWikiBySymbol } = await import('../knowledge/query-router.js')
-        const symbolMatch = topAlert.message.match(/([A-Z]{2,10}\/[A-Z]{2,10})/)
-        if (symbolMatch) {
-          knowledgeContext = await queryWikiBySymbol(symbolMatch[1]!)
-        }
-      } catch {
-        // Wiki query must never propagate
-      }
-
-      return await personaMod.getPersonalizedAlertWithContext({
-        master: { species: master, stats },
-        alert: topAlert,
+      return await personaMod.getPersonalizedAlertWithContext(
+        { species: master, stats },
+        topAlert,
         exchange,
         diary,
-        positions: result.positions,
-        balances: result.balances,
-        knowledgeContext,
-      })
+        result.positions,
+        result.balances,
+      )
     } catch {
       // Fall back to non-context alert on any failure
       return personaMod.getPersonalizedAlert(master, stats, topAlert)
