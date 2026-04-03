@@ -112,7 +112,7 @@ export class GeminiClient {
       throw new GeminiAuthError('API key is not set')
     }
 
-    const url = `${API_BASE}/${this.model}:generateContent?key=${this.apiKey}`
+    const url = `${API_BASE}/${this.model}:generateContent`
 
     const body: GeminiRequestBody = {
       contents: [
@@ -133,7 +133,7 @@ export class GeminiClient {
     try {
       response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })

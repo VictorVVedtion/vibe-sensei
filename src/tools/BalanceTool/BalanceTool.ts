@@ -77,9 +77,15 @@ export const BalanceTool = buildTool({
   },
 
   async call() {
-    const exchange = await getConnectedExchange()
+    try {
+      const exchange = await getConnectedExchange()
 
-    const balances = await exchange.getBalance()
-    return { data: formatBalancesTable(balances) }
+      const balances = await exchange.getBalance()
+      return { data: formatBalancesTable(balances) }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[BalanceTool] Error fetching balance: ${msg}`)
+      return { data: `Error fetching balance: ${msg}` }
+    }
   },
 } satisfies ToolDef<InputSchema, Output>)

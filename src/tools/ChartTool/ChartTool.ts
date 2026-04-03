@@ -92,19 +92,25 @@ export const ChartTool = buildTool({
   renderToolResultMessage,
 
   async call(input) {
-    const exchange = await getConnectedExchange()
-    const timeframe = input.timeframe ?? '4h'
-    const limit = input.limit ?? 50
+    try {
+      const exchange = await getConnectedExchange()
+      const timeframe = input.timeframe ?? '4h'
+      const limit = input.limit ?? 50
 
-    const candles = await exchange.getCandles(input.symbol, timeframe, limit)
+      const candles = await exchange.getCandles(input.symbol, timeframe, limit)
 
-    return {
-      data: {
-        candles,
-        symbol: input.symbol,
-        timeframe,
-        candleCount: candles.length,
-      } satisfies Output,
+      return {
+        data: {
+          candles,
+          symbol: input.symbol,
+          timeframe,
+          candleCount: candles.length,
+        } satisfies Output,
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[ChartTool] Error fetching chart: ${msg}`)
+      return { data: `Error fetching chart: ${msg}` as unknown as Output }
     }
   },
 } satisfies ToolDef<InputSchema, Output>)

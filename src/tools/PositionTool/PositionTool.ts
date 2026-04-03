@@ -89,13 +89,19 @@ export const PositionTool = buildTool({
   },
 
   async call(input) {
-    const exchange = await getConnectedExchange()
+    try {
+      const exchange = await getConnectedExchange()
 
-    const allPositions = await exchange.getPositions()
-    const filtered = input.symbol
-      ? allPositions.filter((p) => p.symbol === input.symbol)
-      : allPositions
+      const allPositions = await exchange.getPositions()
+      const filtered = input.symbol
+        ? allPositions.filter((p) => p.symbol === input.symbol)
+        : allPositions
 
-    return { data: formatPositionsTable(filtered) }
+      return { data: formatPositionsTable(filtered) }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[PositionTool] Error fetching positions: ${msg}`)
+      return { data: `Error fetching positions: ${msg}` }
+    }
   },
 } satisfies ToolDef<InputSchema, Output>)
