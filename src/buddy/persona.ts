@@ -464,8 +464,9 @@ export async function getPersonalizedAlertWithContext(
           }
         }
       }
-    } catch {
+    } catch (err) {
       // Regime module not available — skip this layer
+      console.warn('[Persona] regime context unavailable:', err instanceof Error ? err.message : err)
     }
 
     // Compute drawdown for recovery context
@@ -508,8 +509,9 @@ export async function getPersonalizedAlertWithContext(
     if (included.length === 0) return baseAlert
 
     return baseAlert + '\n' + included.join(' ')
-  } catch {
+  } catch (err) {
     // Any failure in context building falls back to base alert
+    console.warn('[Persona] context-aware alert error, falling back to base:', err)
     return baseAlert
   }
 }
