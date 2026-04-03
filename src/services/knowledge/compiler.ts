@@ -134,8 +134,27 @@ function saveLLMConsent(granted: boolean): void {
 
 // ── Atomic File Write ────────────────────────────────────────────────────────
 
+/**
+ * Validate that a relative article path is safe (no path traversal).
+ * Rejects paths containing '..', absolute paths, and resolved paths
+ * that escape WIKI_DIR.
+ */
+function isSafeArticlePath(relativePath: string): boolean {
+  if (relativePath.startsWith('/')) return false
+  if (relativePath.includes('..')) return false
+  const resolved = join(WIKI_DIR, relativePath)
+  // Ensure the resolved path is still within WIKI_DIR
+  // Use WIKI_DIR + '/' to prevent prefix collisions (e.g., wiki-evil/)
+  if (!resolved.startsWith(WIKI_DIR + '/') && resolved !== WIKI_DIR) return false
+  return true
+}
+
 /** Write a wiki article atomically. Creates parent dirs as needed. */
 function writeArticle(relativePath: string, content: string): void {
+  if (!isSafeArticlePath(relativePath)) {
+    console.warn(`[KB Compiler] rejected unsafe article path: ${relativePath}`)
+    return
+  }
   const fullPath = join(WIKI_DIR, relativePath)
   const dir = dirname(fullPath)
   mkdirSync(dir, { recursive: true, mode: 0o700 })
@@ -238,12 +257,18 @@ function tryParseArticles(raw: string): WikiArticle[] | null {
   }
 }
 
-/** Type guard for a valid wiki article shape. */
+/** Type guard for a valid wiki article shape. Rejects unsafe paths. */
 function isValidArticle(item: unknown): item is WikiArticle {
   if (typeof item !== 'object' || item === null) return false
   const obj = item as Record<string, unknown>
-  return typeof obj.path === 'string' && typeof obj.content === 'string'
-    && obj.path.length > 0 && obj.content.length > 0
+  if (typeof obj.path !== 'string' || typeof obj.content !== 'string') return false
+  if (obj.path.length === 0 || obj.content.length === 0) return false
+  // Reject path traversal attempts from LLM output
+  if (!isSafeArticlePath(obj.path)) {
+    console.warn(`[KB Compiler] rejected unsafe article path: ${obj.path}`)
+    return false
+  }
+  return true
 }
 
 // ── LLM Compilation ─────────────────────────────────────────────────────────
