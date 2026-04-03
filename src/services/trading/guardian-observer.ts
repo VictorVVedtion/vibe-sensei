@@ -292,6 +292,21 @@ export async function evaluateAfterToolCall(
       // KB event emission must never propagate
     }
 
+    // Buffer alert for counterfactual tracking (fire-and-forget)
+    try {
+      const { recordAlert } = await import('../knowledge/counterfactual.js')
+      const cfSymbolMatch = topAlert.message.match(/([A-Z]{2,10}\/[A-Z]{2,10})/)
+      recordAlert({
+        id: `${topAlert.checkName}-${topAlert.timestamp.getTime()}`,
+        symbol: cfSymbolMatch ? cfSymbolMatch[1] : undefined,
+        timestamp: topAlert.timestamp,
+        severity: topAlert.severity,
+        checkName: topAlert.checkName,
+      })
+    } catch {
+      // Counterfactual tracking must never propagate
+    }
+
     // Auto-compile knowledge base after every 5 PlaceOrder calls (fire-and-forget)
     if (toolName === 'PlaceOrder') {
       try {
