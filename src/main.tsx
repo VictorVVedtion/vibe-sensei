@@ -1003,7 +1003,8 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').option('--web', 'Start web chart server alongside REPL').action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)')// .option('--web', 'Start web chart server alongside REPL')  // web端暂停开发
+.action(async (prompt, options) => {
     profileCheckpoint('action_handler_start');
 
     // --bare = one-switch minimal mode. Sets SIMPLE so all the existing
@@ -1016,6 +1017,7 @@ async function run(): Promise<CommanderCommand> {
     }
 
 
+    /* web端暂停开发
     // --web: Start UDF chart server alongside the REPL
     if ((options as { web?: boolean }).web) {
       try {
@@ -1031,7 +1033,9 @@ async function run(): Promise<CommanderCommand> {
         console.error('[!] Chart server failed to start:', (err as Error).message ?? err);
       }
     }
+    */
 
+    /* web端暂停开发
     // Desktop mode: auto-start UDF server for the Electron chart panel
     if (process.env.VIBE_SENSEI_DESKTOP === '1' && !(options as { web?: boolean }).web) {
       try {
@@ -1042,6 +1046,7 @@ async function run(): Promise<CommanderCommand> {
         console.error('[!] UDF server failed to start:', (err as Error).message ?? err);
       }
     }
+    */
     // Ignore "code" as a prompt - treat it the same as no prompt
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});

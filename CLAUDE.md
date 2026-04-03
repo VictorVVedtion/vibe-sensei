@@ -16,7 +16,7 @@ This file provides guidance to AI assistants working with code in this repositor
 ```bash
 bun install          # Install dependencies
 bun run dev          # Interactive REPL
-bun run dev -- --web # REPL + TradingView chart server on :3456
+# bun run dev -- --web # REPL + TradingView chart server (:3456) — web端暂停开发
 bun run build        # Production single-file bundle to dist/cli.js
 ```
 
