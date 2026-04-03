@@ -305,7 +305,16 @@ function handleScreenshotPost(req: Request, res: Response): void {
       res.status(400).json({ error: 'Empty screenshot body' });
       return;
     }
-    latestScreenshot = Buffer.concat(chunks);
+    const buf = Buffer.concat(chunks);
+
+    // Validate PNG magic bytes: \x89PNG\r\n\x1a\n
+    const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    if (buf.length < 8 || !buf.subarray(0, 8).equals(PNG_MAGIC)) {
+      res.status(400).json({ error: 'Invalid image: not a PNG file' });
+      return;
+    }
+
+    latestScreenshot = buf;
     screenshotTimestamp = Date.now();
     res.json({ ok: true, size: latestScreenshot.byteLength });
   });
