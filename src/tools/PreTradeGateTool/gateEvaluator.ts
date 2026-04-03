@@ -171,9 +171,9 @@ export function formatGateResult(
   result: RiskGateResult,
 ): string {
   const statusIcon: Record<GateStatus, string> = {
-    pass: 'PASS',
-    warn: 'WARN',
-    fail: 'FAIL',
+    pass: 'OK',
+    warn: '!',
+    fail: 'XX',
   }
 
   const lines: string[] = []

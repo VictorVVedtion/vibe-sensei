@@ -335,7 +335,7 @@ export class AsyncCouncil {
   formatMessage(result: CouncilResult): string {
     const lines: string[] = []
 
-    lines.push(`\u{1F3DB}\uFE0F Master Council \u2014 ${result.triggerDetail}`)
+    lines.push(`>> COUNCIL \u2014 ${result.triggerDetail}`)
     lines.push('')
 
     for (const master of result.masters) {

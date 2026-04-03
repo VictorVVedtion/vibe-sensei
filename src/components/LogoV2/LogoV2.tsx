@@ -104,7 +104,7 @@ function GuardianInfo() {
   return (
     <Box flexDirection="column" paddingLeft={2}>
       <Text>
-        <Text>{"\u{1F6E1}\uFE0F"} Guardian: </Text>
+        <Text>{"[*]"} Guardian: </Text>
         <Text bold>{info.name}</Text>
         <Text> ({info.rarity} {info.stars})</Text>
       </Text>
@@ -112,7 +112,7 @@ function GuardianInfo() {
         <Text dimColor>   &quot;{info.quote}&quot;</Text>
       )}
       {balance !== null && (
-        <Text>{"\u{1F4B0}"} Paper: {balance} USDT</Text>
+        <Text>{"$"} Paper: {balance} USDT</Text>
       )}
     </Box>
   );

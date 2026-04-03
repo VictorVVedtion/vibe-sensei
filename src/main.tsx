@@ -1026,9 +1026,9 @@ async function run(): Promise<CommanderCommand> {
         } catch (_openErr) {
           // Non-fatal: browser open may fail on non-macOS
         }
-        console.error('📊 Chart server running at http://localhost:3456');
+        console.error('[i] Chart server running at http://localhost:3456');
       } catch (err) {
-        console.error('⚠️ Chart server failed to start:', (err as Error).message ?? err);
+        console.error('[!] Chart server failed to start:', (err as Error).message ?? err);
       }
     }
 
@@ -1037,9 +1037,9 @@ async function run(): Promise<CommanderCommand> {
       try {
         const { startUdfServer } = await import('./services/chart/index.js');
         await startUdfServer(3456);
-        console.error('📊 UDF server running at http://localhost:3456 (desktop mode)');
+        console.error('[i] UDF server running at http://localhost:3456 (desktop mode)');
       } catch (err) {
-        console.error('⚠️ UDF server failed to start:', (err as Error).message ?? err);
+        console.error('[!] UDF server failed to start:', (err as Error).message ?? err);
       }
     }
     // Ignore "code" as a prompt - treat it the same as no prompt

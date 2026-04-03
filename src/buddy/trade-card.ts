@@ -151,7 +151,7 @@ export function calculateRiskReward(
  * Card width adapts to the widest content line.
  */
 export function generateTradeCard(trade: TradeCardInput): string {
-  const sideEmoji = trade.side === 'buy' ? '\u{1F7E2}' : '\u{1F534}'
+  const sideEmoji = trade.side === 'buy' ? '[+]' : '[-]'
   const sideLabel = trade.side.toUpperCase()
   const formattedPrice = formatPrice(trade.price)
   const baseCurrency = trade.symbol.split('/')[0] ?? trade.symbol
@@ -224,7 +224,7 @@ function buildContentLines(
     content.push('')  // spacer
   }
 
-  content.push('\u26A1 vibe-sensei')
+  content.push('-- vibe-sensei')
   return content
 }
 
@@ -292,7 +292,7 @@ function buildReportCardLines(report: TradeReport): string[] {
   const side = report.side === 'buy' ? 'LONG' : 'SHORT'
   const pnlSign = report.netPnL >= 0 ? '+' : ''
   const pctSign = report.netPnLPercent >= 0 ? '+' : ''
-  const resultIcon = report.netPnL >= 0 ? '\u{1F7E2}' : '\u{1F534}'
+  const resultIcon = report.netPnL >= 0 ? '[+]' : '[-]'
 
   content.push(
     `${resultIcon} ${report.symbol} ${side} CLOSED`,
@@ -323,7 +323,7 @@ function buildReportCardLines(report: TradeReport): string[] {
   content.push(`Efficiency: ${report.efficiencyRatio}%`)
   content.push('')
 
-  content.push('\u26A1 vibe-sensei')
+  content.push('-- vibe-sensei')
   return content
 }
 
