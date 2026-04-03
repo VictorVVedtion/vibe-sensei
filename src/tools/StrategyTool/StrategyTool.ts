@@ -141,7 +141,7 @@ export const StrategyTool = buildTool({
   },
 
   isReadOnly() {
-    return true
+    return false
   },
 
   isDestructive() {
