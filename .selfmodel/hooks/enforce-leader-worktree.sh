@@ -11,6 +11,13 @@ if [[ "${BYPASS_LEADER_RULES:-0}" == "1" ]]; then
     exit 0
 fi
 
+# ── Agent worktree 绕过 ──
+# Agent 在独立 worktree 中执行 Sprint，不受 Leader 限制
+BRANCH_NAME="$(git branch --show-current 2>/dev/null || true)"
+if [[ "${BRANCH_NAME}" == worktree-agent-* ]]; then
+    exit 0
+fi
+
 # ── jq 依赖检测：缺失时放行，绝不误拦截 ──
 if ! command -v jq &>/dev/null; then
     exit 0
