@@ -8,6 +8,10 @@
   box-shadow: none !important;
 }
 
+:root {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Chart Panel ── */
 
 .chart-panel {
