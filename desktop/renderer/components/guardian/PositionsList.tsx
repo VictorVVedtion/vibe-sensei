@@ -104,7 +104,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '6px 10px',
+    padding: '4px 8px',
     background: '#0A1628',
     borderBottom: '1px solid #253550',
   },
@@ -129,7 +129,7 @@ const styles: Record<string, React.CSSProperties> = {
   row: {
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 10px',
+    padding: '6px 8px',
     borderBottom: '1px solid #182233',
     gap: 8,
   },
@@ -186,7 +186,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontVariantNumeric: 'tabular-nums',
   },
   empty: {
-    padding: '16px 10px',
+    padding: '10px 8px',
     textAlign: 'center' as const,
   },
   emptyText: {

@@ -29,7 +29,7 @@
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
+  padding: 4px 12px;
   border-bottom: 1px solid #253550;
   flex-shrink: 0;
 }
@@ -128,7 +128,7 @@
   transform: translate(-50%, -50%);
   background: rgba(10, 22, 40, 0.95);
   border: 1px solid #C850C0;
-  padding: 24px 32px;
+  padding: 16px 24px;
   text-align: center;
   max-width: 400px;
   z-index: 10;
@@ -154,7 +154,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 4px 12px;
   border-top: 1px solid #253550;
   flex-shrink: 0;
   font-size: 12px;

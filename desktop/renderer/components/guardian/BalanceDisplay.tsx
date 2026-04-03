@@ -97,7 +97,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '6px 10px',
+    padding: '4px 8px',
     background: '#0A1628',
     borderBottom: '1px solid #253550',
   },
@@ -112,7 +112,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    padding: '10px 10px 8px',
+    padding: '6px 8px 4px',
     borderBottom: '1px solid #182233',
   },
   totalLabel: {
@@ -130,7 +130,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
   },
   assetRow: {
-    padding: '6px 10px',
+    padding: '4px 8px',
     borderBottom: '1px solid #182233',
   },
   assetInfo: {
@@ -170,7 +170,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#7B8AA0',
   },
   empty: {
-    padding: '12px 10px',
+    padding: '8px 8px',
     textAlign: 'center' as const,
   },
   emptyText: {

@@ -88,7 +88,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '6px 10px',
+    padding: '4px 8px',
     background: '#0A1628',
     borderBottom: '1px solid #253550',
     flexShrink: 0,
@@ -118,7 +118,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 6,
-    padding: '6px 10px',
+    padding: '4px 8px',
     borderBottom: '1px solid #182233',
   },
   icon: {
@@ -157,7 +157,7 @@ const styles: Record<string, React.CSSProperties> = {
     wordBreak: 'break-word' as const,
   },
   empty: {
-    padding: '16px 10px',
+    padding: '10px 8px',
     textAlign: 'center' as const,
   },
   emptyText: {

@@ -228,7 +228,7 @@ const overlayContainerStyle: React.CSSProperties = {
 const overlayCardStyle: React.CSSProperties = {
   background: 'rgba(10, 22, 40, 0.85)',
   border: '1px solid #253550',
-  padding: '24px 32px',
+  padding: '16px 24px',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',

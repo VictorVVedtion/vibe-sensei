@@ -133,7 +133,7 @@
   -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 8px;
 }
 
 .title-bar-left {
@@ -205,7 +205,7 @@
   height: 24px;
   background: #0F1924;
   border-top: 1px solid #253550;
-  padding: 0 12px;
+  padding: 0 8px;
   font-size: 11px;
   color: #7B8AA0;
   gap: 16px;
