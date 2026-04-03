@@ -12,7 +12,11 @@ import { isFullscreenActive } from '../utils/fullscreen.js';
 import type { Theme } from '../utils/theme.js';
 import { getCompanion } from './companion.js';
 import { renderFace, renderSprite, spriteFrameCount } from './sprites.js';
+import { MASTER_PORTRAITS } from './sprite-atlas.js';
+import type { Emotion } from './sprite-atlas.js';
+import type { Master } from './types.js';
 import { RARITY_COLORS } from './types.js';
+import { inferEmotionFromReaction } from '../services/companion/expression.js';
 const TICK_MS = 500;
 const BUBBLE_SHOW = 20; // ticks → ~10s at 500ms
 const FADE_WINDOW = 6; // last ~3s the bubble dims so you know it's about to go
@@ -222,6 +226,9 @@ export function CompanionSprite(): React.ReactNode {
   const petAge = petAt ? tick - petStartTick : Infinity;
   const petting = petAge * TICK_MS < PET_BURST_MS;
 
+  // Derive current emotion from reaction text
+  const currentEmotion: Emotion = petting ? 'happy' : inferEmotionFromReaction(reaction);
+
   // Narrow terminals: collapse to one-line face. When speaking, the quip
   // replaces the name beside the face (no room for a bubble).
   if (columns < MIN_COLS_FOR_FULL_SPRITE) {
@@ -255,7 +262,18 @@ export function CompanionSprite(): React.ReactNode {
       spriteFrame = step % frameCount;
     }
   }
-  const body = renderSprite(companion, spriteFrame).map(line => blink ? line.replaceAll(companion.eye, '-') : line);
+
+  // Blink fix: use portrait.eyeChars for accurate eye replacement instead of companion.eye
+  const portrait = MASTER_PORTRAITS[companion.species as Master];
+  const blinkChars = portrait?.eyeChars ?? [companion.eye];
+  const body = renderSprite(companion, spriteFrame, currentEmotion).map(line => {
+    if (!blink) return line;
+    let result = line;
+    for (const char of blinkChars) {
+      result = result.replaceAll(char, '-');
+    }
+    return result;
+  });
   const sprite = heartFrame ? [heartFrame, ...body] : body;
 
   // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,
