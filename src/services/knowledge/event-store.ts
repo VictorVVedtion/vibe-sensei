@@ -160,6 +160,38 @@ function stampEvent(event: KBEvent): KBEvent {
   }
 }
 
+// ── Milestone Integration ────────────────────────────────────────────────────────
+
+type MilestoneNotifyFn = (message: string) => void
+let milestoneNotifier: MilestoneNotifyFn | null = null
+let appendCounter = 0
+const MILESTONE_CHECK_INTERVAL = 10
+
+/**
+ * Register a callback for milestone notifications.
+ * Typically wired to companionReaction via AppState.
+ */
+export function registerMilestoneNotifier(cb: MilestoneNotifyFn): void {
+  milestoneNotifier = cb
+}
+
+/** Fire milestone check every N events (async, best-effort). */
+function maybeCheckMilestones(): void {
+  appendCounter++
+  if (appendCounter % MILESTONE_CHECK_INTERVAL !== 0) return
+  if (!milestoneNotifier) return
+
+  const notify = milestoneNotifier
+  import('./milestones.js')
+    .then(mod => mod.checkMilestones())
+    .then(results => {
+      for (const m of results) {
+        try { notify(m.celebration) } catch { /* never propagate */ }
+      }
+    })
+    .catch(() => { /* milestone check is best-effort */ })
+}
+
 /**
  * Append an event to the JSONL store (async-safe).
  * Use this from async callers like guardian-observer, gateEvaluator, regime.
@@ -169,6 +201,7 @@ export async function appendEvent(event: KBEvent): Promise<void> {
   try {
     const stamped = stampEvent(event)
     writeEventLine(stamped)
+    maybeCheckMilestones()
   } catch {
     // Swallow all errors — event persistence must never block trading
   }
@@ -184,6 +217,7 @@ export function queueEvent(event: KBEvent): void {
     const stamped = stampEvent(event)
     eventQueue.push(stamped)
     scheduleFlush()
+    maybeCheckMilestones()
   } catch {
     // Swallow all errors — event persistence must never block trading
   }
