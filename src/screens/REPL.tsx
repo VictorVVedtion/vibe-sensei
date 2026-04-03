@@ -4111,6 +4111,48 @@ export function REPL({
   useEffect(() => {
     void onInit();
 
+    // Morning Brief: show personalized daily briefing on first startup of the day
+    if (feature('BUDDY')) {
+      void (async () => {
+        try {
+          const { getCompanion } = await import('../buddy/companion.js')
+          const { getMasterArchetype } = await import('../buddy/persona.js')
+          const { MASTER_NAMES } = await import('../buddy/types.js')
+          const { generateMorningBrief } = await import('../services/knowledge/morning-brief.js')
+
+          const companion = getCompanion()
+          if (companion) {
+            const master = companion.species as import('../buddy/types.js').Master
+            const archetype = getMasterArchetype(master)
+            const masterName = MASTER_NAMES[master] ?? companion.name ?? 'Guardian'
+            const brief = await generateMorningBrief(masterName, archetype)
+            if (brief) {
+              setAppState(prev => ({ ...prev, companionReaction: brief }))
+            }
+          }
+        } catch {
+          // Morning brief is best-effort — never block REPL startup
+        }
+      })()
+    }
+
+    // Milestone notifier: wire milestone celebrations to companionReaction
+    if (feature('BUDDY')) {
+      void (async () => {
+        try {
+          const { registerMilestoneNotifier } = await import('../services/knowledge/event-store.js')
+          registerMilestoneNotifier((message: string) => {
+            setAppState(prev => {
+              if (prev.companionReaction === message) return prev
+              return { ...prev, companionReaction: message }
+            })
+          })
+        } catch {
+          // Milestone notifier registration is best-effort
+        }
+      })()
+    }
+
     // Cleanup on unmount
     return () => {
       void diagnosticTracker.shutdown();
