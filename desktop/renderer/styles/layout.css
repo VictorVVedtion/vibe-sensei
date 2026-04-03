@@ -203,7 +203,7 @@
   display: flex;
   align-items: center;
   height: 24px;
-  background: #0F1924;
+  background: #050B14;
   border-top: 1px solid #253550;
   padding: 0 8px;
   font-size: 11px;
@@ -244,9 +244,9 @@
 }
 
 .status-bar .mode-badge {
-  background: #182233;
-  border: 1px solid #253550;
-  padding: 1px 6px;
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 10px;
   color: #00D4FF;
   letter-spacing: 0.3px;
