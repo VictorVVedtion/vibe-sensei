@@ -4,26 +4,48 @@
  * Input: Candle[] (OHLCV data) + ChartOptions (terminal dimensions, display prefs)
  * Output: ChartLine[] — array of lines, each line an array of colored segments.
  *
- * Ink's <Text color="green"> handles coloring; we never emit raw ANSI codes.
+ * Deep-sea Cthulhu theme: cyan (bullish) / magenta (bearish), unified fine-line
+ * wicks, right-side Y-axis, current price indicator, border frame, background
+ * grid dots. Ink's <Text color="cyan"> handles coloring; we never emit raw ANSI.
  */
 
 import type { Candle } from '../../services/exchange/types.js'
 import type { ChartLine, ChartSegment, ChartOptions } from './types.js'
-import { DEFAULT_CHART_OPTIONS } from './types.js'
+import { DEFAULT_CHART_OPTIONS, CHART_COLORS } from './types.js'
 
 // ── Unicode characters ──────────────────────────────────────────────
 
-const BLOCK_FULL = '\u2588'  // █  candle body
-const WICK_THIN  = '\u2502'  // │  wick line
-const DOJI_CROSS = '\u253C'  // ┼  doji (open ≈ close)
+const BLOCK_BULL  = '\u2588'  // █  bullish body — solid, radiant
+const BLOCK_BEAR  = '\u2593'  // ▓  bearish body — shaded, devoured
+const WICK_TOP    = '\u2577'  // ╷  upper wick (fine line)
+const WICK_BOTTOM = '\u2575'  // ╵  lower wick (fine line)
+const WICK_MID    = '\u2502'  // │  body-adjacent wick (fine line)
+const DOJI_CROSS  = '\u253C'  // ┼  doji (open ≈ close)
 
 const VOLUME_BLOCKS = [' ', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']
 //                      0     ▁        ▂        ▃        ▄        ▅        ▆        ▇        █
 
-const AXIS_TEE   = '\u2524'  // ┤  Y-axis tick mark
-const CORNER_BL  = '\u2514'  // └  bottom-left corner
-const HLINE      = '\u2500'  // ─  horizontal line
-const TICK_UP    = '\u2534'  // ┴  X-axis tick
+// Border frame characters
+const BORDER_TL   = '\u250C'  // ┌
+const BORDER_TR   = '\u2510'  // ┐
+const BORDER_BL   = '\u2514'  // └
+const BORDER_BR   = '\u2518'  // ┘
+const BORDER_H    = '\u2500'  // ─
+const BORDER_V    = '\u2502'  // │
+
+// Y-axis (right side)
+const AXIS_TEE_R  = '\u2502'  // │  right-side axis separator
+
+// X-axis
+const TICK_UP     = '\u2534'  // ┴  X-axis tick
+const HLINE       = '\u2500'  // ─  horizontal line
+
+// Current price indicator
+const PRICE_DASH  = '\u2508'  // ┈  dashed line
+const PRICE_ARROW = '\u25B6'  // ▶  arrow pointing to price
+
+// Background grid
+const GRID_DOT    = '\u00B7'  // ·  dim bubble dot
 
 // ── Nice number rounding ────────────────────────────────────────────
 
@@ -76,6 +98,14 @@ function candleColumnWidth(availableWidth: number): number {
   return 1
 }
 
+// ── Grid dot interval ───────────────────────────────────────────────
+
+function isGridDotColumn(candleIdx: number, totalCandles: number): boolean {
+  // Place grid dots at roughly every 4th candle position, skip first and last
+  const interval = Math.max(4, Math.ceil(totalCandles / 12))
+  return candleIdx > 0 && candleIdx < totalCandles - 1 && candleIdx % interval === 0
+}
+
 // ── Main rendering function ─────────────────────────────────────────
 
 export function renderCandlestickChart(
@@ -98,18 +128,24 @@ export function renderCandlestickChart(
 
   const colWidth = candleColumnWidth(opts.width)
 
-  // Determine how many candles fit
-  // Layout: [label + axis] [chart area] [gap]
-  // Y-axis label width: adapt to price magnitude
+  // Layout: [border│] [chart area] [border│ space label]
+  // Y-axis is on the RIGHT side now
   const samplePrice = candles[0].close
   const labelWidth = Math.max(
     samplePrice.toFixed(opts.priceDecimals).length,
     6,
   )
-  const axisWidth = labelWidth + 2 // label + space + ┤
-  const chartAreaWidth = opts.width - axisWidth - 1
+  // Right-side axis: │ + space + label
+  const rightAxisWidth = 1 + 1 + labelWidth
+  // Left border: │
+  const leftBorderWidth = 1
+  const chartAreaWidth = opts.width - leftBorderWidth - rightAxisWidth - 1
   const maxCandles = Math.max(1, Math.floor(chartAreaWidth / colWidth))
   const visibleCandles = candles.slice(-maxCandles)
+
+  // Actual chart content width (candles may not fill the whole area)
+  const candleContentWidth = visibleCandles.length * colWidth
+  const innerWidth = Math.max(candleContentWidth, chartAreaWidth)
 
   // ── Price range ───────────────────────────────────────────────
   let rawMin = Infinity
@@ -134,9 +170,12 @@ export function renderCandlestickChart(
     return Math.round(ratio * (chartHeight - 1))
   }
 
+  // ── Find current price row (last candle's close) ──────────────
+  const lastCandle = visibleCandles[visibleCandles.length - 1]
+  const currentPriceRow = priceToRow(lastCandle.close)
+
   // ── Build price chart grid ────────────────────────────────────
 
-  // Each cell: { char, color, dim }
   type Cell = { char: string; color?: ChartSegment['color']; dim?: boolean }
   const grid: Cell[][] = []
   for (let row = 0; row < chartHeight; row++) {
@@ -147,11 +186,24 @@ export function renderCandlestickChart(
     grid.push(line)
   }
 
+  // Seed background grid dots (before drawing candles, so candles overwrite)
+  for (let row = 0; row < chartHeight; row++) {
+    for (let i = 0; i < visibleCandles.length; i++) {
+      if (isGridDotColumn(i, visibleCandles.length)) {
+        const col = i * colWidth
+        if (col < grid[row].length) {
+          grid[row][col] = { char: GRID_DOT, color: 'gray', dim: true }
+        }
+      }
+    }
+  }
+
   // Draw each candle
   for (let i = 0; i < visibleCandles.length; i++) {
     const c = visibleCandles[i]
     const bullish = c.close >= c.open
-    const color: ChartSegment['color'] = bullish ? 'green' : 'red'
+    const color: ChartSegment['color'] = bullish ? CHART_COLORS.bullish : CHART_COLORS.bearish
+    const bodyChar = bullish ? BLOCK_BULL : BLOCK_BEAR
 
     const highRow = priceToRow(c.high)
     const lowRow = priceToRow(c.low)
@@ -175,14 +227,36 @@ export function renderCandlestickChart(
           // Doji cross
           grid[row][col] = { char: DOJI_CROSS, color }
         } else if (row >= bodyTop && row <= bodyBottom) {
-          // Body
-          grid[row][col] = { char: BLOCK_FULL, color }
+          // Body — different Unicode for bull vs bear
+          grid[row][col] = { char: bodyChar, color }
         } else {
           // Wick — only draw on the first column of multi-column candles
           if (cw === 0 || colWidth === 1) {
-            grid[row][col] = { char: WICK_THIN, color }
+            // Use fine wick characters based on position
+            let wickChar: string
+            if (row === highRow) {
+              wickChar = WICK_TOP  // ╷ at the very top
+            } else if (row === lowRow) {
+              wickChar = WICK_BOTTOM  // ╵ at the very bottom
+            } else {
+              wickChar = WICK_MID  // │ for body-adjacent wicks
+            }
+            grid[row][col] = { char: wickChar, color }
           }
         }
+      }
+    }
+  }
+
+  // ── Overlay current price indicator line ──────────────────────
+  // Draw ┈ dashes across the chart at the current price row,
+  // but only on cells that are empty (space or grid dot).
+  if (currentPriceRow >= 0 && currentPriceRow < chartHeight) {
+    const priceRow = grid[currentPriceRow]
+    for (let col = 0; col < priceRow.length; col++) {
+      const cell = priceRow[col]
+      if (cell.char === ' ' || cell.char === GRID_DOT) {
+        priceRow[col] = { char: PRICE_DASH, color: CHART_COLORS.priceLine, dim: false }
       }
     }
   }
@@ -192,19 +266,21 @@ export function renderCandlestickChart(
   const lines: ChartLine[] = []
 
   // Title line
-  const lastCandle = visibleCandles[visibleCandles.length - 1]
   const titleLine = buildTitleLine(lastCandle, opts)
   lines.push(titleLine)
 
-  // Empty spacer
-  lines.push([seg('')])
+  // Top border: ┌────────────────────────────────┐
+  const topBorder = buildTopBorder(innerWidth)
+  lines.push(topBorder)
 
-  // Price rows with Y-axis
+  // Price rows with right-side Y-axis
   for (let row = 0; row < chartHeight; row++) {
     const line: ChartLine = []
     const price = priceMax - (row / (chartHeight - 1)) * priceRange
     const label = formatPrice(price, opts.priceDecimals, labelWidth)
-    line.push(dimSeg(label + ' ' + AXIS_TEE))
+
+    // Left border
+    line.push(dimSeg(BORDER_V))
 
     // Chart cells — group consecutive same-color cells for efficiency
     const rowCells = grid[row]
@@ -230,21 +306,42 @@ export function renderCandlestickChart(
       line.push(seg(runText, runColor, runDim))
     }
 
+    // Pad remaining chart area
+    const usedCols = rowCells.length
+    if (usedCols < innerWidth) {
+      // If this is the price line row, fill with dashes
+      if (row === currentPriceRow) {
+        const remaining = innerWidth - usedCols
+        line.push(seg(PRICE_DASH.repeat(remaining), CHART_COLORS.priceLine))
+      } else {
+        line.push(seg(' '.repeat(innerWidth - usedCols)))
+      }
+    }
+
+    // Right border + price indicator
+    if (row === currentPriceRow) {
+      // Arrow pointing to current price label
+      line.push(seg(PRICE_ARROW, CHART_COLORS.priceLine))
+      line.push(seg(' ' + label, CHART_COLORS.priceLine))
+    } else {
+      line.push(dimSeg(AXIS_TEE_R + ' ' + label))
+    }
+
     lines.push(line)
   }
 
-  // X-axis line
-  const xAxisLine = buildXAxisLine(visibleCandles, colWidth, axisWidth, chartAreaWidth)
-  lines.push(xAxisLine)
+  // Bottom border: └──────┬──────┬──────┬─────┘
+  const bottomBorder = buildBottomBorder(visibleCandles, colWidth, innerWidth)
+  lines.push(bottomBorder)
 
   // Time labels
-  const timeLabelsLine = buildTimeLabels(visibleCandles, colWidth, axisWidth, opts.timeframe, chartAreaWidth)
+  const timeLabelsLine = buildTimeLabels(visibleCandles, colWidth, leftBorderWidth, opts.timeframe, innerWidth)
   lines.push(timeLabelsLine)
 
-  // Volume bars
+  // Volume bars (outside border frame)
   if (opts.showVolume && opts.volumeHeight > 0) {
     lines.push([seg('')]) // spacer
-    const volumeLines = buildVolumeLines(visibleCandles, colWidth, axisWidth, opts.volumeHeight)
+    const volumeLines = buildVolumeLines(visibleCandles, colWidth, leftBorderWidth, opts.volumeHeight)
     for (const vl of volumeLines) {
       lines.push(vl)
     }
@@ -259,21 +356,23 @@ function buildTitleLine(lastCandle: Candle, opts: ChartOptions): ChartLine {
   const line: ChartLine = []
   const d = opts.priceDecimals
 
-  line.push(seg('  '))
-  line.push(seg(opts.symbol, 'cyan'))
+  line.push(seg(BLOCK_BULL + ' ', CHART_COLORS.bullish))
+  line.push(seg('VIBE SENSEI', 'white'))
+  line.push(dimSeg(' \u2500 '))
+  line.push(seg(opts.symbol, CHART_COLORS.bullish))
   line.push(seg(' '))
-  line.push(dimSeg(opts.timeframe.toUpperCase()))
+  line.push(dimSeg('[' + opts.timeframe.toUpperCase() + ']'))
   line.push(seg('  '))
 
   line.push(dimSeg('O:'))
   line.push(seg(lastCandle.open.toFixed(d), 'white'))
-  line.push(seg(' '))
+  line.push(seg('  '))
   line.push(dimSeg('H:'))
   line.push(seg(lastCandle.high.toFixed(d), 'white'))
-  line.push(seg(' '))
+  line.push(seg('  '))
   line.push(dimSeg('L:'))
   line.push(seg(lastCandle.low.toFixed(d), 'white'))
-  line.push(seg(' '))
+  line.push(seg('  '))
   line.push(dimSeg('C:'))
   line.push(seg(lastCandle.close.toFixed(d), 'white'))
 
@@ -282,40 +381,40 @@ function buildTitleLine(lastCandle: Candle, opts: ChartOptions): ChartLine {
     ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100
     : 0
   const sign = pctChange >= 0 ? '+' : ''
-  const pctColor: ChartSegment['color'] = pctChange >= 0 ? 'green' : 'red'
+  const pctColor: ChartSegment['color'] = pctChange >= 0 ? CHART_COLORS.priceUp : CHART_COLORS.priceDown
   line.push(seg(' '))
   line.push(seg(`(${sign}${pctChange.toFixed(2)}%)`, pctColor))
 
   return line
 }
 
-// ── X-axis ──────────────────────────────────────────────────────────
+// ── Border frame ────────────────────────────────────────────────────
 
-function buildXAxisLine(
+function buildTopBorder(innerWidth: number): ChartLine {
+  return [dimSeg(BORDER_TL + BORDER_H.repeat(innerWidth) + BORDER_TR)]
+}
+
+function buildBottomBorder(
   candles: Candle[],
   colWidth: number,
-  axisWidth: number,
-  chartAreaWidth: number,
+  innerWidth: number,
 ): ChartLine {
-  const line: ChartLine = []
-  // Padding to align with Y-axis
-  const pad = ' '.repeat(axisWidth - 1)
-  line.push(dimSeg(pad + CORNER_BL))
-
-  const totalCandleCols = candles.length * colWidth
-  const usedWidth = Math.min(totalCandleCols, chartAreaWidth)
-
-  // Build the X-axis line with tick marks at label positions
   const labelInterval = computeLabelInterval(candles.length, colWidth)
-  let xStr = ''
-  for (let i = 0; i < usedWidth; i++) {
-    const candleIdx = Math.floor(i / colWidth)
-    const isTickPos = (i % colWidth === 0) && (candleIdx % labelInterval === 0)
-    xStr += isTickPos ? TICK_UP : HLINE
-  }
-  line.push(dimSeg(xStr))
+  const candleContentWidth = candles.length * colWidth
 
-  return line
+  let bottomStr = BORDER_BL
+  for (let i = 0; i < innerWidth; i++) {
+    if (i < candleContentWidth) {
+      const candleIdx = Math.floor(i / colWidth)
+      const isTickPos = (i % colWidth === 0) && (candleIdx % labelInterval === 0)
+      bottomStr += isTickPos ? TICK_UP : BORDER_H
+    } else {
+      bottomStr += BORDER_H
+    }
+  }
+  bottomStr += BORDER_BR
+
+  return [dimSeg(bottomStr)]
 }
 
 // ── Time labels ─────────────────────────────────────────────────────
@@ -323,17 +422,18 @@ function buildXAxisLine(
 function buildTimeLabels(
   candles: Candle[],
   colWidth: number,
-  axisWidth: number,
+  leftOffset: number,
   timeframe: string,
-  chartAreaWidth: number,
+  innerWidth: number,
 ): ChartLine {
   const line: ChartLine = []
-  line.push(dimSeg(' '.repeat(axisWidth)))
+  // Align with left border
+  line.push(dimSeg(' '.repeat(leftOffset)))
 
   const labelInterval = computeLabelInterval(candles.length, colWidth)
 
   // Build a character buffer for time labels
-  const bufLen = Math.min(candles.length * colWidth, chartAreaWidth)
+  const bufLen = Math.min(candles.length * colWidth, innerWidth)
   const buf = new Array<string>(bufLen).fill(' ')
 
   for (let i = 0; i < candles.length; i++) {
@@ -405,7 +505,7 @@ function computeLabelInterval(candleCount: number, colWidth: number): number {
 function buildVolumeLines(
   candles: Candle[],
   colWidth: number,
-  axisWidth: number,
+  leftOffset: number,
   volumeHeight: number,
 ): ChartLine[] {
   // Find max volume for scaling
@@ -424,21 +524,19 @@ function buildVolumeLines(
   )
 
   // Build volume rows from top (highest) to bottom (lowest)
-  const lines: ChartLine[] = []
-  const labelPrefix = ' '.repeat(axisWidth)
+  const resultLines: ChartLine[] = []
+  const labelPrefix = ' '.repeat(leftOffset)
 
-  // Add "Vol" label on first row
   for (let row = 0; row < volumeHeight; row++) {
     const line: ChartLine = []
     if (row === 0) {
-      const volLabel = 'Vol'.padStart(axisWidth - 1) + ' '
+      const volLabel = 'Vol '
       line.push(dimSeg(volLabel))
     } else {
       line.push(dimSeg(labelPrefix))
     }
 
     // For each candle, determine what character to show in this row
-    // Row 0 = top of volume area, row volumeHeight-1 = bottom
     const rowFromBottom = volumeHeight - 1 - row
     const rowStartEighth = rowFromBottom * 8
     const rowEndEighth = (rowFromBottom + 1) * 8
@@ -449,14 +547,12 @@ function buildVolumeLines(
     for (let i = 0; i < candles.length; i++) {
       const level = levels[i]
       const bullish = candles[i].close >= candles[i].open
-      const color: ChartSegment['color'] = bullish ? 'green' : 'red'
+      const color: ChartSegment['color'] = bullish ? CHART_COLORS.bullish : CHART_COLORS.bearish
 
       let char: string
       if (level >= rowEndEighth) {
-        // Full block
         char = VOLUME_BLOCKS[8]
       } else if (level > rowStartEighth) {
-        // Partial block
         const partial = level - rowStartEighth
         char = VOLUME_BLOCKS[Math.min(partial, 8)]
       } else {
@@ -476,8 +572,8 @@ function buildVolumeLines(
     }
     if (runText) line.push(seg(runText, runColor))
 
-    lines.push(line)
+    resultLines.push(line)
   }
 
-  return lines
+  return resultLines
 }

@@ -5,7 +5,7 @@
 
 export interface ChartSegment {
   text: string
-  color?: 'green' | 'red' | 'gray' | 'cyan' | 'white' | 'yellow'
+  color?: 'green' | 'red' | 'gray' | 'cyan' | 'magenta' | 'white' | 'yellow'
   dim?: boolean
 }
 
@@ -33,4 +33,16 @@ export const DEFAULT_CHART_OPTIONS: Partial<ChartOptions> = {
   showVolume: true,
   volumeHeight: 3,
   priceDecimals: 2,
+}
+
+/** Deep-sea Cthulhu theme color constants */
+export const CHART_COLORS = {
+  bullish: 'cyan' as const,       // bioluminescent cyan
+  bearish: 'magenta' as const,    // abyssal purple
+  axis: 'gray' as const,          // dim blue-gray
+  title: 'white' as const,        // title text
+  priceUp: 'cyan' as const,       // up price numbers
+  priceDown: 'magenta' as const,  // down price numbers
+  priceLine: 'yellow' as const,   // current price indicator — deep-sea searchlight
+  volume: undefined,               // follows candle color
 }
