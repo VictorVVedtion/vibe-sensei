@@ -13,6 +13,10 @@
 
 import type { Archetype } from '../../buddy/persona.js'
 import type { Emotion } from '../../buddy/sprite-atlas.js'
+import { GuardianDiary, computeCumulativeStats } from '../../buddy/diary.js'
+import { getLatestRegime } from '../market/regime.js'
+import { getConnectedExchange } from '../exchange/singleton.js'
+import { calculatePortfolioHeat } from '../portfolio/heat-calculator.js'
 import type { ProactiveMessage, ProactiveSeverity, TriggerType } from './types.js'
 
 // ── Message Templates ─────────────────────────────────────────────────────
@@ -200,6 +204,7 @@ function resolveTemplate(
   template: MessageTemplate,
   archetype: Archetype,
   vars: Record<string, string | number>,
+  trigger: TriggerType,
 ): ProactiveMessage {
   const raw = template.templates[archetype] ?? template.fallback
   let message = raw
@@ -207,7 +212,7 @@ function resolveTemplate(
     message = message.replaceAll(`{${key}}`, String(value))
   }
   return {
-    trigger: 'time' as TriggerType, // overridden by caller
+    trigger,
     severity: template.severity,
     message,
     emotion: template.emotion,
@@ -266,6 +271,8 @@ interface TriggerState {
   revengeWarningSent: boolean
   /** Whether averaging-down warning was sent recently. */
   averagingDownWarningSent: boolean
+  /** Last avgR seen (to only praise new highs). */
+  lastAvgR: number
 }
 
 function createInitialState(): TriggerState {
@@ -279,6 +286,22 @@ function createInitialState(): TriggerState {
     lastConsecutiveWins: 0,
     revengeWarningSent: false,
     averagingDownWarningSent: false,
+    lastAvgR: 0,
+  }
+}
+
+// ── Diary Singleton ───────────────────────────────────────────────────────
+
+let diaryInstance: GuardianDiary | null = null
+
+function getDiarySafe(): GuardianDiary | null {
+  try {
+    if (!diaryInstance) {
+      diaryInstance = new GuardianDiary()
+    }
+    return diaryInstance
+  } catch {
+    return null
   }
 }
 
@@ -347,6 +370,39 @@ export class ProactiveMonitor {
     this.state = createInitialState()
   }
 
+  /**
+   * Async market checks that require exchange connection.
+   * Called separately from the main synchronous check() when exchange is available.
+   */
+  async checkMarketAsync(): Promise<ProactiveMessage | null> {
+    try {
+      const exchange = await getConnectedExchange()
+      const [positions, balances, openOrders] = await Promise.all([
+        exchange.getPositions(),
+        exchange.getBalance(),
+        exchange.getOpenOrders(),
+      ])
+
+      const heat = calculatePortfolioHeat(positions, balances, openOrders)
+      const heatPct = heat.heatPercent
+
+      // Only warn when crossing the 60% threshold upward
+      const HEAT_THRESHOLD = 60
+      if (heatPct >= HEAT_THRESHOLD && this.state.lastKnownHeat < HEAT_THRESHOLD) {
+        this.state.lastKnownHeat = heatPct
+        return resolveTemplate(PORTFOLIO_HEAT_WARNING, this.archetype, {
+          heat: Math.round(heatPct),
+        }, 'market')
+      }
+
+      this.state.lastKnownHeat = heatPct
+    } catch {
+      // Exchange not connected or heat calculator unavailable — skip
+    }
+
+    return null
+  }
+
   // ── 1. Session Timer ──────────────────────────────────────────────────
 
   private checkSessionTimer(): ProactiveMessage | null {
@@ -358,29 +414,26 @@ export class ProactiveMonitor {
     if (elapsedHours >= 4 && !this.state.extendedWarningSent) {
       this.state.extendedWarningSent = true
       this.state.restReminderSent = true // also suppress the 2h reminder
-      const msg = resolveTemplate(SESSION_EXTENDED_WARNING, this.archetype, {
+      return resolveTemplate(SESSION_EXTENDED_WARNING, this.archetype, {
         hours: Math.floor(elapsedHours),
-      })
-      return { ...msg, trigger: 'time' }
+      }, 'time')
     }
 
     // Rest reminder (>2 hours, sent once)
     if (elapsedHours >= 2 && !this.state.restReminderSent) {
       this.state.restReminderSent = true
-      const msg = resolveTemplate(SESSION_REST_REMINDER, this.archetype, {
+      return resolveTemplate(SESSION_REST_REMINDER, this.archetype, {
         hours: Math.floor(elapsedHours),
-      })
-      return { ...msg, trigger: 'time' }
+      }, 'time')
     }
 
     // Late-night check (00:00 - 05:00 local time)
     const localHour = new Date(now).getHours()
     if (localHour >= 0 && localHour < 5 && !this.state.lateNightWarningSent) {
       this.state.lateNightWarningSent = true
-      const msg = resolveTemplate(LATE_NIGHT_WARNING, this.archetype, {
+      return resolveTemplate(LATE_NIGHT_WARNING, this.archetype, {
         hour: localHour,
-      })
-      return { ...msg, trigger: 'time' }
+      }, 'time')
     }
 
     // Reset late-night flag when no longer in the late-night window
@@ -394,14 +447,8 @@ export class ProactiveMonitor {
   // ── 2. Behavior Watcher ───────────────────────────────────────────────
 
   private checkBehaviorWatcher(): ProactiveMessage | null {
-    // Dynamic import to avoid hard dependency — diary may not be initialized
-    let diary: import('../../buddy/diary.js').GuardianDiary
-    try {
-      const { GuardianDiary } = require('../../buddy/diary.js')
-      diary = new GuardianDiary()
-    } catch {
-      return null // diary module unavailable
-    }
+    const diary = getDiarySafe()
+    if (!diary) return null
 
     const recentEntries = diary.getRecentEntries(20)
     if (recentEntries.length === 0) return null
@@ -410,8 +457,7 @@ export class ProactiveMonitor {
     const revengeEntries = recentEntries.filter(e => e.patternType === 'revenge_trade')
     if (revengeEntries.length > 0 && !this.state.revengeWarningSent) {
       this.state.revengeWarningSent = true
-      const msg = resolveTemplate(REVENGE_TRADING_INTERVENTION, this.archetype, {})
-      return { ...msg, trigger: 'behavior' }
+      return resolveTemplate(REVENGE_TRADING_INTERVENTION, this.archetype, {}, 'behavior')
     }
     if (revengeEntries.length === 0) {
       this.state.revengeWarningSent = false
@@ -423,8 +469,7 @@ export class ProactiveMonitor {
     )
     if (avgDownEntries.length > 0 && !this.state.averagingDownWarningSent) {
       this.state.averagingDownWarningSent = true
-      const msg = resolveTemplate(AVERAGING_DOWN_WARNING, this.archetype, {})
-      return { ...msg, trigger: 'behavior' }
+      return resolveTemplate(AVERAGING_DOWN_WARNING, this.archetype, {}, 'behavior')
     }
     if (avgDownEntries.length === 0) {
       this.state.averagingDownWarningSent = false
@@ -442,10 +487,9 @@ export class ProactiveMonitor {
 
     if (consecutiveLosses >= 3 && consecutiveLosses > this.state.lastConsecutiveLosses) {
       this.state.lastConsecutiveLosses = consecutiveLosses
-      const msg = resolveTemplate(CONSECUTIVE_LOSSES_COMFORT, this.archetype, {
+      return resolveTemplate(CONSECUTIVE_LOSSES_COMFORT, this.archetype, {
         count: consecutiveLosses,
-      })
-      return { ...msg, trigger: 'behavior' }
+      }, 'behavior')
     }
     if (consecutiveLosses < this.state.lastConsecutiveLosses) {
       this.state.lastConsecutiveLosses = consecutiveLosses
@@ -457,12 +501,8 @@ export class ProactiveMonitor {
   // ── 3. Market Watcher ─────────────────────────────────────────────────
 
   private checkMarketWatcher(): ProactiveMessage | null {
-    // Regime change detection — uses cached data, no exchange call
+    // Regime change detection — uses cached data from getLatestRegime, no exchange call
     try {
-      const { getLatestRegime } = require('../../services/market/regime.js') as {
-        getLatestRegime: (symbol: string) => import('../market/types.js').MarketRegime | null
-      }
-
       for (const symbol of ['BTC/USDT', 'ETH/USDT']) {
         const regime = getLatestRegime(symbol)
         if (!regime) continue
@@ -472,11 +512,10 @@ export class ProactiveMonitor {
 
         if (prevRegime && prevRegime !== currentRegime) {
           this.state.lastKnownRegimes.set(symbol, currentRegime)
-          const msg = resolveTemplate(REGIME_CHANGE_NOTIFICATION, this.archetype, {
+          return resolveTemplate(REGIME_CHANGE_NOTIFICATION, this.archetype, {
             from: prevRegime.replace('_', ' '),
             to: currentRegime.replace('_', ' '),
-          })
-          return { ...msg, trigger: 'market' }
+          }, 'market')
         }
 
         this.state.lastKnownRegimes.set(symbol, currentRegime)
@@ -485,85 +524,15 @@ export class ProactiveMonitor {
       // Market regime module not available — skip
     }
 
-    // Portfolio heat check — requires exchange, gracefully skip
-    try {
-      const { getExchange } = require('../../services/exchange/singleton.js') as {
-        getExchange: () => import('../exchange/types.js').ExchangeInterface
-      }
-      const { calculatePortfolioHeat } = require('../../services/portfolio/heat-calculator.js') as {
-        calculatePortfolioHeat: typeof import('../portfolio/heat-calculator.js').calculatePortfolioHeat
-      }
-
-      const exchange = getExchange()
-      // Use synchronous-ish check: if exchange has cached data, use it
-      // We avoid async here to keep the check() method synchronous
-      // The exchange singleton caches positions/balances after first fetch
-      const heatResult = this.checkPortfolioHeatSync(exchange, calculatePortfolioHeat)
-      if (heatResult) return heatResult
-    } catch {
-      // Exchange or heat calculator not available — skip
-    }
-
-    return null
-  }
-
-  private checkPortfolioHeatSync(
-    _exchange: import('../exchange/types.js').ExchangeInterface,
-    _calculateHeat: typeof import('../portfolio/heat-calculator.js').calculatePortfolioHeat,
-  ): ProactiveMessage | null {
-    // Portfolio heat check is deferred to async check cycle.
-    // The synchronous check() only uses cached regime data.
-    // Heat is checked via checkAsync() instead.
-    return null
-  }
-
-  /**
-   * Async market checks that require exchange connection.
-   * Called separately from the main synchronous check() when exchange is available.
-   */
-  async checkMarketAsync(): Promise<ProactiveMessage | null> {
-    try {
-      const { getConnectedExchange } = await import('../../services/exchange/singleton.js')
-      const { calculatePortfolioHeat } = await import('../../services/portfolio/heat-calculator.js')
-
-      const exchange = await getConnectedExchange()
-      const [positions, balances, openOrders] = await Promise.all([
-        exchange.getPositions(),
-        exchange.getBalance(),
-        exchange.getOpenOrders(),
-      ])
-
-      const heat = calculatePortfolioHeat(positions, balances, openOrders)
-      const heatPct = heat.heatPercent
-
-      // Only warn when crossing the 60% threshold upward
-      const HEAT_THRESHOLD = 60
-      if (heatPct >= HEAT_THRESHOLD && this.state.lastKnownHeat < HEAT_THRESHOLD) {
-        this.state.lastKnownHeat = heatPct
-        const msg = resolveTemplate(PORTFOLIO_HEAT_WARNING, this.archetype, {
-          heat: Math.round(heatPct),
-        })
-        return { ...msg, trigger: 'market' }
-      }
-
-      this.state.lastKnownHeat = heatPct
-    } catch {
-      // Exchange not connected or heat calculator unavailable — skip
-    }
-
+    // Portfolio heat is checked async via checkMarketAsync()
     return null
   }
 
   // ── 4. Encouragement Watcher ──────────────────────────────────────────
 
   private checkEncouragementWatcher(): ProactiveMessage | null {
-    let diary: import('../../buddy/diary.js').GuardianDiary
-    try {
-      const { GuardianDiary } = require('../../buddy/diary.js')
-      diary = new GuardianDiary()
-    } catch {
-      return null
-    }
+    const diary = getDiarySafe()
+    if (!diary) return null
 
     const recentEntries = diary.getRecentEntries(20)
     if (recentEntries.length === 0) return null
@@ -580,32 +549,29 @@ export class ProactiveMonitor {
 
     if (consecutiveWins >= 3 && consecutiveWins > this.state.lastConsecutiveWins) {
       this.state.lastConsecutiveWins = consecutiveWins
-      const msg = resolveTemplate(WIN_STREAK_PRAISE, this.archetype, {
+      return resolveTemplate(WIN_STREAK_PRAISE, this.archetype, {
         count: consecutiveWins,
-      })
-      return { ...msg, trigger: 'encouragement' }
+      }, 'encouragement')
     }
     if (consecutiveWins < this.state.lastConsecutiveWins) {
       this.state.lastConsecutiveWins = consecutiveWins
     }
 
-    // Check for stop-loss discipline (most recent trade was a loss with good_discipline)
+    // Check for stop-loss discipline (most recent trade was a disciplined loss)
     const lastEntry = recentEntries[0]
     if (lastEntry && lastEntry.patternType === 'good_discipline' && lastEntry.outcome === 'loss') {
-      const msg = resolveTemplate(STOP_LOSS_DISCIPLINE_PRAISE, this.archetype, {})
-      return { ...msg, trigger: 'encouragement' }
+      return resolveTemplate(STOP_LOSS_DISCIPLINE_PRAISE, this.archetype, {}, 'encouragement')
     }
 
     // Check for good R-multiple via cumulative stats
     try {
-      const { computeCumulativeStats } = require('../../buddy/diary.js') as {
-        computeCumulativeStats: () => import('../../buddy/diary.js').CumulativeStats | null
-      }
       const stats = computeCumulativeStats()
-      if (stats && stats.avgR > 2.0) {
-        // Only praise if this is a new high
-        const msg = resolveTemplate(GOOD_R_MULTIPLE_PRAISE, this.archetype, {})
-        return { ...msg, trigger: 'encouragement' }
+      if (stats && stats.avgR > 2.0 && stats.avgR > this.state.lastAvgR) {
+        this.state.lastAvgR = stats.avgR
+        return resolveTemplate(GOOD_R_MULTIPLE_PRAISE, this.archetype, {}, 'encouragement')
+      }
+      if (stats) {
+        this.state.lastAvgR = stats.avgR
       }
     } catch {
       // Stats not available — skip
