@@ -2811,6 +2811,14 @@ export function REPL({
         companionReaction: reaction as string | undefined
       }));
     }
+    // Proactive companion engine — lazy-register the AppState setter on first query.
+    // The engine starts on the first trading event via guardian-observer.
+    try {
+      const { registerAppStateSetter } = await import('../services/companion/singleton.js')
+      registerAppStateSetter(setAppState)
+    } catch {
+      // Companion engine registration must never block the query loop
+    }
     queryCheckpoint('query_end');
 
     // Capture ant-only API metrics before resetLoadingState clears the ref.

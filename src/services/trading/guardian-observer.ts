@@ -259,6 +259,21 @@ export async function evaluateAfterToolCall(
     // Emit guardian alert to desktop bridge
     emitGuardianAlert(topAlert, bridgeMod)
 
+    // Notify companion engine about the trading event
+    try {
+      const { notifyTradingEvent } = await import('../companion/singleton.js')
+      const symbolMatch = topAlert.message.match(/([A-Z]{2,10}\/[A-Z]{2,10})/)
+      notifyTradingEvent({
+        type: 'trade_executed',
+        symbol: symbolMatch ? symbolMatch[1]! : 'UNKNOWN',
+        side: 'buy',
+        quantity: 0,
+        price: 0,
+      })
+    } catch {
+      // Companion engine notification must never propagate
+    }
+
     const master = companion.species as import('../../buddy/types.js').Master
     const stats = companion.stats
 
