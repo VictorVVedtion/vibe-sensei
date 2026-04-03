@@ -378,5 +378,10 @@ export function createUdfApp(): Express {
 
   mountUdfRoutes(app);
 
+  // Custom 404 handler — must be last (after all route registrations)
+  app.use((_req: Request, res: Response) => {
+    res.status(404).json({ error: 'Not found' });
+  });
+
   return app;
 }
