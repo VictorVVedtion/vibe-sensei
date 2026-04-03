@@ -7,6 +7,7 @@
  *   - CooldownManager (prevents message spam)
  *   - AsyncCouncil (background debates when risk rises, Sprint 52)
  *   - VisionService (chart screenshot analysis via multimodal AI, Sprint 53)
+ *   - TTSService (text-to-speech voice output for masters, Sprint 54)
  *
  * The engine runs a 60-second polling loop that checks all triggers,
  * respects cooldown, and pushes messages via a callback. Emergency/urgent
@@ -26,6 +27,8 @@ import { ExpressionEngine, type TradingEventType } from './expression.js'
 import { CooldownManager, ProactiveMonitor } from './proactive-monitor.js'
 import { AsyncCouncil } from './council.js'
 import { VisionService } from './vision.js'
+import { TTSService } from './tts.js'
+import { ARCHETYPE_VOICES } from './voice-config.js'
 import type {
   CompanionConfig,
   CompanionStatus,
@@ -49,6 +52,7 @@ export class CompanionEngine {
   private readonly cooldown: CooldownManager
   private readonly council: AsyncCouncil
   private readonly vision: VisionService
+  private readonly tts: TTSService
   private readonly config: CompanionConfig
   private readonly archetype: Archetype
   private readonly masterName: string
@@ -59,6 +63,7 @@ export class CompanionEngine {
   private running: boolean = false
   private messagesDelivered: number = 0
   private lastMessageAt: number | null = null
+  private ttsEnabled: boolean = true
 
   constructor(
     config: CompanionConfig,
@@ -77,6 +82,7 @@ export class CompanionEngine {
     this.cooldown = new CooldownManager(config.cooldownMs)
     this.council = new AsyncCouncil()
     this.vision = new VisionService()
+    this.tts = new TTSService()
   }
 
   /** Start the polling loop and async market checks. */
@@ -106,6 +112,7 @@ export class CompanionEngine {
       this.intervalId = null
     }
 
+    this.tts.stop()
     this.expression.dispose()
   }
 
@@ -240,6 +247,24 @@ export class CompanionEngine {
     return this.vision.isChartServerAvailable()
   }
 
+  /** Enable or disable TTS voice output. */
+  setTTSEnabled(enabled: boolean): void {
+    this.ttsEnabled = enabled
+    if (!enabled) {
+      this.tts.stop()
+    }
+  }
+
+  /** Whether TTS is currently enabled and has a valid API key. */
+  isTTSEnabled(): boolean {
+    return this.ttsEnabled && this.tts.isAvailable()
+  }
+
+  /** Stop any currently playing TTS audio. */
+  stopTTS(): void {
+    this.tts.stop()
+  }
+
   // ── Private ─────────────────────────────────────────────────────────────
 
   private runCheck(): void {
@@ -309,6 +334,19 @@ export class CompanionEngine {
 
     // Push the message
     this.pushMessage(msg.message)
+
+    // Speak the message via TTS (async, non-blocking)
+    if (this.ttsEnabled && this.tts.isAvailable()) {
+      const voice = ARCHETYPE_VOICES[this.archetype]
+      if (voice) {
+        this.tts.speak(msg.message, voice).catch((err: unknown) => {
+          console.error(
+            '[CompanionEngine] TTS error:',
+            err instanceof Error ? err.message : err,
+          )
+        })
+      }
+    }
 
     // Update expression
     this.expression.setEmotion(msg.emotion, PROACTIVE_EMOTION_DURATION_MS)
