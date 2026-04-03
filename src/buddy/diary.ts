@@ -718,6 +718,7 @@ export class GuardianDiary {
   private tradeReports: TradeReport[] = []
   private readonly storePath: string
   private enhancedCache: { hash: number; summary: EnhancedPatternSummary } | null = null
+  private _cacheVersion = 0
 
   constructor(storePath?: string) {
     this.storePath = storePath ?? DEFAULT_STORE_PATH
@@ -746,6 +747,7 @@ export class GuardianDiary {
     }
 
     this.entries.push(entry)
+    this._cacheVersion++
     this.save()
 
     // Emit DiaryPatternEvent to Knowledge Base (sync-safe, one-way emit)
@@ -788,7 +790,7 @@ export class GuardianDiary {
   getEnhancedSummary(): EnhancedPatternSummary | null {
     if (this.entries.length < 20) return null
 
-    const hash = this.entries.length
+    const hash = this.entries.length * 1000 + this._cacheVersion
     if (this.enhancedCache && this.enhancedCache.hash === hash) {
       return this.enhancedCache.summary
     }
@@ -804,6 +806,7 @@ export class GuardianDiary {
     if (this.tradeReports.length > 50) {
       this.tradeReports = this.tradeReports.slice(-50)
     }
+    this._cacheVersion++
     this.save()
 
     // Emit TradeLogEvent to Knowledge Base (sync-safe, one-way emit)
