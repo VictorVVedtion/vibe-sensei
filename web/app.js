@@ -464,10 +464,63 @@
     candleSeries.setMarkers(newMarkers);
   }
 
+  // --- Chart Screenshot Capture ---
+
+  var SCREENSHOT_INTERVAL = 10000; // 10 seconds
+  var screenshotTimer = null;
+
+  /**
+   * Capture the current chart as a PNG and POST it to the server.
+   * Uses TradingView Lightweight Charts' takeScreenshot() method.
+   * Runs silently — failures are logged but never disrupt the user.
+   */
+  function captureAndUploadScreenshot() {
+    if (!chart) return;
+
+    try {
+      var canvas = chart.takeScreenshot();
+      if (!canvas) return;
+
+      canvas.toBlob(function (blob) {
+        if (!blob) return;
+
+        fetch(UDF_BASE + '/api/screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'image/png' },
+          body: blob,
+        }).catch(function (err) {
+          // Silent failure — screenshot upload is best-effort
+          console.debug('[Vibe Sensei] Screenshot upload failed:', err.message);
+        });
+      }, 'image/png');
+    } catch (err) {
+      console.debug('[Vibe Sensei] Screenshot capture failed:', err.message);
+    }
+  }
+
+  /**
+   * Start periodic screenshot capture.
+   * Called after chart initialization and first data load.
+   */
+  function startScreenshotCapture() {
+    if (screenshotTimer) return;
+    // First capture after a short delay to let the chart render
+    setTimeout(captureAndUploadScreenshot, 2000);
+    screenshotTimer = setInterval(captureAndUploadScreenshot, SCREENSHOT_INTERVAL);
+  }
+
+  /**
+   * Manually trigger a screenshot capture (exposed via public API).
+   */
+  function takeScreenshot() {
+    captureAndUploadScreenshot();
+  }
+
   // Expose public API
   window.VibeSensei = {
     addTradeMarker: addTradeMarker,
     reload: loadData,
+    takeScreenshot: takeScreenshot,
   };
 
   // --- Bootstrap ---
@@ -478,6 +531,7 @@
     bindEvents();
     loadData();
     connectWebSocket();
+    startScreenshotCapture();
   }
 
   // Wait for DOM if needed (script is at bottom, so usually ready)

@@ -21,7 +21,7 @@
 import type { AppState } from '../../state/AppStateStore.js'
 import { getCompanion } from '../../buddy/companion.js'
 import { getMasterArchetype } from '../../buddy/persona.js'
-import type { Master } from '../../buddy/types.js'
+import { MASTER_NAMES, type Master } from '../../buddy/types.js'
 import { CompanionEngine } from './engine.js'
 import type { CompanionConfig, CompanionStatus, TradingEvent } from './types.js'
 
@@ -52,6 +52,7 @@ export function initCompanionEngine(
 
   const masterSpecies = companion.species as Master
   const archetype = getMasterArchetype(masterSpecies)
+  const masterName = MASTER_NAMES[masterSpecies] ?? companion.name ?? 'Trading Master'
 
   const fullConfig: CompanionConfig = {
     enabled: true,
@@ -68,7 +69,7 @@ export function initCompanionEngine(
     })
   }
 
-  engineInstance = new CompanionEngine(fullConfig, archetype, pushMessage, masterSpecies)
+  engineInstance = new CompanionEngine(fullConfig, archetype, pushMessage, masterName, masterSpecies)
   engineInstance.start()
 }
 
