@@ -2,6 +2,8 @@ interface RiskGaugeProps {
   score: number
 }
 
+const TOTAL_BLOCKS = 20
+
 function getSeverityLabel(score: number): string {
   if (score <= 20) return 'LOW'
   if (score <= 50) return 'MODERATE'
@@ -12,18 +14,21 @@ function getSeverityLabel(score: number): string {
 function getSeverityColor(score: number): string {
   if (score <= 20) return '#00FFA3'
   if (score <= 50) return '#FFBB33'
-  if (score <= 75) return '#D4A843'
+  if (score <= 75) return '#C850C0'
   return '#C850C0'
+}
+
+function buildBlockString(score: number): string {
+  const filled = Math.round((score / 100) * TOTAL_BLOCKS)
+  const empty = TOTAL_BLOCKS - filled
+  return '\u2588'.repeat(filled) + '\u2591'.repeat(empty)
 }
 
 export function RiskGauge({ score }: RiskGaugeProps) {
   const clamped = Math.max(0, Math.min(100, score))
   const color = getSeverityColor(clamped)
   const label = getSeverityLabel(clamped)
-
-  // Build gradient stops for the track background
-  const trackGradient =
-    'linear-gradient(to right, #00FFA3 0%, #FFBB33 35%, #D4A843 65%, #C850C0 100%)'
+  const blocks = buildBlockString(clamped)
 
   return (
     <div
@@ -34,35 +39,13 @@ export function RiskGauge({ score }: RiskGaugeProps) {
       aria-valuemax={100}
       aria-label={`Risk score ${clamped} out of 100, severity ${label}`}
     >
-      <div style={styles.header}>
-        <span style={styles.title}>Risk</span>
+      <div style={styles.gaugeRow}>
+        <span style={styles.title}>RISK</span>
+        <span style={{ ...styles.blocks, color }}>{blocks}</span>
         <span style={{ ...styles.scoreLabel, color }}>
-          {clamped} <span style={styles.severityTag}>{label}</span>
+          {String(clamped).padStart(3, ' ')}
         </span>
-      </div>
-      <div style={styles.trackOuter}>
-        <div style={{ ...styles.track, background: trackGradient }}>
-          <div
-            style={{
-              ...styles.trackOverlay,
-              width: `${100 - clamped}%`,
-            }}
-          />
-        </div>
-        <div
-          style={{
-            ...styles.indicator,
-            left: `${clamped}%`,
-            borderColor: color,
-          }}
-        />
-      </div>
-      <div style={styles.labels}>
-        <span style={styles.labelText}>0</span>
-        <span style={styles.labelText}>25</span>
-        <span style={styles.labelText}>50</span>
-        <span style={styles.labelText}>75</span>
-        <span style={styles.labelText}>100</span>
+        <span style={{ ...styles.severityTag, color }}>{label}</span>
       </div>
     </div>
   )
@@ -71,71 +54,40 @@ export function RiskGauge({ score }: RiskGaugeProps) {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     background: '#0F1924',
-    padding: '8px 12px',
+    padding: '6px 8px',
     border: '1px solid #253550',
   },
-  header: {
+  gaugeRow: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 8,
+    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace",
   },
   title: {
-    fontSize: 11,
-    fontWeight: 600,
+    fontSize: 10,
+    fontWeight: 700,
     color: '#7B8AA0',
-    textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
+    flexShrink: 0,
+  },
+  blocks: {
+    fontSize: 12,
+    letterSpacing: 0,
+    lineHeight: 1,
+    flexShrink: 0,
+    whiteSpace: 'pre' as const,
   },
   scoreLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
+    whiteSpace: 'pre' as const,
   },
   severityTag: {
     fontSize: 9,
     fontWeight: 600,
     letterSpacing: 0.5,
-  },
-  trackOuter: {
-    position: 'relative' as const,
-    height: 8,
-    marginBottom: 4,
-  },
-  track: {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 8,
-    overflow: 'hidden',
-  },
-  trackOverlay: {
-    position: 'absolute' as const,
-    top: 0,
-    right: 0,
-    height: '100%',
-    background: 'rgba(10, 22, 40, 0.7)',
-    transition: 'width 0.4s ease',
-  },
-  indicator: {
-    position: 'absolute' as const,
-    top: -2,
-    width: 4,
-    height: 12,
-    background: '#0F1924',
-    border: '2px solid',
-    transform: 'translateX(-50%)',
-    transition: 'left 0.4s ease',
-    zIndex: 1,
-  },
-  labels: {
-    display: 'flex',
-    justifyContent: 'space-between',
-  },
-  labelText: {
-    fontSize: 8,
-    color: '#7B8AA0',
-    fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
   },
 }
