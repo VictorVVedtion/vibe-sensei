@@ -136,11 +136,15 @@ export class GhostEngine {
   }
 }
 
+// Module-level singleton — preserves per-ghost cooldown state across calls.
+let defaultEngine: GhostEngine | null = null
+
 /**
- * Convenience function — create engine, check all triggers, return result.
- * Exported for single-call usage from guardian or other modules.
+ * Convenience function — uses a module-level singleton engine so that
+ * per-ghost cooldowns persist across calls. Previously created a new
+ * engine each call, resetting cooldowns and causing alert spam.
  */
 export function checkGhostTriggers(context: GhostContext): GhostWarning | null {
-  const engine = new GhostEngine()
-  return engine.checkAll(context)
+  if (!defaultEngine) defaultEngine = new GhostEngine()
+  return defaultEngine.checkAll(context)
 }
