@@ -7,6 +7,7 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { getConnectedExchange } from '../../services/exchange/singleton.js'
+import { InvalidSymbolError } from '../../services/exchange/index.js'
 import type { Candle } from '../../services/exchange/types.js'
 import { renderToolResultMessage, renderToolUseMessage } from './UI.js'
 
@@ -96,15 +97,24 @@ export const ChartTool = buildTool({
     const timeframe = input.timeframe ?? '4h'
     const limit = input.limit ?? 50
 
-    const candles = await exchange.getCandles(input.symbol, timeframe, limit)
+    try {
+      const candles = await exchange.getCandles(input.symbol, timeframe, limit)
 
-    return {
-      data: {
-        candles,
-        symbol: input.symbol,
-        timeframe,
-        candleCount: candles.length,
-      } satisfies Output,
+      return {
+        data: {
+          candles,
+          symbol: input.symbol,
+          timeframe,
+          candleCount: candles.length,
+        } satisfies Output,
+      }
+    } catch (error: unknown) {
+      if (error instanceof InvalidSymbolError) {
+        return {
+          data: `Unknown symbol: ${input.symbol}. Use format like BTC/USDT. Available: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, UNI, ATOM, LTC, NEAR, APT, ARB, OP, SUI, PEPE, MATIC.` as unknown as Output,
+        }
+      }
+      throw error
     }
   },
 } satisfies ToolDef<InputSchema, Output>)

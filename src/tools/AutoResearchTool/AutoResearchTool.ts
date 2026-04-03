@@ -10,6 +10,7 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { getConnectedExchange } from '../../services/exchange/singleton.js'
+import { InvalidSymbolError } from '../../services/exchange/index.js'
 import type { Candle } from '../../services/exchange/types.js'
 
 // ---------------------------------------------------------------------------
@@ -555,6 +556,11 @@ export const AutoResearchTool = buildTool({
       const exchange = await getConnectedExchange()
       candles = await exchange.getCandles(symbol, timeframe, 100)
     } catch (error: unknown) {
+      if (error instanceof InvalidSymbolError) {
+        return {
+          data: 'Unknown symbol: ' + symbol + '. Use format like BTC/USDT. Available: BTC, ETH, SOL, BNB, XRP, ADA, DOGE, AVAX, DOT, LINK, UNI, ATOM, LTC, NEAR, APT, ARB, OP, SUI, PEPE, MATIC.',
+        }
+      }
       const msg =
         error instanceof Error ? error.message : String(error)
       return { data: 'Failed to fetch candle data: ' + msg }
