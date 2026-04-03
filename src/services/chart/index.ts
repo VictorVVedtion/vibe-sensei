@@ -35,7 +35,7 @@ export function startUdfServer(port: number): Promise<void> {
     const webDir = pathResolve(import.meta.dirname ?? __dirname, '..', '..', '..', 'web');
     app.use(express.static(webDir));
 
-    server = app.listen(port, () => {
+    server = app.listen(port, '127.0.0.1', () => {
       console.log(`UDF server listening on http://localhost:${port}`);
       console.log(`Web frontend: http://localhost:${port}/`);
       resolve();
