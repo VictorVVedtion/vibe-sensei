@@ -1,6 +1,7 @@
 import type { CompanionBones, Eye, Master, Rarity } from './types.js'
 import { MASTER_NAMES, RARITY_STARS, MASTER_RARITY } from './types.js'
 import { MASTER_PORTRAITS } from './sprite-atlas.js'
+import type { Emotion } from './sprite-atlas.js'
 import { stringWidth } from '../ink/stringWidth.js'
 
 /**
@@ -81,6 +82,7 @@ function padTo(text: string, width: number): string {
 /**
  * Render a compact master sprite with box-drawing frame.
  * Returns 8 lines with personality-driven ASCII portrait.
+ * Optional emotion parameter selects an emotion-variant portrait if available.
  *
  * Example (legendary):
  * ╔═══════════════════╗
@@ -92,7 +94,7 @@ function padTo(text: string, width: number): string {
  * ║ ₿ Satoshi Nakamoto ║
  * ╚═══════════════════╝
  */
-export function renderSprite(bones: CompanionBones, _frame = 0): string[] {
+export function renderSprite(bones: CompanionBones, _frame = 0, emotion?: Emotion): string[] {
   const master = bones.species as Master
   const name = MASTER_NAMES[master] ?? master
   const rarity = MASTER_RARITY[master] ?? bones.rarity
@@ -103,12 +105,15 @@ export function renderSprite(bones: CompanionBones, _frame = 0): string[] {
   const [tl, tr, bl, br, hz, vt] = getBorderChars(rarity)
   const W = 19
 
-  // Portrait lines (fallback to generic face if somehow missing)
-  const art = portrait?.portrait ?? [
+  // Select emotion portrait variant if available, fallback to neutral
+  const fallback: [string, string, string] = [
     `    (${bones.eye}  ${bones.eye})    `,
     '                 ',
     '                 ',
   ]
+  const art = (emotion && emotion !== 'neutral' && portrait?.emotions?.[emotion])
+    ?? portrait?.portrait
+    ?? fallback
 
   return [
     `${tl}${hz.repeat(W)}${tr}`,
