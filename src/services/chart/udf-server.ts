@@ -176,8 +176,16 @@ async function fetchCandles(
 async function handleHistory(req: Request, res: Response): Promise<void> {
   const symbol = String(req.query.symbol ?? '');
   const resolution = String(req.query.resolution ?? '60');
-  const from = Number(req.query.from) || 0;
-  const to = Number(req.query.to) || Math.floor(Date.now() / 1000);
+  const from = Number(req.query.from);
+  const to = Number(req.query.to);
+
+  if (Number.isNaN(from) || Number.isNaN(to)) {
+    res.status(400).json({ s: 'error', errmsg: 'Invalid timestamp parameter' });
+    return;
+  }
+
+  const fromSafe = from || 0;
+  const toSafe = to || Math.floor(Date.now() / 1000);
 
   if (!symbol) {
     res.status(400).json({ s: 'error', errmsg: 'Missing symbol parameter' });
@@ -190,7 +198,7 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const cacheKey = `${symbol}:${resolution}:${from}:${to}`;
+  const cacheKey = `${symbol}:${resolution}:${fromSafe}:${toSafe}`;
 
   const cached = candleCache.get(cacheKey);
   if (cached) {
@@ -201,7 +209,7 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
   try {
     let pending = inflight.get(cacheKey);
     if (!pending) {
-      pending = fetchCandles(symbol, resolution, timeframe, from, to).finally(() => {
+      pending = fetchCandles(symbol, resolution, timeframe, fromSafe, toSafe).finally(() => {
         inflight.delete(cacheKey);
       });
       inflight.set(cacheKey, pending);
