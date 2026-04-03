@@ -292,6 +292,19 @@ export async function evaluateAfterToolCall(
       // KB event emission must never propagate
     }
 
+    // Auto-compile knowledge base after every 5 PlaceOrder calls (fire-and-forget)
+    if (toolName === 'PlaceOrder') {
+      try {
+        const { incrementTradeCount, shouldAutoCompile, autoCompile } = await import('../knowledge/compiler.js')
+        incrementTradeCount()
+        if (shouldAutoCompile()) {
+          autoCompile().catch(() => { /* swallow */ })
+        }
+      } catch {
+        // KB auto-compile must never propagate
+      }
+    }
+
     const master = companion.species as import('../../buddy/types.js').Master
     const stats = companion.stats
 
