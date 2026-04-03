@@ -133,6 +133,9 @@ export const OrderTool = buildTool({
         if (report) result += '\n\n' + report
       }
 
+      // Check if this order ignores a recent guardian alert (fire-and-forget)
+      checkIgnoredAlert(input.symbol, input.side).catch(() => {})
+
       return { data: result }
     } catch (error: unknown) {
       if (error instanceof InsufficientFundsError) {
@@ -240,5 +243,23 @@ async function recordToDiary(
     recordTradeReport(report)
   } catch {
     // Diary integration is optional — never propagate
+  }
+}
+
+/**
+ * Check if the placed order ignores a recent guardian alert.
+ * Dynamic import with try-catch — failure is silently swallowed.
+ */
+async function checkIgnoredAlert(
+  symbol: string,
+  side: string,
+): Promise<void> {
+  try {
+    const { checkIfIgnored } = await import(
+      '../../services/knowledge/counterfactual.js'
+    )
+    await checkIfIgnored(symbol, Date.now(), side)
+  } catch {
+    // Counterfactual tracking must never block trading
   }
 }

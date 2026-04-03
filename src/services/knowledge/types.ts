@@ -1,9 +1,9 @@
 /**
  * Knowledge Base Event Type Definitions.
  *
- * Defines 7 event types emitted by the trading system:
+ * Defines 8 event types emitted by the trading system:
  * TradeLogEvent, AlertEvent, GhostEvent, RegimeChangeEvent,
- * CircuitBreakerEvent, GateCheckEvent, DiaryPatternEvent.
+ * CircuitBreakerEvent, GateCheckEvent, DiaryPatternEvent, AlertIgnoredEvent.
  *
  * Each event extends a base KBEvent with type, timestamp, and UUID id.
  * Zod schemas provide runtime validation for JSONL read-back.
@@ -115,6 +115,21 @@ export const DiaryPatternEventSchema = KBEventBaseSchema.extend({
 
 export type DiaryPatternEvent = z.infer<typeof DiaryPatternEventSchema>
 
+
+// ── AlertIgnoredEvent ─────────────────────────────────────────────────────
+
+export const AlertIgnoredEventSchema = KBEventBaseSchema.extend({
+  type: z.literal('alert_ignored'),
+  alertId: z.string(),
+  symbol: z.string(),
+  alertSeverity: z.enum(['INFO', 'WARNING', 'CRITICAL', 'EMERGENCY']),
+  alertCheckName: z.string(),
+  orderSide: z.string().optional(),
+  timeDeltaMs: z.number().optional(),
+})
+
+export type AlertIgnoredEvent = z.infer<typeof AlertIgnoredEventSchema>
+
 // ── Union Schema ──────────────────────────────────────────────────────────────
 
 export const KBEventSchema = z.union([
@@ -125,6 +140,7 @@ export const KBEventSchema = z.union([
   CircuitBreakerEventSchema,
   GateCheckEventSchema,
   DiaryPatternEventSchema,
+  AlertIgnoredEventSchema,
 ])
 
 export type KBEventUnion =
@@ -135,3 +151,4 @@ export type KBEventUnion =
   | CircuitBreakerEvent
   | GateCheckEvent
   | DiaryPatternEvent
+  | AlertIgnoredEvent
