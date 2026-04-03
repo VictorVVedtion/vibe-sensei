@@ -1,5 +1,7 @@
-import type { CompanionBones, Eye, Master } from './types.js'
+import type { CompanionBones, Eye, Master, Rarity } from './types.js'
 import { MASTER_NAMES, RARITY_STARS, MASTER_RARITY } from './types.js'
+import { MASTER_PORTRAITS } from './sprite-atlas.js'
+import { stringWidth } from '../ink/stringWidth.js'
 
 /**
  * Master sprites — compact visual identity cards with box-drawing frames.
@@ -51,25 +53,44 @@ function getEmblem(master: Master): string {
 }
 
 /**
+ * Return border characters based on rarity tier.
+ * Returns [topLeft, topRight, bottomLeft, bottomRight, horizontal, vertical].
+ */
+function getBorderChars(rarity: Rarity): [string, string, string, string, string, string] {
+  switch (rarity) {
+    case 'legendary':
+      return ['╔', '╗', '╚', '╝', '═', '║']
+    case 'epic':
+      return ['╭', '╮', '╰', '╯', '─', '│']
+    default:
+      // common, uncommon, rare
+      return ['┌', '┐', '└', '┘', '─', '│']
+  }
+}
+
+/**
  * Pad or truncate a string to fit within a fixed visual width.
- * Simple approach: pads with spaces on the right.
+ * Uses stringWidth() for accurate Unicode width measurement.
  */
 function padTo(text: string, width: number): string {
-  if (text.length >= width) return text.slice(0, width)
-  return text + ' '.repeat(width - text.length)
+  const w = stringWidth(text)
+  if (w >= width) return text.slice(0, width) // simple truncation fallback
+  return text + ' '.repeat(width - w)
 }
 
 /**
  * Render a compact master sprite with box-drawing frame.
- * Returns 6 lines representing the master's identity card.
+ * Returns 8 lines with personality-driven ASCII portrait.
  *
- * Example:
- * ┌───────────────────┐
- * │ 📊 Warren Buffett  │
- * │ ★★★★★ Legendary   │
- * │    (◉  ◉)         │
- * │ Your Guardian      │
- * └───────────────────┘
+ * Example (legendary):
+ * ╔═══════════════════╗
+ * ║   ▄▓███████▄      ║
+ * ║   █▓░ ··  ░▓█     ║
+ * ║   ▀▓██████▓▀      ║
+ * ║                    ║
+ * ║ ★★★★★ Legendary   ║
+ * ║ ₿ Satoshi Nakamoto ║
+ * ╚═══════════════════╝
  */
 export function renderSprite(bones: CompanionBones, _frame = 0): string[] {
   const master = bones.species as Master
@@ -78,21 +99,26 @@ export function renderSprite(bones: CompanionBones, _frame = 0): string[] {
   const stars = RARITY_STARS[rarity] ?? '\u2605'
   const emblem = getEmblem(master)
   const rarityLabel = rarity.charAt(0).toUpperCase() + rarity.slice(1)
-
-  // Inner width: 19 chars (content between │ and │)
+  const portrait = MASTER_PORTRAITS[master]
+  const [tl, tr, bl, br, hz, vt] = getBorderChars(rarity)
   const W = 19
-  const line1 = padTo(` ${emblem} ${name}`, W)
-  const line2 = padTo(` ${stars} ${rarityLabel}`, W)
-  const line3 = padTo(`    (${bones.eye}  ${bones.eye})`, W)
-  const line4 = padTo(` Your Guardian`, W)
+
+  // Portrait lines (fallback to generic face if somehow missing)
+  const art = portrait?.portrait ?? [
+    `    (${bones.eye}  ${bones.eye})    `,
+    '                 ',
+    '                 ',
+  ]
 
   return [
-    `\u250C${'─'.repeat(W)}\u2510`,
-    `\u2502${line1}\u2502`,
-    `\u2502${line2}\u2502`,
-    `\u2502${line3}\u2502`,
-    `\u2502${line4}\u2502`,
-    `\u2514${'─'.repeat(W)}\u2518`,
+    `${tl}${hz.repeat(W)}${tr}`,
+    `${vt}${padTo(` ${art[0]}`, W)}${vt}`,
+    `${vt}${padTo(` ${art[1]}`, W)}${vt}`,
+    `${vt}${padTo(` ${art[2]}`, W)}${vt}`,
+    `${vt}${padTo('', W)}${vt}`,
+    `${vt}${padTo(` ${stars} ${rarityLabel}`, W)}${vt}`,
+    `${vt}${padTo(` ${emblem} ${name}`, W)}${vt}`,
+    `${bl}${hz.repeat(W)}${br}`,
   ]
 }
 
@@ -103,9 +129,12 @@ export function spriteFrameCount(_species: Master): number {
 
 /**
  * Render a compact face for inline display (status bar, alerts).
+ * Uses personality-specific compactFace from the portrait atlas.
  */
 export function renderFace(bones: CompanionBones): string {
   const master = bones.species as Master
+  const portrait = MASTER_PORTRAITS[master]
+  if (portrait) return portrait.compactFace
   const emblem = getEmblem(master)
   return `${emblem}(${bones.eye}${bones.eye})`
 }
