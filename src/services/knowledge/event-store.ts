@@ -248,6 +248,36 @@ export async function readEvents(
   return events
 }
 
+/**
+ * Parse a JSONL filename into sortable components.
+ *
+ * Handles two formats:
+ *   - Base:    "YYYY-MM.jsonl"       -> { prefix: "YYYY-MM", suffix: 0 }
+ *   - Rotated: "YYYY-MM-NN.jsonl"    -> { prefix: "YYYY-MM", suffix: NN }
+ *
+ * Ensures base files sort before their rotated variants within the same month,
+ * fixing the lexicographic ordering bug where "2026-04-02.jsonl" incorrectly
+ * sorted before "2026-04.jsonl" (ASCII '-' < '.').
+ *
+ * Correct order: 2026-04.jsonl, 2026-04-02.jsonl, 2026-04-03.jsonl, 2026-05.jsonl
+ */
+function parseEventFileName(filename: string): { prefix: string; suffix: number } {
+  const stem = filename.replace(/\.jsonl$/, '')
+  const match = stem.match(/^(\d{4}-\d{2})(?:-(\d{2,}))?$/)
+  if (!match) {
+    return { prefix: stem, suffix: 999 }
+  }
+  return { prefix: match[1]!, suffix: match[2] ? parseInt(match[2], 10) : 0 }
+}
+
+/** Compare two JSONL filenames for chronological ordering. */
+function compareEventFileNames(a: string, b: string): number {
+  const pa = parseEventFileName(a)
+  const pb = parseEventFileName(b)
+  if (pa.prefix !== pb.prefix) return pa.prefix < pb.prefix ? -1 : 1
+  return pa.suffix - pb.suffix
+}
+
 /** List JSONL files, optionally filtered by month prefix. */
 function listEventFiles(month?: string): string[] {
   try {
@@ -257,11 +287,13 @@ function listEventFiles(month?: string): string[] {
     if (month) {
       return jsonlFiles
         .filter((f) => f.startsWith(month))
+        .sort(compareEventFileNames)
         .map((f) => join(EVENTS_DIR, f))
-        .sort()
     }
 
-    return jsonlFiles.map((f) => join(EVENTS_DIR, f)).sort()
+    return jsonlFiles
+      .sort(compareEventFileNames)
+      .map((f) => join(EVENTS_DIR, f))
   } catch {
     return []
   }
