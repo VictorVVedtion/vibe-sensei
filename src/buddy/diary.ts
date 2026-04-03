@@ -853,7 +853,7 @@ export class GuardianDiary {
   save(): void {
     const dir = dirname(this.storePath)
     try {
-      mkdirSync(dir, { recursive: true })
+      mkdirSync(dir, { recursive: true, mode: 0o700 })
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
     }
@@ -865,7 +865,7 @@ export class GuardianDiary {
     }
 
     const json = JSON.stringify(data, null, 2)
-    writeFileSync(this.storePath, json, 'utf-8')
+    writeFileSync(this.storePath, json, { encoding: 'utf-8', mode: 0o600 })
   }
 
   /** Load diary from JSON file. Handles missing file and corrupted data. */
