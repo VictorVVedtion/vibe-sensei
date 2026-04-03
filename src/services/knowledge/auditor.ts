@@ -25,6 +25,7 @@ import {
 import { join } from 'path'
 import { homedir } from 'os'
 import { readEvents } from './event-store.js'
+import { callGemini } from './gemini-client.js'
 import type { KBEventUnion, TradeLogEvent } from './types.js'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -92,10 +93,6 @@ export interface DiscoveredPattern {
 const WIKI_DIR = join(homedir(), '.vibe-sensei', 'wiki')
 const COMPILE_STATE_PATH = join(WIKI_DIR, '.compile-state.json')
 const DISCOVERED_DIR = join(WIKI_DIR, 'patterns', 'discovered')
-const LLM_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
-const LLM_MODEL = 'gemini-2.5-flash'
-const LLM_TIMEOUT_MS = 30_000
-const LLM_MAX_TOKENS = 4000
 
 /** The 13 built-in PatternType values from diary.ts. */
 const KNOWN_PATTERN_TYPES = [
@@ -451,63 +448,13 @@ function formatEventLine(event: KBEventUnion): string {
 /** Call LLM for pattern discovery. Returns patterns or empty array. */
 async function discoverPatternsWithLLM(
   events: KBEventUnion[],
-  apiKey: string,
+  _apiKey: string,
 ): Promise<DiscoveredPattern[]> {
   const prompt = buildDiscoveryPrompt(events)
-  const responseText = await callLLM(prompt, apiKey)
-  if (!responseText) return []
+  const result = await callGemini({ prompt, temperature: 0.4 })
+  if (!result) return []
 
-  return parseDiscoveredPatterns(responseText)
-}
-
-/** Call the LLM with a text prompt. Returns text or null on failure. */
-async function callLLM(
-  prompt: string,
-  apiKey: string,
-): Promise<string | null> {
-  const url = `${LLM_API_BASE}/${LLM_MODEL}:generateContent?key=${apiKey}`
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: LLM_MAX_TOKENS,
-    },
-  }
-
-  let response: Response
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
-    })
-  } catch {
-    return null
-  }
-
-  if (!response.ok) return null
-
-  try {
-    const data = await response.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-    }
-    return extractLLMText(data) ?? null
-  } catch {
-    return null
-  }
-}
-
-/** Extract text from LLM response shape. */
-function extractLLMText(data: {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-}): string | undefined {
-  const parts = data.candidates?.[0]?.content?.parts
-  if (!parts) return undefined
-  for (const part of parts) {
-    if (part.text && part.text.trim().length > 0) return part.text.trim()
-  }
-  return undefined
+  return parseDiscoveredPatterns(result.text)
 }
 
 /** Parse the LLM response into DiscoveredPattern[]. Multi-layer extraction. */

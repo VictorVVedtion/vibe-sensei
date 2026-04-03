@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { readEvents } from './event-store.js'
+import { callGemini } from './gemini-client.js'
 import { getWikiHealthScore } from './auditor.js'
 import { getAdviceAccuracy } from './counterfactual.js'
 import type { KBEventUnion, TradeLogEvent, DiaryPatternEvent } from './types.js'
@@ -26,11 +27,6 @@ import type { KBEventUnion, TradeLogEvent, DiaryPatternEvent } from './types.js'
 const VIBE_DIR = join(homedir(), '.vibe-sensei')
 const LAST_BRIEF_PATH = join(VIBE_DIR, '.last-brief-date')
 const WIKI_DIR = join(VIBE_DIR, 'wiki')
-
-const LLM_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
-const LLM_MODEL = 'ge' + 'mini-2.5-flash'
-const LLM_TIMEOUT_MS = 15_000
-const LLM_MAX_TOKENS = 300
 
 function todayString(): string {
   const d = new Date()
@@ -195,7 +191,7 @@ async function rephraseWithLLM(
   briefData: BriefData,
   masterName: string,
   archetype: string,
-  apiKey: string,
+  _apiKey: string,
 ): Promise<string | null> {
   const rawBrief = [
     briefData.regimeLine, briefData.patternLine,
@@ -209,27 +205,15 @@ async function rephraseWithLLM(
     'Do not add markdown formatting or bullet points. Plain text only.',
     '', rawBrief,
   ].join('\n')
-  try {
-    const url = `${LLM_API_BASE}/${LLM_MODEL}:generateContent?key=${apiKey}`
-    const body = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: LLM_MAX_TOKENS },
-    }
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
-    })
-    if (!response.ok) return null
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-    }
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-    return text && text.length > 10 ? text : null
-  } catch {
-    return null
-  }
+  const result = await callGemini({
+    prompt,
+    temperature: 0.7,
+    maxTokens: 300,
+    timeoutMs: 15_000,
+  })
+  if (!result) return null
+  const text = result.text.trim()
+  return text.length > 10 ? text : null
 }
 
 function formatTemplateBrief(briefData: BriefData, masterName: string): string {

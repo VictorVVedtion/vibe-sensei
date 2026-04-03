@@ -22,6 +22,7 @@ import {
 import { dirname, join } from 'path'
 import { homedir } from 'os'
 import { readEvents } from './event-store.js'
+import { callGemini } from './gemini-client.js'
 import { buildCompilationPrompt } from './prompts.js'
 import type { KBEventUnion, TradeLogEvent } from './types.js'
 
@@ -51,10 +52,6 @@ interface WikiArticle {
 const WIKI_DIR = join(homedir(), '.vibe-sensei', 'wiki')
 const COMPILE_STATE_PATH = join(WIKI_DIR, '.compile-state.json')
 const CONSENT_PATH = join(homedir(), '.vibe-sensei', '.gemini-consent')
-const LLM_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
-const LLM_MODEL = 'gemini-2.5-flash'
-const LLM_TIMEOUT_MS = 30_000
-const LLM_MAX_TOKENS = 4000
 const AUTO_COMPILE_INTERVAL = 5 // trades between auto-compiles
 
 // ── Directory Bootstrap ──────────────────────────────────────────────────────
@@ -172,55 +169,6 @@ function readArticle(relativePath: string): string | undefined {
   }
 }
 
-// ── LLM API Call ─────────────────────────────────────────────────────────────
-
-/** Call the LLM with a text prompt. Returns text response or null on failure. */
-async function callLLM(prompt: string, apiKey: string): Promise<string | null> {
-  const url = `${LLM_API_BASE}/${LLM_MODEL}:generateContent?key=${apiKey}`
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.3,
-      maxOutputTokens: LLM_MAX_TOKENS,
-    },
-  }
-
-  let response: Response
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
-    })
-  } catch {
-    return null
-  }
-
-  if (!response.ok) return null
-
-  try {
-    const data = await response.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-    }
-    return extractLLMText(data) ?? null
-  } catch {
-    return null
-  }
-}
-
-/** Extract text from LLM response, trying multiple paths. */
-function extractLLMText(data: {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-}): string | undefined {
-  const parts = data.candidates?.[0]?.content?.parts
-  if (!parts) return undefined
-  for (const part of parts) {
-    if (part.text && part.text.trim().length > 0) return part.text.trim()
-  }
-  return undefined
-}
-
 /** Parse LLM response as JSON array of wiki articles. */
 function parseLLMArticles(text: string): WikiArticle[] | null {
   const direct = tryParseArticles(text)
@@ -290,12 +238,13 @@ function collectExistingWikiContext(): string | undefined {
 /** Compile events using the LLM. Returns articles or null on failure. */
 async function compileWithLLM(
   events: KBEventUnion[],
-  apiKey: string,
+  _apiKey: string,
 ): Promise<{ articles: WikiArticle[]; warnings: string[] } | null> {
   const existingWiki = collectExistingWikiContext()
   const prompt = buildCompilationPrompt(events, existingWiki)
 
-  const responseText = await callLLM(prompt, apiKey)
+  const result = await callGemini({ prompt, temperature: 0.3 })
+  const responseText = result?.text ?? null
   if (!responseText) {
     consecutiveLLMFailures++
     return null
