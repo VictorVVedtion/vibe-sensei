@@ -50,6 +50,7 @@ const agentsPlatform =
     ? require('./commands/agents-platform/index.js').default
     : null
 /* eslint-enable @typescript-eslint/no-require-imports */
+import compileKB from './commands/compile/index.js'
 import securityReview from './commands/security-review.js'
 import bughunter from './commands/bughunter/index.js'
 import terminalSetup from './commands/terminalSetup/index.js'
@@ -264,6 +265,7 @@ const COMMANDS = memoize((): Command[] => [
   chrome,
   clear,
   color,
+  compileKB,
   compact,
   config,
   copy,
@@ -622,7 +624,7 @@ export const REMOTE_SAFE_COMMANDS: Set<Command> = new Set([
   clear, // Clear screen
   help, // Show help
   theme, // Change terminal theme
-  color, // Change agent color
+  color,
   vim, // Toggle vim mode
   cost, // Show session cost (local cost tracking)
   usage, // Show usage info
