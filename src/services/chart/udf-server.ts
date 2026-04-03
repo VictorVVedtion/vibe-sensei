@@ -350,6 +350,14 @@ export function mountUdfRoutes(app: Express): void {
   app.get('/marks', handleMarks);
   app.get('/api/screenshot', handleScreenshotGet);
   app.post('/api/screenshot', handleScreenshotPost);
+
+  // 405 Method Not Allowed for defined GET-only paths
+  const getOnlyPaths = ['/config', '/time', '/search', '/symbols', '/history', '/marks'];
+  for (const path of getOnlyPaths) {
+    app.all(path, (_req: Request, res: Response) => {
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+  }
 }
 
 /** Create a configured Express app with CORS and UDF routes */
