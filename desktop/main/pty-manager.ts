@@ -29,7 +29,7 @@ export class PtyManager {
   }
 
   spawn(): void {
-    const projectRoot = path.resolve(__dirname, '..', '..')
+    const projectRoot = path.resolve(__dirname, '..', '..', '..')
     const shell = process.platform === 'win32' ? 'powershell.exe' : 'bun'
     const args =
       process.platform === 'win32'
