@@ -263,12 +263,17 @@ export async function evaluateAfterToolCall(
     try {
       const { notifyTradingEvent } = await import('../companion/singleton.js')
       const symbolMatch = topAlert.message.match(/([A-Z]{2,10}\/[A-Z]{2,10})/)
+      const symbol = symbolMatch ? symbolMatch[1]! : 'UNKNOWN'
+
+      // Extract actual trade data from positions when available
+      const matchingPosition = result.positions.find(p => p.symbol === symbol)
       notifyTradingEvent({
         type: 'trade_executed',
-        symbol: symbolMatch ? symbolMatch[1]! : 'UNKNOWN',
-        side: 'buy',
-        quantity: 0,
-        price: 0,
+        symbol,
+        side: matchingPosition?.side ?? 'buy',
+        quantity: matchingPosition?.quantity ?? 0,
+        price: matchingPosition?.currentPrice ?? 0,
+        pnlPercent: matchingPosition?.unrealizedPnlPercent,
       })
     } catch {
       // Companion engine notification must never propagate
