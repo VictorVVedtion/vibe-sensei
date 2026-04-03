@@ -89,7 +89,6 @@ export function MasterCard({ master }: MasterCardProps) {
 const styles: Record<string, React.CSSProperties> = {
   card: {
     background: '#0F1924',
-    borderRadius: 6,
     padding: 12,
     border: '1px solid #253550',
   },
@@ -141,7 +140,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   quote: {
     background: '#0A1628',
-    borderRadius: 4,
     padding: '6px 8px',
     marginBottom: 10,
     borderLeft: '2px solid #253550',
@@ -175,12 +173,10 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     height: 4,
     background: '#0A1628',
-    borderRadius: 2,
     overflow: 'hidden',
   },
   statFill: {
     height: '100%',
-    borderRadius: 2,
     transition: 'width 0.4s ease',
   },
   statValue: {

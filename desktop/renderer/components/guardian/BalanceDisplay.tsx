@@ -19,7 +19,6 @@ function AllocationBar({ pct, color }: { pct: number; color: string }) {
           height: '100%',
           width: `${Math.max(0, Math.min(100, pct))}%`,
           background: color,
-          borderRadius: 2,
           transition: 'width 0.4s ease',
         }}
       />
@@ -92,7 +91,6 @@ export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplay
 const styles: Record<string, React.CSSProperties> = {
   container: {
     background: '#0F1924',
-    borderRadius: 6,
     border: '1px solid #253550',
     overflow: 'hidden',
   },
@@ -155,7 +153,6 @@ const styles: Record<string, React.CSSProperties> = {
   allocTrack: {
     height: 3,
     background: '#0A1628',
-    borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 2,
   },

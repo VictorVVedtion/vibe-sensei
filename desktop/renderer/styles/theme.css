@@ -1,6 +1,13 @@
 /* Vibe Sensei Desktop — Abyss color palette theme */
 /* Deep ocean bioluminescent trading terminal */
 
+/* ── Global Reset: No curves, no shadows — hardware terminal ── */
+
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 /* ── Chart Panel ── */
 
 .chart-panel {
@@ -48,7 +55,6 @@
   background: #182233;
   color: #E2E4ED;
   border: 1px solid #253550;
-  border-radius: 4px;
   padding: 6px 10px;
   font-family: inherit;
   font-size: 13px;
@@ -62,7 +68,6 @@
 
 .symbol-select:focus {
   border-color: #00D4FF;
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
 }
 
 /* ── Timeframe Buttons ── */
@@ -76,7 +81,6 @@
   background: #182233;
   color: #E2E4ED;
   border: 1px solid #253550;
-  border-radius: 4px;
   padding: 6px 12px;
   font-family: inherit;
   font-size: 12px;
@@ -126,7 +130,6 @@
   transform: translate(-50%, -50%);
   background: rgba(10, 22, 40, 0.95);
   border: 1px solid #FF4D6A;
-  border-radius: 8px;
   padding: 24px 32px;
   text-align: center;
   max-width: 400px;

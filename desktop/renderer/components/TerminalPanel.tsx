@@ -209,7 +209,6 @@ function Spinner() {
         height: 20,
         border: '2px solid #253550',
         borderTopColor: '#00D4FF',
-        borderRadius: '50%',
         animation: 'pty-spinner 0.8s linear infinite',
       }}
     />
@@ -230,7 +229,6 @@ const overlayContainerStyle: React.CSSProperties = {
 const overlayCardStyle: React.CSSProperties = {
   background: 'rgba(10, 22, 40, 0.85)',
   border: '1px solid #253550',
-  borderRadius: 8,
   padding: '24px 32px',
   display: 'flex',
   flexDirection: 'column',
@@ -243,7 +241,6 @@ const reconnectButtonStyle: React.CSSProperties = {
   background: '#00D4FF',
   color: '#0A1628',
   border: 'none',
-  borderRadius: 4,
   padding: '8px 20px',
   fontSize: 13,
   fontWeight: 600,

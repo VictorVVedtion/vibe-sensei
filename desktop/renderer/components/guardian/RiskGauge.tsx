@@ -71,7 +71,6 @@ export function RiskGauge({ score }: RiskGaugeProps) {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     background: '#0F1924',
-    borderRadius: 6,
     padding: '8px 12px',
     border: '1px solid #253550',
   },
@@ -109,7 +108,6 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     height: 8,
-    borderRadius: 4,
     overflow: 'hidden',
   },
   trackOverlay: {
@@ -127,7 +125,6 @@ const styles: Record<string, React.CSSProperties> = {
     height: 12,
     background: '#0F1924',
     border: '2px solid',
-    borderRadius: 2,
     transform: 'translateX(-50%)',
     transition: 'left 0.4s ease',
     zIndex: 1,
