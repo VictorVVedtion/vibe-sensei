@@ -41,7 +41,7 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: 'hidden' as const,
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: 4,
     padding: 8,
     minHeight: 0,
   },

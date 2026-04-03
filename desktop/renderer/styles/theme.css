@@ -1,6 +1,17 @@
 /* Vibe Sensei Desktop — Abyss color palette theme */
 /* Deep ocean bioluminescent trading terminal */
 
+/* ── Global Reset: No curves, no shadows — hardware terminal ── */
+
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+:root {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Chart Panel ── */
 
 .chart-panel {
@@ -22,7 +33,7 @@
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
+  padding: 4px 12px;
   border-bottom: 1px solid #253550;
   flex-shrink: 0;
 }
@@ -48,7 +59,6 @@
   background: #182233;
   color: #E2E4ED;
   border: 1px solid #253550;
-  border-radius: 4px;
   padding: 6px 10px;
   font-family: inherit;
   font-size: 13px;
@@ -62,7 +72,6 @@
 
 .symbol-select:focus {
   border-color: #00D4FF;
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
 }
 
 /* ── Timeframe Buttons ── */
@@ -76,12 +85,10 @@
   background: #182233;
   color: #E2E4ED;
   border: 1px solid #253550;
-  border-radius: 4px;
   padding: 6px 12px;
   font-family: inherit;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
 }
 
 .tf-btn:hover {
@@ -103,7 +110,6 @@
   font-size: 12px;
   margin-left: auto;
   opacity: 0;
-  transition: opacity 0.2s;
 }
 
 .loading-indicator.visible {
@@ -125,16 +131,15 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(10, 22, 40, 0.95);
-  border: 1px solid #FF4D6A;
-  border-radius: 8px;
-  padding: 24px 32px;
+  border: 1px solid #C850C0;
+  padding: 16px 24px;
   text-align: center;
   max-width: 400px;
   z-index: 10;
 }
 
 .chart-container .error-overlay h3 {
-  color: #FF4D6A;
+  color: #C850C0;
   margin-bottom: 8px;
   font-size: 14px;
 }
@@ -153,7 +158,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 4px 12px;
   border-top: 1px solid #253550;
   flex-shrink: 0;
   font-size: 12px;
@@ -175,11 +180,11 @@
 }
 
 .ohlc-bar-panel .last-price.up {
-  color: #00E5A0;
+  color: #00FFA3;
 }
 
 .ohlc-bar-panel .last-price.down {
-  color: #FF4D6A;
+  color: #C850C0;
 }
 
 .ohlc-bar-panel .ohlc-values {

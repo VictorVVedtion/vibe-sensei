@@ -30,16 +30,6 @@
   overflow: hidden;
   min-width: 0;
   min-height: 0;
-  transition: box-shadow 0.2s ease;
-}
-
-.panel.focused {
-  box-shadow: inset 0 0 0 2px rgba(0, 212, 255, 0.6);
-}
-
-.panel:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 2px rgba(0, 212, 255, 0.6);
 }
 
 .panel-terminal {
@@ -68,7 +58,6 @@
 
 .panel-sidebar ::-webkit-scrollbar-thumb {
   background: #253550;
-  border-radius: 2px;
 }
 
 .panel-sidebar ::-webkit-scrollbar-thumb:hover {
@@ -87,7 +76,6 @@
 .divider::after {
   content: '';
   position: absolute;
-  transition: background 0.15s ease;
 }
 
 .divider-horizontal {
@@ -137,7 +125,7 @@
   -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 8px;
 }
 
 .title-bar-left {
@@ -183,7 +171,6 @@
   color: #7B8AA0;
   cursor: pointer;
   font-size: 10px;
-  transition: background 0.1s, color 0.1s;
 }
 
 .window-control-btn:hover {
@@ -208,9 +195,9 @@
   display: flex;
   align-items: center;
   height: 24px;
-  background: #0F1924;
+  background: #050B14;
   border-top: 1px solid #253550;
-  padding: 0 12px;
+  padding: 0 8px;
   font-size: 11px;
   color: #7B8AA0;
   gap: 16px;
@@ -227,36 +214,31 @@
 .status-bar .connection-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
   flex-shrink: 0;
 }
 
 .status-bar .connection-dot.connected {
-  background: #00E5A0;
-  box-shadow: 0 0 4px rgba(0, 229, 160, 0.4);
+  background: #00FFA3;
 }
 
 .status-bar .connection-dot.reconnecting {
   background: #FFBB33;
-  box-shadow: 0 0 4px rgba(255, 187, 51, 0.4);
-  animation: pulse-dot 1.5s infinite;
+  animation: pulse-dot 1.5s step-end infinite;
 }
 
 .status-bar .connection-dot.disconnected {
-  background: #FF4D6A;
-  box-shadow: 0 0 4px rgba(255, 77, 106, 0.4);
+  background: #C850C0;
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.4; }
 }
 
 .status-bar .mode-badge {
-  background: #182233;
-  border: 1px solid #253550;
-  border-radius: 3px;
-  padding: 1px 6px;
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 10px;
   color: #00D4FF;
   letter-spacing: 0.3px;
@@ -281,17 +263,31 @@
 }
 
 .status-bar .last-price-val.up {
-  color: #00E5A0;
+  color: #00FFA3;
 }
 
 .status-bar .last-price-val.down {
-  color: #FF4D6A;
+  color: #C850C0;
 }
 
 /* ── PTY Reconnect Spinner ── */
 
 @keyframes pty-spinner {
-  to {
-    transform: rotate(360deg);
-  }
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ── Panel Focus — outline, not box-shadow ── */
+
+.panel.focused {
+  outline: 2px solid rgba(0, 212, 255, 0.6);
+  outline-offset: -2px;
+}
+
+.panel:focus {
+  outline: 2px solid rgba(0, 212, 255, 0.6);
+  outline-offset: -2px;
 }

@@ -52,7 +52,7 @@ export function StatusBar({
       </div>
 
       <div className="status-section">
-        <span className="mode-badge">Paper Trading</span>
+        <span className="mode-badge">[PAPER]</span>
       </div>
 
       <div className="shortcuts">

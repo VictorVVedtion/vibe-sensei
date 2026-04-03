@@ -24,8 +24,8 @@ function formatPct(n: number): string {
 
 function PositionRow({ position }: { position: TradingPosition }) {
   const isProfit = position.unrealizedPnl >= 0
-  const pnlColor = isProfit ? '#00E5A0' : '#FF4D6A'
-  const sideColor = position.side === 'buy' ? '#00D4FF' : '#FF4D6A'
+  const pnlColor = isProfit ? '#00FFA3' : '#C850C0'
+  const sideColor = position.side === 'buy' ? '#00D4FF' : '#C850C0'
 
   return (
     <div
@@ -97,7 +97,6 @@ export function PositionsList({ positions }: PositionsListProps) {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     background: '#0F1924',
-    borderRadius: 6,
     border: '1px solid #253550',
     overflow: 'hidden',
   },
@@ -105,7 +104,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '6px 10px',
+    padding: '4px 8px',
     background: '#0A1628',
     borderBottom: '1px solid #253550',
   },
@@ -120,7 +119,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     color: '#00D4FF',
     background: '#182233',
-    borderRadius: 8,
     padding: '1px 6px',
     fontWeight: 600,
   },
@@ -131,7 +129,7 @@ const styles: Record<string, React.CSSProperties> = {
   row: {
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 10px',
+    padding: '6px 8px',
     borderBottom: '1px solid #182233',
     gap: 8,
   },
@@ -188,7 +186,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontVariantNumeric: 'tabular-nums',
   },
   empty: {
-    padding: '16px 10px',
+    padding: '10px 8px',
     textAlign: 'center' as const,
   },
   emptyText: {

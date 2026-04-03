@@ -19,8 +19,6 @@ function AllocationBar({ pct, color }: { pct: number; color: string }) {
           height: '100%',
           width: `${Math.max(0, Math.min(100, pct))}%`,
           background: color,
-          borderRadius: 2,
-          transition: 'width 0.4s ease',
         }}
       />
     </div>
@@ -92,7 +90,6 @@ export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplay
 const styles: Record<string, React.CSSProperties> = {
   container: {
     background: '#0F1924',
-    borderRadius: 6,
     border: '1px solid #253550',
     overflow: 'hidden',
   },
@@ -100,7 +97,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '6px 10px',
+    padding: '4px 8px',
     background: '#0A1628',
     borderBottom: '1px solid #253550',
   },
@@ -115,7 +112,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    padding: '10px 10px 8px',
+    padding: '6px 8px 4px',
     borderBottom: '1px solid #182233',
   },
   totalLabel: {
@@ -125,7 +122,7 @@ const styles: Record<string, React.CSSProperties> = {
   totalValue: {
     fontSize: 18,
     fontWeight: 700,
-    color: '#00E5A0',
+    color: '#00FFA3',
     fontVariantNumeric: 'tabular-nums',
   },
   list: {
@@ -133,7 +130,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
   },
   assetRow: {
-    padding: '6px 10px',
+    padding: '4px 8px',
     borderBottom: '1px solid #182233',
   },
   assetInfo: {
@@ -155,7 +152,6 @@ const styles: Record<string, React.CSSProperties> = {
   allocTrack: {
     height: 3,
     background: '#0A1628',
-    borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 2,
   },
@@ -174,7 +170,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#7B8AA0',
   },
   empty: {
-    padding: '12px 10px',
+    padding: '8px 8px',
     textAlign: 'center' as const,
   },
   emptyText: {
