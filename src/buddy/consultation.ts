@@ -202,6 +202,7 @@ export function buildConsultationPrompt(
   master: Master,
   question: string,
   tradingContext: string,
+  wikiContext?: string | null,
 ): string {
   const persona = buildGuardianSystemPrompt(master, CONSULTATION_STATS)
   const name = MASTER_NAMES[master]
@@ -212,6 +213,7 @@ export function buildConsultationPrompt(
     `You are being consulted as ${name}. A trader has a question for you.`,
     '',
     tradingContext ? `Current trading context: ${tradingContext}` : '',
+    wikiContext ? `Trading knowledge: ${wikiContext}` : '',
     '',
     `Question: ${question}`,
     '',

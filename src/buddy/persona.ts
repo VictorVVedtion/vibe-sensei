@@ -6,7 +6,7 @@
 import type { Master, StatName } from './types.js'
 import { MASTER_NAMES, MASTER_QUOTES } from './types.js'
 import type { RiskAlert } from './guardian.js'
-import type { GuardianDiary, EnhancedDiarySummary } from './diary.js'
+import type { GuardianDiary, EnhancedPatternSummary } from './diary.js'
 import type { ExchangeInterface, Position, Balance } from '../services/exchange/types.js'
 
 // ─── Archetypes ───────────────────────────────────────────────────────────────
@@ -274,8 +274,8 @@ function dominantStat(stats: Record<StatName, number>): StatName {
 
 // ─── Context-aware alert system ─────────────────────────────────────────────
 
-// Token budget: base ~150 + context ~260 = ~410 total
-const CONTEXT_TOKEN_BUDGET = 260
+// Token budget: base ~150 + context ~360 = ~510 total (5 layers)
+const CONTEXT_TOKEN_BUDGET = 360
 // Approximate 1 token ~ 4 chars for budget enforcement
 const CHARS_PER_TOKEN = 4
 
@@ -322,7 +322,7 @@ export function buildDiaryContext(
 ): string | null {
   if (!diary) return null
 
-  let summary: EnhancedDiarySummary | null
+  let summary: EnhancedPatternSummary | null
   try {
     summary = diary.getEnhancedSummary()
   } catch {
@@ -332,13 +332,29 @@ export function buildDiaryContext(
 
   const parts: string[] = []
   if (summary.topPattern) {
-    parts.push(`Your patterns: ${summary.topPattern} (${summary.topPatternCount}x)`)
+    parts.push(`Pattern: ${summary.topPattern.label} (${summary.topPattern.count}x)`)
   }
-  if (summary.worstInstrument) {
-    parts.push(`${summary.worstInstrument} has ${summary.worstInstrumentLosses} losses`)
+  const worstInst = summary.instrumentBiases.reduce<{ symbol: string; losses: number } | null>(
+    (worst, ib) => {
+      const losses = ib.totalTrades - Math.round(ib.totalTrades * ib.winRate / 100)
+      if (!worst || losses > worst.losses) return { symbol: ib.symbol, losses }
+      return worst
+    },
+    null,
+  )
+  if (worstInst && worstInst.losses > 0) {
+    parts.push(`${worstInst.symbol} has ${worstInst.losses} losses`)
   }
-  if (summary.bestSession) {
-    parts.push(`Best session: ${summary.bestSession}`)
+  const bestSession = summary.timeOfDayAnalysis.reduce<{ session: string; winRate: number } | null>(
+    (best, sa) => {
+      if (sa.totalTrades < 3) return best
+      if (!best || sa.winRate > best.winRate) return { session: sa.session, winRate: sa.winRate }
+      return best
+    },
+    null,
+  )
+  if (bestSession) {
+    parts.push(`Best session: ${bestSession.session}`)
   }
 
   if (parts.length === 0) return null
@@ -419,24 +435,32 @@ export function buildRecoveryContext(
   return guidance.shallow
 }
 
+/** Options for context-aware alert generation. */
+export interface AlertContextOptions {
+  master: { species: string; stats: Record<string, number> }
+  alert: RiskAlert
+  exchange: ExchangeInterface
+  diary: GuardianDiary | null
+  positions: Position[]
+  balances: Balance[]
+  /** Pre-fetched wiki knowledge context (~100 tokens). */
+  knowledgeContext?: string | null
+}
+
 /**
  * Context-aware alert generation.
  * Builds all available context layers and appends them to the base alert.
  * Falls back to getPersonalizedAlert() if exchange/diary are unavailable.
  *
- * Token budget: base ~150 + context ~260 = ~410 total.
- * Priority truncation order: regime > portfolio > diary > recovery.
+ * Token budget: base ~150 + context ~360 = ~510 total (5 layers).
+ * Priority truncation order: regime > knowledge > portfolio > diary > recovery.
  */
 export async function getPersonalizedAlertWithContext(
-  master: { species: string; stats: Record<string, number> },
-  alert: RiskAlert,
-  exchange: ExchangeInterface,
-  diary: GuardianDiary | null,
-  positions: Position[],
-  balances: Balance[],
+  opts: AlertContextOptions,
 ): Promise<string> {
-  const masterId = master.species as Master
-  const stats = master.stats as Record<StatName, number>
+  const { alert, exchange, diary, positions, balances, knowledgeContext } = opts
+  const masterId = opts.master.species as Master
+  const stats = opts.master.stats as Record<StatName, number>
 
   // Base alert (always available, ~150 tokens)
   const baseAlert = getPersonalizedAlert(masterId, stats, alert)
@@ -449,7 +473,6 @@ export async function getPersonalizedAlertWithContext(
     try {
       const regimeMod = await import('../services/market/regime.js')
       if (typeof regimeMod.getLatestRegime === 'function') {
-        // Extract symbol from alert context if available
         const symbol = extractSymbolFromAlert(alert)
         if (symbol) {
           const regime = regimeMod.getLatestRegime(symbol)
@@ -473,14 +496,19 @@ export async function getPersonalizedAlertWithContext(
     const regimeCtx = buildRegimeContext(regimeInfo, archetype)
     if (regimeCtx) layers.push({ text: regimeCtx, priority: 1 })
 
+    // Layer 2: Knowledge from wiki (~100 tokens)
+    if (knowledgeContext) {
+      layers.push({ text: `Knowledge: ${knowledgeContext}`, priority: 2 })
+    }
+
     const portfolioCtx = buildPortfolioContext(positions, balances)
-    if (portfolioCtx) layers.push({ text: portfolioCtx, priority: 2 })
+    if (portfolioCtx) layers.push({ text: portfolioCtx, priority: 3 })
 
     const diaryCtx = buildDiaryContext(diary)
-    if (diaryCtx) layers.push({ text: diaryCtx, priority: 3 })
+    if (diaryCtx) layers.push({ text: diaryCtx, priority: 4 })
 
     const recoveryCtx = buildRecoveryContext(archetype, totalDrawdown)
-    if (recoveryCtx) layers.push({ text: recoveryCtx, priority: 4 })
+    if (recoveryCtx) layers.push({ text: recoveryCtx, priority: 5 })
 
     if (layers.length === 0) return baseAlert
 
