@@ -1,6 +1,9 @@
 /**
  * Paper trading exchange: simulated order execution, position tracking,
  * and P&L calculation for risk-free practice.
+ *
+ * Optionally delegates market data (getTicker, getCandles) to a real
+ * exchange via CCXT, falling back to synthetic data on failure.
  */
 
 import type {
@@ -14,10 +17,22 @@ import type {
   Position,
   Ticker,
 } from './types.js';
+import { InvalidSymbolError } from './ccxt-client.js';
 
 const DEFAULT_INITIAL_BALANCE = 100_000;
 const DEFAULT_FEE_RATE = 0.001;
 const DEFAULT_PRICE = 50_000;
+
+/**
+ * Static allowlist for offline symbol validation when no market data
+ * source is available. Covers major Binance spot pairs.
+ */
+const VALID_SYMBOLS = new Set([
+  'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT',
+  'ADA/USDT', 'DOGE/USDT', 'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT',
+  'LINK/USDT', 'UNI/USDT', 'ATOM/USDT', 'LTC/USDT', 'NEAR/USDT',
+  'APT/USDT', 'ARB/USDT', 'OP/USDT', 'SUI/USDT', 'PEPE/USDT',
+]);
 
 interface PaperConfig {
   initialBalance?: number;
@@ -44,8 +59,10 @@ export class PaperExchange implements ExchangeInterface {
   private prices: Map<string, number>;
   private connected: boolean;
   private readonly feeRate: number;
+  private marketDataSource?: ExchangeInterface;
+  private marketDataConnected: boolean;
 
-  constructor(config?: PaperConfig) {
+  constructor(config?: PaperConfig, marketDataSource?: ExchangeInterface) {
     const initialBalance = config?.initialBalance ?? DEFAULT_INITIAL_BALANCE;
     this.feeRate = config?.feeRate ?? DEFAULT_FEE_RATE;
     this.balances = new Map([
@@ -56,6 +73,8 @@ export class PaperExchange implements ExchangeInterface {
     this.positions = new Map();
     this.prices = new Map();
     this.connected = false;
+    this.marketDataSource = marketDataSource;
+    this.marketDataConnected = false;
   }
 
   async connect(): Promise<void> {
@@ -78,6 +97,7 @@ export class PaperExchange implements ExchangeInterface {
 
   async placeOrder(req: OrderRequest): Promise<Order> {
     this.ensureConnected();
+    await this.validateSymbol(req.symbol);
     this.validateOrderRequest(req);
 
     const order = this.createOrderFromRequest(req);
@@ -130,28 +150,21 @@ export class PaperExchange implements ExchangeInterface {
 
   async getCandles(
     symbol: string,
-    _timeframe: string,
+    timeframe: string,
     limit: number,
   ): Promise<Candle[]> {
     this.ensureConnected();
+    const realCandles = await this.fetchRealCandles(symbol, timeframe, limit);
+    if (realCandles) return realCandles;
     const price = this.prices.get(symbol) ?? DEFAULT_PRICE;
     return this.generateSyntheticCandles(price, limit);
   }
 
   async getTicker(symbol: string): Promise<Ticker> {
     this.ensureConnected();
-    const price = this.prices.get(symbol) ?? DEFAULT_PRICE;
-    const spread = price * 0.0005;
-    return {
-      symbol,
-      last: price,
-      bid: price - spread,
-      ask: price + spread,
-      high: price * 1.02,
-      low: price * 0.98,
-      volume: 1000,
-      timestamp: Date.now(),
-    };
+    const realTicker = await this.fetchRealTicker(symbol);
+    if (realTicker) return realTicker;
+    return this.buildSyntheticTicker(symbol);
   }
 
   /**
@@ -170,11 +183,105 @@ export class PaperExchange implements ExchangeInterface {
     return [...this.fills];
   }
 
+  // ── Market data source (lazy connection) ──────────────────────────
+
+  /**
+   * Connect to the market data source on first use.
+   * Returns true if connected, false if unavailable.
+   * Connection is attempted only once; failure disables the source.
+   */
+  private async ensureMarketDataConnected(): Promise<boolean> {
+    if (!this.marketDataSource) return false;
+    if (this.marketDataConnected) return true;
+    try {
+      await this.marketDataSource.connect();
+      this.marketDataConnected = true;
+      return true;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[Paper] Market data source unavailable: ${msg}`);
+      this.marketDataSource = undefined;
+      return false;
+    }
+  }
+
+  /**
+   * Fetch real candle data from the market data source.
+   * Returns null on failure so the caller can fall back to synthetic.
+   */
+  private async fetchRealCandles(
+    symbol: string,
+    timeframe: string,
+    limit: number,
+  ): Promise<Candle[] | null> {
+    if (!(await this.ensureMarketDataConnected())) return null;
+    try {
+      return await this.marketDataSource!.getCandles(symbol, timeframe, limit);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Fetch real ticker from the market data source and cache the price.
+   * Returns null on failure so the caller can fall back to synthetic.
+   */
+  private async fetchRealTicker(symbol: string): Promise<Ticker | null> {
+    if (!(await this.ensureMarketDataConnected())) return null;
+    try {
+      const ticker = await this.marketDataSource!.getTicker(symbol);
+      this.prices.set(symbol, ticker.last);
+      return ticker;
+    } catch {
+      return null;
+    }
+  }
+
+  private buildSyntheticTicker(symbol: string): Ticker {
+    const price = this.prices.get(symbol) ?? DEFAULT_PRICE;
+    const spread = price * 0.0005;
+    return {
+      symbol,
+      last: price,
+      bid: price - spread,
+      ask: price + spread,
+      high: price * 1.02,
+      low: price * 0.98,
+      volume: 1000,
+      timestamp: Date.now(),
+    };
+  }
+
+  // ── Internals ─────────────────────────────────────────────────────
+
   private ensureConnected(): void {
     if (!this.connected) {
       throw new Error(
         'Paper exchange not connected. Call connect() first.',
       );
+    }
+  }
+
+  /**
+   * Validate that a symbol is a known trading pair.
+   * If the market data source is available, it validates via getTicker().
+   * Otherwise falls back to the static VALID_SYMBOLS allowlist.
+   */
+  private async validateSymbol(symbol: string): Promise<void> {
+    if (await this.ensureMarketDataConnected()) {
+      try {
+        const ticker = await this.marketDataSource!.getTicker(symbol);
+        this.prices.set(symbol, ticker.last);
+        return;
+      } catch (err: unknown) {
+        if (err instanceof InvalidSymbolError) {
+          throw new InvalidSymbolError(symbol);
+        }
+        // Network/timeout errors: fall through to static check
+      }
+    }
+    if (!VALID_SYMBOLS.has(symbol)) {
+      throw new InvalidSymbolError(symbol);
     }
   }
 
@@ -211,15 +318,26 @@ export class PaperExchange implements ExchangeInterface {
     };
   }
 
-  private executeMarketOrder(order: Order): Order {
-    const price = this.resolveExecutionPrice(order);
+  private async executeMarketOrder(order: Order): Promise<Order> {
+    const price = await this.resolveExecutionPrice(order);
     this.executeFill(order, price, order.quantity);
     return { ...order };
   }
 
-  private resolveExecutionPrice(order: Order): number {
+  /**
+   * Resolve execution price for a market order:
+   * 1. Explicit order price
+   * 2. Cached price from previous ticker fetch
+   * 3. Real-time price from market data source
+   * 4. DEFAULT_PRICE fallback
+   */
+  private async resolveExecutionPrice(order: Order): Promise<number> {
     if (order.price != null && order.price > 0) return order.price;
-    return this.prices.get(order.symbol) ?? DEFAULT_PRICE;
+    const cached = this.prices.get(order.symbol);
+    if (cached) return cached;
+    const ticker = await this.fetchRealTicker(order.symbol);
+    if (ticker) return ticker.last;
+    return DEFAULT_PRICE;
   }
 
   private executeFill(order: Order, price: number, quantity: number): void {
