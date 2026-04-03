@@ -49,7 +49,7 @@ const bridgeFilePath = path.join(
   `vibe-sensei-bridge-${process.pid}.jsonl`,
 )
 
-const isDev = !app.isPackaged
+const isDev = process.env.VIBE_FORCE_PROD === '1' ? false : !app.isPackaged
 const isMac = process.platform === 'darwin'
 
 function checkBunRuntime(): boolean {
