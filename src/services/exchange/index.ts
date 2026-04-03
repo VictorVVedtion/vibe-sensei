@@ -1,6 +1,7 @@
 /**
  * Exchange service factory.
  * Returns a PaperExchange for paper mode (default) or CcxtClient for live trading.
+ * Paper mode injects a read-only Binance CCXT client for real market prices.
  */
 
 export { CcxtClient } from './ccxt-client.js';
@@ -32,8 +33,21 @@ import { CcxtClient } from './ccxt-client.js';
 import { PaperExchange } from './paper-trading.js';
 
 /**
+ * Create a read-only CCXT client for public market data.
+ * Uses Binance public API (no API key required) for getTicker and getCandles.
+ * Connection is deferred — PaperExchange connects lazily on first use.
+ */
+function createMarketDataSource(): ExchangeInterface {
+  return new CcxtClient({
+    mode: 'live',
+    exchange: 'binance',
+  });
+}
+
+/**
  * Create an exchange instance based on configuration.
  * Defaults to paper trading mode when no config is provided.
+ * Paper mode receives a Binance market data source for real prices.
  */
 export function createExchange(config?: ExchangeConfig): ExchangeInterface {
   const resolvedConfig: ExchangeConfig = config ?? { mode: 'paper' };
@@ -42,5 +56,6 @@ export function createExchange(config?: ExchangeConfig): ExchangeInterface {
     return new CcxtClient(resolvedConfig);
   }
 
-  return new PaperExchange();
+  const marketData = createMarketDataSource();
+  return new PaperExchange(undefined, marketData);
 }
