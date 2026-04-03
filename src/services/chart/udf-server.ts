@@ -219,7 +219,7 @@ async function handleHistory(req: Request, res: Response): Promise<void> {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[UDF] /history error for ${symbol}: ${message}`);
-    res.status(500).json({ s: 'error', errmsg: message });
+    res.status(500).json({ s: 'error', errmsg: 'Internal server error' });
   }
 }
 
