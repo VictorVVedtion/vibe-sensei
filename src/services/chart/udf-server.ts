@@ -354,6 +354,7 @@ export function mountUdfRoutes(app: Express): void {
 /** Create a configured Express app with CORS and UDF routes */
 export function createUdfApp(): Express {
   const app = express();
+  app.disable('x-powered-by');
 
   app.use((_req: Request, res: Response, next: () => void) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
