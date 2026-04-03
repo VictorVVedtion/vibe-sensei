@@ -18,7 +18,7 @@
  */
 
 import type { Archetype } from '../../buddy/persona.js'
-import { ExpressionEngine } from './expression.js'
+import { ExpressionEngine, type TradingEventType } from './expression.js'
 import { CooldownManager, ProactiveMonitor } from './proactive-monitor.js'
 import type {
   CompanionConfig,
@@ -97,8 +97,8 @@ export class CompanionEngine {
 
     // Map trading events to expression events
     if (event.type === 'position_closed' && event.pnlPercent !== undefined) {
-      const expressionEvent = event.pnlPercent > 0 ? 'trade_win' : 'trade_loss'
-      const trigger = this.expression.evaluateEvent(expressionEvent as import('./expression.js').TradingEventType)
+      const expressionEvent: TradingEventType = event.pnlPercent > 0 ? 'trade_win' : 'trade_loss'
+      const trigger = this.expression.evaluateEvent(expressionEvent)
       if (trigger) {
         this.expression.setEmotion(trigger.emotion, trigger.duration)
       }
