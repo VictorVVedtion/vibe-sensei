@@ -6,7 +6,7 @@
 import type { Master, StatName } from './types.js'
 import { MASTER_NAMES, MASTER_QUOTES } from './types.js'
 import type { RiskAlert } from './guardian.js'
-import type { GuardianDiary, EnhancedDiarySummary } from './diary.js'
+import type { GuardianDiary, EnhancedPatternSummary } from './diary.js'
 import type { ExchangeInterface, Position, Balance } from '../services/exchange/types.js'
 
 // ─── Archetypes ───────────────────────────────────────────────────────────────
@@ -322,23 +322,29 @@ export function buildDiaryContext(
 ): string | null {
   if (!diary) return null
 
-  let summary: EnhancedDiarySummary | null
+  let summary: EnhancedPatternSummary | null
   try {
     summary = diary.getEnhancedSummary()
-  } catch {
+  } catch (err) {
+    console.warn('[Persona] diary summary error:', err)
     return null
   }
   if (!summary) return null
 
   const parts: string[] = []
   if (summary.topPattern) {
-    parts.push(`Your patterns: ${summary.topPattern} (${summary.topPatternCount}x)`)
+    parts.push(`Your patterns: ${summary.topPattern.label} (${summary.topPattern.count}x)`)
   }
-  if (summary.worstInstrument) {
-    parts.push(`${summary.worstInstrument} has ${summary.worstInstrumentLosses} losses`)
+  if (summary.instrumentBiases && summary.instrumentBiases.length > 0) {
+    const worst = summary.instrumentBiases.reduce((a, b) => a.winRate < b.winRate ? a : b)
+    if (worst.winRate < 50) {
+      const losses = worst.totalTrades - Math.round(worst.totalTrades * worst.winRate / 100)
+      parts.push(`${worst.symbol} has ${losses} losses`)
+    }
   }
-  if (summary.bestSession) {
-    parts.push(`Best session: ${summary.bestSession}`)
+  if (summary.timeOfDayAnalysis && summary.timeOfDayAnalysis.length > 0) {
+    const best = summary.timeOfDayAnalysis.reduce((a, b) => a.winRate > b.winRate ? a : b)
+    parts.push(`Best session: ${best.session}`)
   }
 
   if (parts.length === 0) return null
@@ -458,8 +464,9 @@ export async function getPersonalizedAlertWithContext(
           }
         }
       }
-    } catch {
+    } catch (err) {
       // Regime module not available — skip this layer
+      console.warn('[Persona] regime context unavailable:', err instanceof Error ? err.message : err)
     }
 
     // Compute drawdown for recovery context
@@ -502,8 +509,9 @@ export async function getPersonalizedAlertWithContext(
     if (included.length === 0) return baseAlert
 
     return baseAlert + '\n' + included.join(' ')
-  } catch {
+  } catch (err) {
     // Any failure in context building falls back to base alert
+    console.warn('[Persona] context-aware alert error, falling back to base:', err)
     return baseAlert
   }
 }

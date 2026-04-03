@@ -8,7 +8,7 @@ export const RARITIES = [
 export type Rarity = (typeof RARITIES)[number]
 
 // ===== MASTERS (replaces animal species) =====
-// 52 historical trading/philosophy masters as guardian personas.
+// 56 historical trading/philosophy masters as guardian personas.
 // LLMs already know these figures — zero extra tokens for personality.
 
 export const MASTERS = [
@@ -199,7 +199,7 @@ export const MASTER_QUOTES: Record<Master, string> = {
   hu_xueyan: '天下没有不需要成本的生意。',
   zong_qinghou: '做实业就要一步一个脚印。',
   zeng_guofan: '天下之至拙，能胜天下之至巧。',
-  bai_gui: '人弃我取，人取我与。',
+  bai_gui: '时不至，不可强生；时至，不可失也。',
   shen_wansan: '聚财有道，散财有方。',
   zhang_jian: '实业为体，金融为用。',
   vitalik_buterin: "Crypto isn't about price, it's about changing coordination.",
@@ -223,7 +223,7 @@ export const MASTER_RARITY: Record<Master, Rarity> = {
   warren_buffett: 'legendary', benjamin_graham: 'legendary',
   jim_simons: 'legendary', sun_tzu: 'legendary',
   satoshi_nakamoto: 'legendary', john_von_neumann: 'legendary',
-  // Epic (15)
+  // Epic (18)
   paul_tudor_jones: 'epic', stanley_druckenmiller: 'epic',
   michael_burry: 'epic', charlie_munger: 'epic', ray_dalio: 'epic',
   ed_thorp: 'epic', munehisa_homma: 'epic', miyamoto_musashi: 'epic',
@@ -231,14 +231,14 @@ export const MASTER_RARITY: Record<Master, Rarity> = {
   garry_tan: 'epic', andrej_karpathy: 'epic', li_ka_shing: 'epic',
   vitalik_buterin: 'epic', alan_turing: 'epic',
   benoit_mandelbrot: 'epic', claude_shannon: 'epic',
-  // Rare (14)
+  // Rare (18)
   john_paulson: 'rare', john_templeton: 'rare', richard_dennis: 'rare',
   fan_li: 'rare', lv_buwei: 'rare', seneca: 'rare', laozi: 'rare',
   jeff_bezos: 'rare', steve_jobs: 'rare', richard_feynman: 'rare',
   hu_xueyan: 'rare', zeng_guofan: 'rare', bai_gui: 'rare',
   cz_zhao: 'rare', he_yi: 'rare', isaac_newton: 'rare',
   albert_einstein: 'rare', carl_gauss: 'rare',
-  // Uncommon (10)
+  // Uncommon (11)
   nicolas_darvas: 'uncommon', linda_raschke: 'uncommon',
   machiavelli: 'uncommon', arthur_hayes: 'uncommon',
   victor_sperandeo: 'uncommon', larry_williams: 'uncommon',

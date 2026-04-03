@@ -49,9 +49,13 @@ function totalPortfolioValue(balances: Balance[]): number {
   return balances.reduce((sum, b) => sum + b.total, 0)
 }
 
-/** Estimate the notional value of an order. */
-function estimateOrderValue(order: OrderRequest): number {
-  const price = order.price ?? 0
+/**
+ * Estimate the notional value of an order.
+ * For market orders (no price), uses lastPrice fallback.
+ * Returns 0 only when neither order.price nor lastPrice is available.
+ */
+function estimateOrderValue(order: OrderRequest, lastPrice?: number): number {
+  const price = order.price ?? lastPrice ?? 0
   return order.quantity * price
 }
 
@@ -59,19 +63,31 @@ function estimateOrderValue(order: OrderRequest): number {
 
 /**
  * Returns true if the order value exceeds 5% of total portfolio.
- * Orders without a price (pure market orders) return false — caller
- * should enrich with current market price before calling.
+ * For market orders without a price, uses lastPrice to estimate value.
+ * If lastPrice is also unavailable, falls back to a quantity-based heuristic:
+ * triggers debate when quantity * portfolio / 1000 exceeds the threshold,
+ * which catches large-quantity market orders conservatively.
  */
 export function shouldTriggerDebate(
   order: OrderRequest,
   _positions: Position[],
   balances: Balance[],
+  lastPrice?: number,
 ): boolean {
   const portfolio = totalPortfolioValue(balances)
   if (portfolio <= 0) return false
-  const orderValue = estimateOrderValue(order)
-  if (orderValue <= 0) return false
-  return orderValue / portfolio > 0.05
+
+  const orderValue = estimateOrderValue(order, lastPrice)
+
+  // When we have a usable order value, apply the standard 5% threshold
+  if (orderValue > 0) return orderValue / portfolio > 0.05
+
+  // Fallback for market orders with no price info at all:
+  // conservatively assume the order is significant if quantity > 0
+  // (better to debate unnecessarily than to skip a large market order)
+  if (!order.price && !lastPrice && order.quantity > 0) return true
+
+  return false
 }
 
 /**
