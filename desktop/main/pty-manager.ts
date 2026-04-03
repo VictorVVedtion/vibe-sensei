@@ -29,25 +29,32 @@ export class PtyManager {
   }
 
   spawn(): void {
-    const projectRoot = path.resolve(__dirname, '..', '..')
+    const projectRoot = path.resolve(__dirname, '..', '..', '..')
     const shell = process.platform === 'win32' ? 'powershell.exe' : 'bun'
     const args =
       process.platform === 'win32'
         ? ['-Command', 'bun', 'run', 'src/entrypoints/cli.tsx']
         : ['run', 'src/entrypoints/cli.tsx']
 
-    this.process = pty.spawn(shell, args, {
-      name: 'xterm-256color',
-      cols: 120,
-      rows: 40,
-      cwd: projectRoot,
-      env: {
-        ...process.env,
-        VIBE_SENSEI_DESKTOP: '1',
-        TERM: 'xterm-256color',
-        ...this.extraEnv,
-      },
-    })
+    try {
+      this.process = pty.spawn(shell, args, {
+        name: 'xterm-256color',
+        cols: 120,
+        rows: 40,
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          VIBE_SENSEI_DESKTOP: '1',
+          TERM: 'xterm-256color',
+          ...this.extraEnv,
+        },
+      })
+    } catch (err) {
+      console.error('[PtyManager] Failed to spawn PTY process:', err)
+      this.process = null
+      this.onExitCallback?.(1)
+      return
+    }
 
     this.lastSpawnTime = Date.now()
 
