@@ -19,7 +19,6 @@ function AllocationBar({ pct, color }: { pct: number; color: string }) {
           height: '100%',
           width: `${Math.max(0, Math.min(100, pct))}%`,
           background: color,
-          transition: 'width 0.4s ease',
         }}
       />
     </div>

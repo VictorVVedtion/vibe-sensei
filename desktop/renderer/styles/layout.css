@@ -84,7 +84,6 @@
 .divider::after {
   content: '';
   position: absolute;
-  transition: background 0.15s ease;
 }
 
 .divider-horizontal {
@@ -180,7 +179,6 @@
   color: #7B8AA0;
   cursor: pointer;
   font-size: 10px;
-  transition: background 0.1s, color 0.1s;
 }
 
 .window-control-btn:hover {
