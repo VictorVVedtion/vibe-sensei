@@ -1,157 +1,161 @@
-import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { Box, Text } from '../../ink.js';
 import { env } from '../../utils/env.js';
-export type ClawdPose = 'default' | 'arms-up' // both arms raised (used during jump)
-| 'look-left' // both pupils shifted left
-| 'look-right'; // both pupils shifted right
+export type ClawdPose = 'default' | 'arms-up' | 'look-left' | 'look-right';
 
 type Props = {
   pose?: ClawdPose;
+  guardianName?: string;
+  guardianRarity?: string;
+  balance?: string;
 };
 
-// Vane — the deep-sea sensei octopus with hachimaki headband.
+// Deep-sea octopus — the Vibe Sensei mascot.
 //
-// Design (6 rows, ~15 chars wide):
+// Design (10 rows, ~25 chars wide):
 //
-//    ━━◇━━━━━━━       ← hachimaki headband with diamond knot
-//    ▐▛██████▜▌       ← rounded dome (mantle)
-//   ▝▜█ ◉  ◉ █▛▘     ← face with wise spaced eyes
-//    ▝▜██████▛▘       ← body taper
-//     ╰┬╮╭┬╮╭┬╯      ← tentacle base (graceful curves)
-//    ╰─╯╰─╯╰─╯       ← flowing tentacle tips
+//         _.---._
+//      .-'       '-.
+//     /   o     o   \
+//    |   .-------.   |
+//     \ / \_.-._/ \ /
+//      '/|       |\'
+//     / /|       |\ \
+//    / / |       | \ \
+//   ( (  |       |  ) )
+//    '-' '-'   '-' '-'
 //
-// Each pose is a pre-built array of 6 strings. Colors are applied
-// uniformly via clawd_body theme token.
-//
-// Pose variations:
-//   default    — eyes centered, tentacles resting
-//   look-left  — eyes shift left
-//   look-right — eyes shift right
-//   arms-up    — dome arms raised (▗▟ / ▙▖), tentacles lifted
+// Each pose is a pre-built array of 10 strings.
+// The right-side info panel is rendered separately.
 
 const POSES: Record<ClawdPose, string[]> = {
   default: [
-    '   ━━◇━━━━━━━  ',
-    '   ▐▛██████▜▌  ',
-    '  ▝▜█ ◉  ◉ █▛▘ ',
-    '   ▝▜██████▛▘  ',
-    '    ╰┬╮╭┬╮╭┬╯  ',
-    '   ╰─╯╰─╯╰─╯  ',
+    "        _.---._        ",
+    "     .-'       '-.     ",
+    "    /   o     o   \\    ",
+    "   |   .-------.   |   ",
+    "    \\ / \\_.-._/ \\ /    ",
+    "     '/|       |\\'     ",
+    "    / /|       |\\ \\    ",
+    "   / / |       | \\ \\   ",
+    "  ( (  |       |  ) )  ",
+    "   '-' '-'   '-' '-'   ",
   ],
   'look-left': [
-    '   ━━◇━━━━━━━  ',
-    '   ▐▛██████▜▌  ',
-    '  ▝▜◉  ◉ ██▛▘ ',
-    '   ▝▜██████▛▘  ',
-    '    ╰┬╮╭┬╮╭┬╯  ',
-    '   ╰─╯╰─╯╰─╯  ',
+    "        _.---._        ",
+    "     .-'       '-.     ",
+    "    /  o    o     \\    ",
+    "   |   .-------.   |   ",
+    "    \\ / \\_.-._/ \\ /    ",
+    "     '/|       |\\'     ",
+    "    / /|       |\\ \\    ",
+    "   / / |       | \\ \\   ",
+    "  ( (  |       |  ) )  ",
+    "   '-' '-'   '-' '-'   ",
   ],
   'look-right': [
-    '   ━━◇━━━━━━━  ',
-    '   ▐▛██████▜▌  ',
-    '  ▝▜██ ◉  ◉▛▘ ',
-    '   ▝▜██████▛▘  ',
-    '    ╰┬╮╭┬╮╭┬╯  ',
-    '   ╰─╯╰─╯╰─╯  ',
+    "        _.---._        ",
+    "     .-'       '-.     ",
+    "    /     o    o  \\    ",
+    "   |   .-------.   |   ",
+    "    \\ / \\_.-._/ \\ /    ",
+    "     '/|       |\\'     ",
+    "    / /|       |\\ \\    ",
+    "   / / |       | \\ \\   ",
+    "  ( (  |       |  ) )  ",
+    "   '-' '-'   '-' '-'   ",
   ],
   'arms-up': [
-    '   ━━◇━━━━━━━  ',
-    '  ▗▟▛██████▜▙▖ ',
-    '   ▜█ ◉  ◉ █▛  ',
-    '   ▝▜██████▛▘  ',
-    '   ╭─╮╭─╮╭─╮  ',
-    '   ╰─╯╰─╯╰─╯  ',
+    "        _.---._        ",
+    "     .-'       '-.     ",
+    "    /   o     o   \\    ",
+    "   |   .-------.   |   ",
+    "    \\ / \\_.-._/ \\ /    ",
+    "     '/|       |\\'     ",
+    "    / /|       |\\ \\    ",
+    "   / / |       | \\ \\   ",
+    "  ) )  |       |  ( (  ",
+    "   '-' '-'   '-' '-'   ",
   ],
 };
 
-// Apple Terminal fallback: simplified 3-line Vane with headband.
-// Apple Terminal bg-fill trick only works for simple horizontal spans.
+// Apple Terminal fallback: simplified 5-line octopus.
 const APPLE_POSES: Record<ClawdPose, string[]> = {
   default: [
-    ' ━◇━━━━━━━',
-    ' ◉  █  ◉ ',
-    ' ╰─╯╰─╯ ',
+    "    _.---._    ",
+    "  /  o   o  \\  ",
+    "  | .-----. |  ",
+    "  ( |     | )  ",
+    "  '-'     '-'  ",
   ],
   'look-left': [
-    ' ━◇━━━━━━━',
-    '◉ ◉  ██  ',
-    ' ╰─╯╰─╯ ',
+    "    _.---._    ",
+    "  / o  o    \\  ",
+    "  | .-----. |  ",
+    "  ( |     | )  ",
+    "  '-'     '-'  ",
   ],
   'look-right': [
-    ' ━◇━━━━━━━',
-    '  ██  ◉ ◉',
-    ' ╰─╯╰─╯ ',
+    "    _.---._    ",
+    "  /    o  o \\  ",
+    "  | .-----. |  ",
+    "  ( |     | )  ",
+    "  '-'     '-'  ",
   ],
   'arms-up': [
-    ' ━◇━━━━━━━',
-    ' ◉  █  ◉ ',
-    ' ╭─╮╭─╮ ',
+    "    _.---._    ",
+    "  /  o   o  \\  ",
+    "  | .-----. |  ",
+    "  ) |     | (  ",
+    "  '-'     '-'  ",
   ],
 };
 
-export function Clawd(t0: Props) {
-  const $ = _c(8);
-  let t1;
-  if ($[0] !== t0) {
-    t1 = t0 === undefined ? {} : t0;
-    $[0] = t0;
-    $[1] = t1;
-  } else {
-    t1 = $[1];
-  }
-  const {
-    pose: t2
-  } = t1;
-  const pose = t2 === undefined ? "default" : t2;
-  if (env.terminal === "Apple_Terminal") {
-    let t3;
-    if ($[2] !== pose) {
-      t3 = <AppleTerminalClawd pose={pose} />;
-      $[2] = pose;
-      $[3] = t3;
-    } else {
-      t3 = $[3];
-    }
-    return t3;
-  }
-  const lines = POSES[pose];
-  let t3;
-  if ($[4] !== lines) {
-    t3 = (
-      <Box flexDirection="column">
-        {lines.map((line, i) => (
-          <Text key={i} color="clawd_body">{line}</Text>
-        ))}
-      </Box>
-    );
-    $[4] = lines;
-    $[5] = t3;
-  } else {
-    t3 = $[5];
-  }
-  return t3;
+// Info lines rendered to the right of the octopus art.
+// Indexed by row in the 10-line art. Only rows with info text get it.
+function getInfoLines(guardianName?: string, guardianRarity?: string, balance?: string): Record<number, string> {
+  return {
+    2: 'V I B E   S E N S E I',
+    3: 'v0.1.0-abyssal',
+    5: `[*] GUARDIAN: ${guardianName ?? '???'} (${guardianRarity ?? '???'})`,
+    6: `[$] BALANCE:  ${balance ?? '100,000.00'} USDT [PAPER]`,
+    7: '[~] SONAR ACTIVE. AWAITING COMMAND.',
+  };
 }
 
-function AppleTerminalClawd(t0: { pose: ClawdPose }) {
-  const $ = _c(4);
-  const {
-    pose
-  } = t0;
-  const lines = APPLE_POSES[pose];
-  let t1;
-  if ($[0] !== lines) {
-    t1 = (
-      <Box flexDirection="column" alignItems="center">
-        {lines.map((line, i) => (
-          <Text key={i} color="clawd_body">{line}</Text>
-        ))}
-      </Box>
-    );
-    $[0] = lines;
-    $[1] = t1;
-  } else {
-    t1 = $[1];
+export function Clawd({ pose = 'default', guardianName, guardianRarity, balance }: Props) {
+  if (env.terminal === "Apple_Terminal") {
+    return <AppleTerminalClawd pose={pose} guardianName={guardianName} guardianRarity={guardianRarity} balance={balance} />;
   }
-  return t1;
+
+  const lines = POSES[pose];
+  const infoLines = getInfoLines(guardianName, guardianRarity, balance);
+
+  return (
+    <Box flexDirection="column">
+      {lines.map((line, i) => (
+        <Text key={i}>
+          <Text color="clawd_body">{line}</Text>
+          {infoLines[i] !== undefined && (
+            <Text bold={i === 2} dimColor={i !== 2}>{infoLines[i]}</Text>
+          )}
+        </Text>
+      ))}
+    </Box>
+  );
+}
+
+function AppleTerminalClawd({ pose, guardianName, guardianRarity, balance }: { pose: ClawdPose; guardianName?: string; guardianRarity?: string; balance?: string }) {
+  const lines = APPLE_POSES[pose];
+
+  return (
+    <Box flexDirection="column">
+      {lines.map((line, i) => (
+        <Text key={i} color="clawd_body">{line}</Text>
+      ))}
+      <Text bold>V I B E   S E N S E I</Text>
+      {guardianName && <Text dimColor>[*] {guardianName} ({guardianRarity ?? '???'})</Text>}
+      {balance && <Text dimColor>[$] {balance} USDT [PAPER]</Text>}
+    </Box>
+  );
 }

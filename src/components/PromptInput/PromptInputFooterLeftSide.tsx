@@ -407,8 +407,11 @@ function ModeIndicator({
   // below still treat "pill present" as non-empty.
   const tasksPart = hasBackgroundTasks && !hasTeammatePills && !shouldHideTasksFooter(tasks, showSpinnerTree) ? <BackgroundTaskStatus tasksSelected={tasksSelected} isViewingTeammate={isViewingTeammate} teammateFooterIndex={teammateFooterIndex} isLeaderIdle={!isLoading} onOpenDialog={onOpenTasksDialog} /> : null;
   if (parts.length === 0 && !tasksPart && !modePart && showHint) {
+    parts.push(<Text color="warning" key="paper-badge">
+        [PAPER]
+      </Text>);
     parts.push(<Text dimColor key="shortcuts-hint">
-        ? for shortcuts
+        ? for commands
       </Text>);
   }
 

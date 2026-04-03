@@ -1,5 +1,4 @@
 import { c as _c } from "react/compiler-runtime";
-import figures from 'figures';
 import * as React from 'react';
 import { Box, Text } from 'src/ink.js';
 import { AGENT_COLOR_TO_THEME_COLOR, AGENT_COLORS, type AgentColorName } from 'src/tools/AgentTool/agentColorManager.js';
@@ -38,7 +37,7 @@ type PromptCharProps = {
 };
 
 /**
- * Renders the prompt character (❯).
+ * Renders the prompt character (≋ wave).
  * Teammate color overrides the default color when set.
  */
 function PromptChar(t0) {
@@ -51,7 +50,7 @@ function PromptChar(t0) {
   const color = teammateColor ?? (false ? "subtle" : undefined);
   let t1;
   if ($[0] !== color || $[1] !== isLoading) {
-    t1 = <Text color={color} dimColor={isLoading}>{figures.pointer} </Text>;
+    t1 = <Text color={color} dimColor={isLoading}>{"\u224B"} </Text>;
     $[0] = color;
     $[1] = isLoading;
     $[2] = t1;
