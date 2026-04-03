@@ -25,6 +25,10 @@ export async function getConnectedExchange(): Promise<ExchangeInterface> {
     connectionPromise = exchange.connect().then(() => {
       connected = true
       return exchange
+    }).catch((err) => {
+      connectionPromise = null
+      connected = false
+      throw err
     })
   }
   return connectionPromise
