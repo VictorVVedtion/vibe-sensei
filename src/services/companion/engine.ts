@@ -8,6 +8,7 @@
  *   - AsyncCouncil (background debates when risk rises, Sprint 52)
  *   - VisionService (chart screenshot analysis via multimodal AI, Sprint 53)
  *   - TTSService (text-to-speech voice output for masters, Sprint 54)
+ *   - STTService (speech-to-text voice input via sox + API, Sprint 55)
  *
  * The engine runs a 60-second polling loop that checks all triggers,
  * respects cooldown, and pushes messages via a callback. Emergency/urgent
@@ -28,6 +29,7 @@ import { CooldownManager, ProactiveMonitor } from './proactive-monitor.js'
 import { AsyncCouncil } from './council.js'
 import { VisionService } from './vision.js'
 import { TTSService } from './tts.js'
+import { STTService } from './stt.js'
 import { ARCHETYPE_VOICES } from './voice-config.js'
 import type {
   CompanionConfig,
@@ -53,6 +55,7 @@ export class CompanionEngine {
   private readonly council: AsyncCouncil
   private readonly vision: VisionService
   private readonly tts: TTSService
+  private readonly stt: STTService
   private readonly config: CompanionConfig
   private readonly archetype: Archetype
   private readonly masterName: string
@@ -83,6 +86,7 @@ export class CompanionEngine {
     this.council = new AsyncCouncil()
     this.vision = new VisionService()
     this.tts = new TTSService()
+    this.stt = new STTService()
   }
 
   /** Start the polling loop and async market checks. */
@@ -263,6 +267,40 @@ export class CompanionEngine {
   /** Stop any currently playing TTS audio. */
   stopTTS(): void {
     this.tts.stop()
+  }
+
+  // ── STT (Sprint 55) ───────────────────────────────────────────────────
+
+  /**
+   * Start recording audio from the microphone.
+   * No-op if STT is not available or already recording.
+   */
+  async startListening(): Promise<void> {
+    if (!this.stt.isAvailable()) return
+    await this.stt.startRecording()
+  }
+
+  /**
+   * Stop recording and transcribe the captured audio to text.
+   *
+   * @returns The transcribed text, or null if:
+   *   - STT is not available
+   *   - No recording was in progress
+   *   - The audio was too short (silence)
+   *   - Transcription failed
+   */
+  async stopListeningAndGetText(): Promise<string | null> {
+    return this.stt.stopAndTranscribe()
+  }
+
+  /** Whether a recording is currently in progress. */
+  isListening(): boolean {
+    return this.stt.isRecording()
+  }
+
+  /** Whether STT is available (has API key and sox installed). */
+  isSTTAvailable(): boolean {
+    return this.stt.isAvailable()
   }
 
   // ── Private ─────────────────────────────────────────────────────────────
