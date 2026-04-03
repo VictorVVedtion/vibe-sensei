@@ -259,6 +259,26 @@ export async function computeRegimeForSymbol(
       computedAt: Date.now(),
     }
 
+    // Emit RegimeChangeEvent if regime changed (fire-and-forget)
+    const oldSnapshot = regimeCache.get(symbol)
+    const oldRegime = oldSnapshot?.regime.regime
+    if (oldRegime !== undefined && oldRegime !== regime) {
+      try {
+        const { appendEvent } = await import('../knowledge/event-store.js')
+        await appendEvent({
+          id: '',
+          type: 'regime_change',
+          timestamp: new Date().toISOString(),
+          symbol,
+          oldRegime,
+          newRegime: regime,
+          confidence,
+        } as import('../knowledge/types.js').KBEvent)
+      } catch {
+        // KB event emission must never propagate
+      }
+    }
+
     // Update cache
     regimeCache.set(symbol, {
       regime: result,

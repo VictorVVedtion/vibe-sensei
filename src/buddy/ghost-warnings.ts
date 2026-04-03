@@ -74,6 +74,22 @@ export class GhostEngine {
       const warning = check()
       if (warning !== null && !this.isOnCooldown(warning.ghostId)) {
         this.ghostCooldowns.set(warning.ghostId, Date.now())
+
+        // Emit GhostEvent to Knowledge Base (sync-safe, fire-and-forget)
+        try {
+          const { queueEvent } = require('../services/knowledge/event-store.js') as typeof import('../services/knowledge/event-store.js')
+          queueEvent({
+            id: '',
+            type: 'ghost',
+            timestamp: new Date().toISOString(),
+            ghostId: warning.ghostId,
+            ghostName: warning.ghostName,
+            triggerReason: warning.triggerReason,
+          })
+        } catch {
+          // KB event emission must never propagate
+        }
+
         return warning
       }
     }

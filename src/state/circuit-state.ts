@@ -115,6 +115,20 @@ export function recordTrade(timestamp: number): void {
   if (state.tradeTimestamps.length > MAX_TRADE_TIMESTAMPS) {
     state.tradeTimestamps.length = MAX_TRADE_TIMESTAMPS
   }
+
+  // Emit CircuitBreakerEvent to Knowledge Base (sync-safe)
+  try {
+    const { queueEvent } = require('../services/knowledge/event-store.js') as typeof import('../services/knowledge/event-store.js')
+    queueEvent({
+      id: '',
+      type: 'circuit_breaker',
+      timestamp: new Date(timestamp).toISOString(),
+      breakerType: 'trade_recorded',
+      details: { tradeCount: state.tradeTimestamps.length },
+    })
+  } catch {
+    // KB event emission must never propagate
+  }
 }
 
 /**
@@ -127,6 +141,20 @@ export function recordLoss(pnl: number, timestamp: number): void {
   if (state.consecutiveLosses.length > MAX_CONSECUTIVE_LOSSES) {
     state.consecutiveLosses.length = MAX_CONSECUTIVE_LOSSES
   }
+
+  // Emit CircuitBreakerEvent to Knowledge Base (sync-safe)
+  try {
+    const { queueEvent } = require('../services/knowledge/event-store.js') as typeof import('../services/knowledge/event-store.js')
+    queueEvent({
+      id: '',
+      type: 'circuit_breaker',
+      timestamp: new Date(timestamp).toISOString(),
+      breakerType: 'loss_recorded',
+      details: { pnl, consecutiveLosses: state.consecutiveLosses.length },
+    })
+  } catch {
+    // KB event emission must never propagate
+  }
 }
 
 /**
@@ -135,4 +163,17 @@ export function recordLoss(pnl: number, timestamp: number): void {
 export function recordWin(): void {
   const state = getCircuitState()
   state.consecutiveLosses = []
+
+  // Emit CircuitBreakerEvent to Knowledge Base (sync-safe)
+  try {
+    const { queueEvent } = require('../services/knowledge/event-store.js') as typeof import('../services/knowledge/event-store.js')
+    queueEvent({
+      id: '',
+      type: 'circuit_breaker',
+      timestamp: new Date().toISOString(),
+      breakerType: 'win_recorded',
+    })
+  } catch {
+    // KB event emission must never propagate
+  }
 }

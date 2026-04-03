@@ -274,6 +274,24 @@ export async function evaluateAfterToolCall(
       // Companion engine notification must never propagate
     }
 
+    // Emit AlertEvent to Knowledge Base (fire-and-forget)
+    try {
+      const { appendEvent } = await import('../knowledge/event-store.js')
+      const kbSymbolMatch = topAlert.message.match(/([A-Z]{2,10}\/[A-Z]{2,10})/)
+      await appendEvent({
+        id: '',
+        type: 'alert',
+        timestamp: topAlert.timestamp.toISOString(),
+        severity: topAlert.severity,
+        masterName: topAlert.masterName,
+        checkName: topAlert.checkName,
+        message: topAlert.message,
+        symbol: kbSymbolMatch ? kbSymbolMatch[1] : undefined,
+      } as import('../knowledge/types.js').KBEvent)
+    } catch {
+      // KB event emission must never propagate
+    }
+
     const master = companion.species as import('../../buddy/types.js').Master
     const stats = companion.stats
 

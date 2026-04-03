@@ -143,6 +143,25 @@ export async function evaluateGate(input: GateInput): Promise<RiskGateResult> {
   const summary = buildSummary(status, allChecks)
   const recommendation = buildRecommendation(allChecks)
 
+  // Emit GateCheckEvent to Knowledge Base (fire-and-forget)
+  try {
+    const { appendEvent } = await import('../../services/knowledge/event-store.js')
+    const failCount = allChecks.filter(c => c.status === 'fail').length
+    const warnCount = allChecks.filter(c => c.status === 'warn').length
+    await appendEvent({
+      id: '',
+      type: 'gate_check',
+      timestamp: new Date().toISOString(),
+      symbol: input.symbol,
+      side: input.side,
+      status,
+      failCount,
+      warnCount,
+    } as import('../../services/knowledge/types.js').KBEvent)
+  } catch {
+    // KB event emission must never propagate
+  }
+
   return { status, checks: allChecks, summary, recommendation }
 }
 

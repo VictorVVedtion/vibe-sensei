@@ -747,6 +747,23 @@ export class GuardianDiary {
 
     this.entries.push(entry)
     this.save()
+
+    // Emit DiaryPatternEvent to Knowledge Base (sync-safe, one-way emit)
+    try {
+      const { queueEvent } = require('../services/knowledge/event-store.js') as typeof import('../services/knowledge/event-store.js')
+      queueEvent({
+        id: '',
+        type: 'diary_pattern',
+        timestamp: now.toISOString(),
+        entryId: entry.id,
+        symbol: trade.symbol,
+        side: trade.side,
+        patternType,
+        outcome: entry.outcome,
+      })
+    } catch {
+      // KB event emission must never propagate
+    }
   }
 
   /** Get pattern summary after 10+ entries. Returns null if insufficient data. */
@@ -788,6 +805,27 @@ export class GuardianDiary {
       this.tradeReports = this.tradeReports.slice(-50)
     }
     this.save()
+
+    // Emit TradeLogEvent to Knowledge Base (sync-safe, one-way emit)
+    try {
+      const { queueEvent } = require('../services/knowledge/event-store.js') as typeof import('../services/knowledge/event-store.js')
+      queueEvent({
+        id: '',
+        type: 'trade_log',
+        timestamp: new Date(report.timestamp).toISOString(),
+        symbol: report.symbol,
+        side: report.side,
+        quantity: report.quantity,
+        price: report.entryPrice,
+        grossPnL: report.grossPnL,
+        netPnL: report.netPnL,
+        rMultiple: report.rMultiple,
+        holdDurationMs: report.holdDurationMs,
+        fees: report.totalFees,
+      })
+    } catch {
+      // KB event emission must never propagate
+    }
   }
 
   /** Compute rolling stats from the most recent 20 trade reports. */
