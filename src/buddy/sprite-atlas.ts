@@ -6,12 +6,22 @@ import type { Master } from './types.js'
  * Design rules:
  * - Each portrait has 3 lines of ASCII art, each ≤17 display chars
  * - compactFace is a 4-6 char inline face for narrow terminals
- * - LEGENDARY: maximum detail, uses ▓░ shading
- * - EPIC: good detail with personality-specific features
- * - RARE: moderate detail
- * - UNCOMMON: simpler, 1-2 key features
- * - COMMON: minimal
+ * - eyeChars lists the eye characters used in each portrait (for blink replacement)
+ * - emotions maps emotion states to variant portraits (by rarity tier)
+ * - LEGENDARY: maximum detail, uses ▓░ shading, 4 emotions
+ * - EPIC: good detail with personality-specific features, 3 emotions
+ * - RARE: moderate detail, 2 emotions
+ * - UNCOMMON: simpler, 1-2 key features, eyeChars only
+ * - COMMON: minimal, eyeChars only
  * - NO emoji inside portraits (width unpredictable)
+ *
+ * Emotion design principles:
+ * - HEAD/HAIR (line 1) stays the same across emotions
+ * - MOUTH/JAW (line 3) is the primary expression carrier
+ * - EYES (line 2) may change for stronger emotions
+ * - happy: bigger smile, brighter eyes
+ * - worried: tight/wavy mouth, smaller/dimmer eyes
+ * - stern: hard line mouth, sharp/narrow eyes
  *
  * Character palette:
  *   Structure: ( ) / \ _ - ~ ^ | -
@@ -20,14 +30,18 @@ import type { Master } from './types.js'
  *   Special:   ◉ ● ○ · ✦ × ° ▬ ╱ ╲ ╳ ┤ ├ ╰ ╯ ⊙ ‿
  */
 
+export type Emotion = 'neutral' | 'happy' | 'worried' | 'stern'
+
 export interface MasterPortrait {
-  portrait: [string, string, string]  // 3 lines ASCII art, each ≤17 chars
+  portrait: [string, string, string]  // 3 lines ASCII art, each ≤17 chars (= neutral)
   compactFace: string                 // narrow terminal 4-6 char face
+  eyeChars: string[]                  // eye characters used in portrait, for blink replacement
+  emotions?: Partial<Record<Emotion, [string, string, string]>>  // emotion variant portraits
 }
 
 export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
   // ═══════════════════════════════════════════════════════════
-  // LEGENDARY (8) — Maximum detail, ▓░ shading
+  // LEGENDARY (8) — Maximum detail, ▓░ shading, 4 emotions
   // ═══════════════════════════════════════════════════════════
 
   // Jesse Livermore — 1920s slicked hair, sharp squinting eyes, high collar
@@ -38,6 +52,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       ' ▀▄▄▄▬▄▄▄▀ ',
     ],
     compactFace: '◉▬▬◉',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   [' ▄▓▓▓▓▓▓▓▄ ', ' ▌◉▬▬▬▬◉▐░ ', ' ▀▄▄▄▽▄▄▄▀ '],
+      worried: [' ▄▓▓▓▓▓▓▓▄ ', ' ▌·▬▬▬▬·▐░ ', ' ▀▄▄▄~▄▄▄▀ '],
+      stern:   [' ▄▓▓▓▓▓▓▓▄ ', ' ▌◉▬▬▬▬◉▐░ ', ' ▀▄▄▄═▄▄▄▀ '],
+    },
   },
 
   // George Soros — heavy brow ridge, angular jaw, deep-set eyes
@@ -48,6 +68,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ▀▄▬▬▬▄▀  ',
     ],
     compactFace: '▓◉◉▓',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   [' ░▄▄▄▄▄▄▄░ ', ' ▓▌◉    ◉▐▓', '  ▀▄ ▽▽ ▄▀  '],
+      worried: [' ░▄▄▄▄▄▄▄░ ', ' ▓▌·    ·▐▓', '  ▀▄~~~▄▀  '],
+      stern:   [' ░▄▄▄▄▄▄▄░ ', ' ▓▌◉    ◉▐▓', '  ▀▄═══▄▀  '],
+    },
   },
 
   // Warren Buffett — round face, round glasses, warm smile
@@ -58,6 +84,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ╲  ‿‿  ╱  ',
     ],
     compactFace: '(⊙‿⊙)',
+    eyeChars: ['⊙'],
+    emotions: {
+      happy:   ['  ░░▄▄▄░░   ', ' (⊙)    (⊙) ', '  ╲  ▽▽  ╱  '],
+      worried: ['  ░░▄▄▄░░   ', ' (⊙)    (⊙) ', '  ╲  ~~  ╱  '],
+      stern:   ['  ░░▄▄▄░░   ', ' (⊙)    (⊙) ', '  ╲  ▬▬  ╱  '],
+    },
   },
 
   // Benjamin Graham — thin-frame glasses, high scholar forehead
@@ -68,6 +100,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ▀▄────▄▀  ',
     ],
     compactFace: '┌○○┐',
+    eyeChars: ['○'],
+    emotions: {
+      happy:   ['  ▄▄▄▄▄▄▄  ', ' ┌○┐    ┌○┐', '  ▀▄ ‿‿ ▄▀  '],
+      worried: ['  ▄▄▄▄▄▄▄  ', ' ┌·┐    ┌·┐', '  ▀▄~~~~▄▀  '],
+      stern:   ['  ▄▄▄▄▄▄▄  ', ' ┌○┐    ┌○┐', '  ▀▄════▄▀  '],
+    },
   },
 
   // Jim Simons — big beard, glasses, bald mathematician
@@ -78,6 +116,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       ' ▓▓▓▓▓▓▓▓▓ ',
     ],
     compactFace: '○▓▓○',
+    eyeChars: ['○'],
+    emotions: {
+      happy:   [' ░▄▓▓▓▓▄░  ', ' ▌○      ○▐', ' ▓▓▓▽▽▓▓▓ '],
+      worried: [' ░▄▓▓▓▓▄░  ', ' ▌·      ·▐', ' ▓▓▓~~▓▓▓ '],
+      stern:   [' ░▄▓▓▓▓▄░  ', ' ▌○      ○▐', ' ▓▓▓▬▬▓▓▓ '],
+    },
   },
 
   // Sun Tzu — warrior helmet, visor slit, full armor
@@ -88,6 +132,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '▀█▄▄▄▄▄▄█▀ ',
     ],
     compactFace: '█▬▬█',
+    eyeChars: ['▬'],
+    emotions: {
+      happy:   ['▄█▀▀▀▀▀▀█▄ ', '█▌▬░░░░▬▐█ ', '▀█▄▄▽▽▄▄█▀ '],
+      worried: ['▄█▀▀▀▀▀▀█▄ ', '█▌·░░░░·▐█ ', '▀█▄▄~~▄▄█▀ '],
+      stern:   ['▄█▀▀▀▀▀▀█▄ ', '█▌▬░░░░▬▐█ ', '▀█▄▄══▄▄█▀ '],
+    },
   },
 
   // Satoshi Nakamoto — deep hood, full face shadow, only eye glints
@@ -98,6 +148,12 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       ' ▀▓██████▓▀',
     ],
     compactFace: '▓··▓',
+    eyeChars: ['·'],
+    emotions: {
+      happy:   [' ▄▓███████▄', ' █▓░ ✦✦  ░▓█', ' ▀▓██████▓▀'],
+      worried: [' ▄▓███████▄', ' █▓░ ..  ░▓█', ' ▀▓██████▓▀'],
+      stern:   [' ▄▓███████▄', ' █▓░ ××  ░▓█', ' ▀▓██████▓▀'],
+    },
   },
 
   // John von Neumann — high forehead, neat hair, bow tie
@@ -108,10 +164,16 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ▀▄╳╳╳▄▀  ',
     ],
     compactFace: '◉╳◉',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   ['  ▄▄▄▄▄▄▄  ', '  ▌◉    ◉▐  ', '  ▀▄ ▽▽ ▄▀  '],
+      worried: ['  ▄▄▄▄▄▄▄  ', '  ▌·    ·▐  ', '  ▀▄~~~▄▀  '],
+      stern:   ['  ▄▄▄▄▄▄▄  ', '  ▌◉    ◉▐  ', '  ▀▄═══▄▀  '],
+    },
   },
 
   // ═══════════════════════════════════════════════════════════
-  // EPIC (18) — Good detail, personality-specific features
+  // EPIC (18) — Good detail, personality-specific features, 3 emotions
   // ═══════════════════════════════════════════════════════════
 
   // Paul Tudor Jones — thick hair, athletic jaw
@@ -122,6 +184,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▄══▄▀   ',
     ],
     compactFace: '●══●',
+    eyeChars: ['●'],
+    emotions: {
+      happy:   ['  ▄▓▓▓▓▓▓▄ ', '  ▌●    ●▐  ', '   ▀▄▽▽▄▀   '],
+      worried: ['  ▄▓▓▓▓▓▓▄ ', '  ▌·    ·▐  ', '   ▀▄~~▄▀   '],
+    },
   },
 
   // Stanley Druckenmiller — tall head, serious focus
@@ -132,6 +199,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▄▄▄▀    ',
     ],
     compactFace: '◉▄◉',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   ['  ▄▓▓▓▓▓▄  ', '  ▌◉    ◉▐  ', '   ▀▄‿▄▀    '],
+      worried: ['  ▄▓▓▓▓▓▄  ', '  ▌·    ·▐  ', '   ▀▄~▄▀    '],
+    },
   },
 
   // Michael Burry — messy hair, asymmetric eyes (● real / ○ glass)
@@ -142,6 +214,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▄──▄▀   ',
     ],
     compactFace: '●··○',
+    eyeChars: ['●', '○'],
+    emotions: {
+      happy:   [' ░▓▄▓░▓▄░  ', '  ▌●    ○▐  ', '   ▀▄‿‿▄▀   '],
+      worried: [' ░▓▄▓░▓▄░  ', '  ▌·    ·▐  ', '   ▀▄~~▄▀   '],
+    },
   },
 
   // Charlie Munger — ultra-thick glasses [◉], jowls
@@ -152,6 +229,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ▀▀▬▬▀▀    ',
     ],
     compactFace: '[◉◉]',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   ['   ░░▄▄░░   ', ' [◉]    [◉] ', '  ▀▀▽▽▀▀    '],
+      worried: ['   ░░▄▄░░   ', ' [·]    [·] ', '  ▀▀~~▀▀    '],
+    },
   },
 
   // Ray Dalio — meditation half-closed eyes, zen
@@ -162,6 +244,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '─∿─',
+    eyeChars: ['─'],
+    emotions: {
+      happy:   ['   ░▄▄▄▄░   ', '  ▌○    ○▐  ', '    ▀‿‿▀     '],
+      worried: ['   ░▄▄▄▄░   ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Ed Thorp — academic neat, precise thin lips
@@ -172,6 +259,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀──▀     ',
     ],
     compactFace: '○♠○',
+    eyeChars: ['○'],
+    emotions: {
+      happy:   ['   ▄▄▄▄▄    ', '  ▌○    ○▐  ', '    ▀‿‿▀     '],
+      worried: ['   ▄▄▄▄▄    ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Munehisa Homma — tall eboshi hat, merchant
@@ -182,6 +274,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ╲▄▄╱     ',
     ],
     compactFace: '██●●',
+    eyeChars: ['●'],
+    emotions: {
+      happy:   [' ▄██▀▀▀██▄ ', '  ▌●    ●▐  ', '   ╲▽▽╱     '],
+      worried: [' ▄██▀▀▀██▄ ', '  ▌·    ·▐  ', '   ╲~~╱     '],
+    },
   },
 
   // Miyamoto Musashi — topknot, fierce × eyes, crossed swords
@@ -192,6 +289,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       ' ╱▀▄▬▬▄▀╲  ',
     ],
     compactFace: '┃××┃',
+    eyeChars: ['×'],
+    emotions: {
+      happy:   ['    ┃▓▓┃    ', '  ▌✦    ✦▐  ', ' ╱▀▄‿‿▄▀╲  '],
+      worried: ['    ┃▓▓┃    ', '  ▌·    ·▐  ', ' ╱▀▄~~▄▀╲  '],
+    },
   },
 
   // Nassim Taleb — short hair, wide face, thick neck, weightlifter
@@ -202,6 +304,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       ' ▓▀▄▬▬▄▀▓  ',
     ],
     compactFace: '▓●●▓',
+    eyeChars: ['●'],
+    emotions: {
+      happy:   ['  ▄▓▓▓▓▄   ', ' ▓▌●    ●▐▓', ' ▓▀▄▽▽▄▀▓  '],
+      worried: ['  ▄▓▓▓▓▄   ', ' ▓▌·    ·▐▓', ' ▓▀▄~~▄▀▓  '],
+    },
   },
 
   // Elon Musk — modern hair, star eyes, angular jaw
@@ -212,6 +319,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ╲▀▄▄▀╱   ',
     ],
     compactFace: '✦╱╲✦',
+    eyeChars: ['✦'],
+    emotions: {
+      happy:   ['  ▄▄▄▄▄▄   ', '  ▌✦    ✦▐  ', '  ╲▀▽▽▀╱   '],
+      worried: ['  ▄▄▄▄▄▄   ', '  ▌·    ·▐  ', '  ╲▀~~▀╱   '],
+    },
   },
 
   // Peter Thiel — neat short hair, laser-focus
@@ -222,6 +334,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '◉→◉',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   ['   ▄▄▄▄▄    ', '  ▌◉    ◉▐  ', '    ▀‿‿▀     '],
+      worried: ['   ▄▄▄▄▄    ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Garry Tan — modern hair, modern glasses
@@ -232,6 +349,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '┌●●┐',
+    eyeChars: ['●'],
+    emotions: {
+      happy:   ['   ▄▓▓▓▄    ', ' ┌●┐  ┌●┐  ', '    ▀‿‿▀     '],
+      worried: ['   ▄▓▓▓▄    ', ' ┌·┐  ┌·┐  ', '    ▀~~▀     '],
+    },
   },
 
   // Andrej Karpathy — tech look, analytic eyes, neural texture
@@ -242,6 +364,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ░▀▄▄▀░    ',
     ],
     compactFace: '○≡○',
+    eyeChars: ['○'],
+    emotions: {
+      happy:   ['   ▄▄▄▄▄    ', '  ▌○    ○▐  ', '  ░▀‿‿▀░    '],
+      worried: ['   ▄▄▄▄▄    ', '  ▌·    ·▐  ', '  ░▀~~▀░    '],
+    },
   },
 
   // Li Ka-shing — elder, business glasses
@@ -252,6 +379,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▬▬▀     ',
     ],
     compactFace: '◉▬◉',
+    eyeChars: ['◉'],
+    emotions: {
+      happy:   ['   ░░▄▄░░   ', ' ┌◉┐  ┌◉┐  ', '    ▀‿‿▀     '],
+      worried: ['   ░░▄▄░░   ', ' ┌·┐  ┌·┐  ', '    ▀~~▀     '],
+    },
   },
 
   // Vitalik Buterin — ultra-thin face, small eyes, very narrow jaw
@@ -262,6 +394,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '·◇·',
+    eyeChars: ['·'],
+    emotions: {
+      happy:   ['  ▄▄▄▄▄▄   ', '  ▌✦    ✦▐  ', '     ▀‿▀     '],
+      worried: ['  ▄▄▄▄▄▄   ', '  ▌.    .▐  ', '     ▀~▀     '],
+    },
   },
 
   // Alan Turing — 1940s side-parted hair, clear analytic eyes
@@ -272,6 +409,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '●01●',
+    eyeChars: ['●'],
+    emotions: {
+      happy:   ['  ▄▓▄▄▄▄▄  ', '  ▌●    ●▐  ', '    ▀‿‿▀     '],
+      worried: ['  ▄▓▄▄▄▄▄  ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Benoit Mandelbrot — fractal hair alternating, big round glasses
@@ -282,6 +424,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▄▄▄▄▀   ',
     ],
     compactFace: '░○○░',
+    eyeChars: ['○'],
+    emotions: {
+      happy:   [' ░▓░▓░▓░▓░ ', ' ┌○┐    ┌○┐', '   ▀▄‿‿▄▀   '],
+      worried: [' ░▓░▓░▓░▓░ ', ' ┌·┐    ┌·┐', '   ▀▄~~▄▀   '],
+    },
   },
 
   // Claude Shannon — 1950s neat, sharp focus
@@ -292,10 +439,15 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '●10●',
+    eyeChars: ['●'],
+    emotions: {
+      happy:   ['  ▄▓▓▓▓▓▄  ', '  ▌●    ●▐  ', '    ▀‿‿▀     '],
+      worried: ['  ▄▓▓▓▓▓▄  ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // ═══════════════════════════════════════════════════════════
-  // RARE (18) — Moderate detail
+  // RARE (18) — Moderate detail, 2 emotions (neutral + worried)
   // ═══════════════════════════════════════════════════════════
 
   // John Paulson — conservative hedge fund hair
@@ -306,6 +458,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '●$●',
+    eyeChars: ['●'],
+    emotions: {
+      worried: ['  ▄▓▓▓▓▄   ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Sir John Templeton — elder bow tie
@@ -316,6 +472,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀╳╳▀     ',
     ],
     compactFace: '○╳○',
+    eyeChars: ['○'],
+    emotions: {
+      worried: ['   ░▄▄▄░    ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Richard Dennis — 70-80s hair, wide face
@@ -326,6 +486,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▄▬▄▀    ',
     ],
     compactFace: '●▬●',
+    eyeChars: ['●'],
+    emotions: {
+      worried: ['  ▄▓▓▓▓▄   ', '  ▌·    ·▐  ', '   ▀▄~▄▀    '],
+    },
   },
 
   // Fan Li — simple headcloth, flowing robe collar
@@ -336,6 +500,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ╲▄▄▄╱    ',
     ],
     compactFace: '─··─',
+    eyeChars: ['·'],
+    emotions: {
+      worried: [' ─▄▄▄▄▄─   ', '  ▌.    .▐  ', '   ╲~~~╱    '],
+    },
   },
 
   // Lv Buwei — official crown, shrewd
@@ -346,6 +514,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '█●●█',
+    eyeChars: ['●'],
+    emotions: {
+      worried: [' ▄█▀▀▀▀█▄  ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Seneca — Roman bald, stoic eyes, short beard
@@ -356,6 +528,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▓▓▓▀    ',
     ],
     compactFace: '◉▓◉',
+    eyeChars: ['◉'],
+    emotions: {
+      worried: ['   ░▄▄▄░    ', '  ▌·    ·▐  ', '    ▀▓~▓▀    '],
+    },
   },
 
   // Laozi — zen half-closed eyes, long flowing beard
@@ -366,6 +542,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ░▓▓▓▓░    ',
     ],
     compactFace: '─▓▓─',
+    eyeChars: ['─'],
+    emotions: {
+      worried: ['   ░▄▄▄░    ', '  ▌·    ·▐  ', '  ░▓~~▓░    '],
+    },
   },
 
   // Jeff Bezos — bald, strong jaw
@@ -376,6 +556,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ▀▄▬▬▄▀   ',
     ],
     compactFace: '░●●░',
+    eyeChars: ['●'],
+    emotions: {
+      worried: ['   ░░░░░    ', '  ▌·    ·▐  ', '  ▀▄~~▄▀   '],
+    },
   },
 
   // Steve Jobs — round glasses, black turtleneck
@@ -386,6 +570,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '  ▀████▀    ',
     ],
     compactFace: '(○○)',
+    eyeChars: ['○'],
+    emotions: {
+      worried: ['   ▄▄▄▄▄    ', ' (·)    (·) ', '  ▀█~~█▀    '],
+    },
   },
 
   // Richard Feynman — curly hair alternating, playful wide grin
@@ -396,6 +584,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▬▬▀     ',
     ],
     compactFace: '●▬▬●',
+    eyeChars: ['●'],
+    emotions: {
+      worried: ['  ░▓░▓░▓░   ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Hu Xueyan — red-top official hat, merchant
@@ -406,6 +598,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '●··●',
+    eyeChars: ['·'],
+    emotions: {
+      worried: [' ▄●▀▀▀●▄   ', '  ▌.    .▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Zeng Guofan — military cap, stern
@@ -416,6 +612,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '██●●',
+    eyeChars: ['●'],
+    emotions: {
+      worried: [' ▄██▀▀██▄  ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Bai Gui — simple cloth cap, scholar beard
@@ -426,6 +626,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀──▀     ',
     ],
     compactFace: '·──·',
+    eyeChars: ['·'],
+    emotions: {
+      worried: ['  ─▄▄▄▄─    ', '  ▌.    .▐  ', '    ▀~~▀     '],
+    },
   },
 
   // CZ Zhao — modern short hair, confident
@@ -436,6 +640,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '●₿●',
+    eyeChars: ['●'],
+    emotions: {
+      worried: ['   ▄▄▄▄▄    ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // He Yi — female long hair, bright eyes
@@ -446,6 +654,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '▓✦✦▓',
+    eyeChars: ['✦'],
+    emotions: {
+      worried: [' ▄▓▓▓▓▓▓▄  ', '  ▌·    ·▐  ', '    ▀~~▀     '],
+    },
   },
 
   // Isaac Newton — big curly wig
@@ -456,6 +668,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▄▄▄▀    ',
     ],
     compactFace: '▓◉◉▓',
+    eyeChars: ['◉'],
+    emotions: {
+      worried: ['░▓▓▓▓▓▓▓░  ', '▓▌·    ·▐▓  ', '   ▀▄~▄▀    '],
+    },
   },
 
   // Albert Einstein — wild side hair (gap in middle), mustache
@@ -466,6 +682,10 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '   ▀▓▓▓▓▀   ',
     ],
     compactFace: '░●●░',
+    eyeChars: ['●'],
+    emotions: {
+      worried: ['░▓░    ░▓░  ', '  ▌·    ·▐  ', '   ▀▓~~▓▀   '],
+    },
   },
 
   // Carl Gauss — 19th century academic cap, sideburns
@@ -476,10 +696,14 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▄▀     ',
     ],
     compactFace: '▓●●▓',
+    eyeChars: ['●'],
+    emotions: {
+      worried: [' ▄▀▀▀▀▀▄   ', ' ▓▌·    ·▐▓', '    ▀~~▀     '],
+    },
   },
 
   // ═══════════════════════════════════════════════════════════
-  // UNCOMMON (11) — Simple, 1-2 key features
+  // UNCOMMON (11) — Simple, 1-2 key features, eyeChars only
   // ═══════════════════════════════════════════════════════════
 
   // Nicolas Darvas — elegant slicked hair, slender
@@ -490,6 +714,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '●□●',
+    eyeChars: ['●'],
   },
 
   // Linda Raschke — female hair, sharp eyes
@@ -500,6 +725,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '✦▬✦',
+    eyeChars: ['✦'],
   },
 
   // Machiavelli — Renaissance hat, cunning eyes
@@ -510,6 +736,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '▀××▀',
+    eyeChars: ['×'],
   },
 
   // Arthur Hayes — modern glasses
@@ -520,6 +747,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '┌●●┐',
+    eyeChars: ['●'],
   },
 
   // Victor Sperandeo — sparse veteran hair, mouth
@@ -530,6 +758,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '    ▀▄▬▀     ',
     ],
     compactFace: '●▬●',
+    eyeChars: ['●'],
   },
 
   // Larry Williams — graying hair, observant eyes
@@ -540,6 +769,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '      ▀▀     ',
     ],
     compactFace: '○  ○',
+    eyeChars: ['○'],
   },
 
   // Zong Qinghou — practical neat hair
@@ -550,6 +780,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '●步●',
+    eyeChars: ['●'],
   },
 
   // Shen Wansan — Ming dynasty merchant hat
@@ -560,6 +791,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '▀··▀',
+    eyeChars: ['·'],
   },
 
   // Zhang Jian — late Qing modern hair
@@ -570,6 +802,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '●工●',
+    eyeChars: ['●'],
   },
 
   // Andre Cronje — hoodie, hacker eyes
@@ -580,6 +813,7 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '█✦✦█',
+    eyeChars: ['✦'],
   },
 
   // Xu Mingxing — business neat hair
@@ -590,10 +824,11 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '     ▀▄▀     ',
     ],
     compactFace: '●⚡●',
+    eyeChars: ['●'],
   },
 
   // ═══════════════════════════════════════════════════════════
-  // COMMON (1) — Minimal
+  // COMMON (1) — Minimal, eyeChars only
   // ═══════════════════════════════════════════════════════════
 
   // William O'Neil — standard business hair, simple
@@ -604,5 +839,6 @@ export const MASTER_PORTRAITS: Record<Master, MasterPortrait> = {
       '      ▀▀     ',
     ],
     compactFace: '●●',
+    eyeChars: ['●'],
   },
 }
