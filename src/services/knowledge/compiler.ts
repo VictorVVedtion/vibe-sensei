@@ -22,6 +22,7 @@ import {
 import { dirname, join } from 'path'
 import { homedir } from 'os'
 import { readEvents } from './event-store.js'
+import { callGemini } from './gemini-client.js'
 import { buildCompilationPrompt } from './prompts.js'
 import type { KBEventUnion, TradeLogEvent } from './types.js'
 
@@ -51,10 +52,6 @@ interface WikiArticle {
 const WIKI_DIR = join(homedir(), '.vibe-sensei', 'wiki')
 const COMPILE_STATE_PATH = join(WIKI_DIR, '.compile-state.json')
 const CONSENT_PATH = join(homedir(), '.vibe-sensei', '.gemini-consent')
-const LLM_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
-const LLM_MODEL = 'gemini-2.5-flash'
-const LLM_TIMEOUT_MS = 30_000
-const LLM_MAX_TOKENS = 4000
 const AUTO_COMPILE_INTERVAL = 5 // trades between auto-compiles
 
 // ── Directory Bootstrap ──────────────────────────────────────────────────────
@@ -134,8 +131,27 @@ function saveLLMConsent(granted: boolean): void {
 
 // ── Atomic File Write ────────────────────────────────────────────────────────
 
+/**
+ * Validate that a relative article path is safe (no path traversal).
+ * Rejects paths containing '..', absolute paths, and resolved paths
+ * that escape WIKI_DIR.
+ */
+function isSafeArticlePath(relativePath: string): boolean {
+  if (relativePath.startsWith('/')) return false
+  if (relativePath.includes('..')) return false
+  const resolved = join(WIKI_DIR, relativePath)
+  // Ensure the resolved path is still within WIKI_DIR
+  // Use WIKI_DIR + '/' to prevent prefix collisions (e.g., wiki-evil/)
+  if (!resolved.startsWith(WIKI_DIR + '/') && resolved !== WIKI_DIR) return false
+  return true
+}
+
 /** Write a wiki article atomically. Creates parent dirs as needed. */
 function writeArticle(relativePath: string, content: string): void {
+  if (!isSafeArticlePath(relativePath)) {
+    console.warn(`[KB Compiler] rejected unsafe article path: ${relativePath}`)
+    return
+  }
   const fullPath = join(WIKI_DIR, relativePath)
   const dir = dirname(fullPath)
   mkdirSync(dir, { recursive: true, mode: 0o700 })
@@ -151,55 +167,6 @@ function readArticle(relativePath: string): string | undefined {
   } catch {
     return undefined
   }
-}
-
-// ── LLM API Call ─────────────────────────────────────────────────────────────
-
-/** Call the LLM with a text prompt. Returns text response or null on failure. */
-async function callLLM(prompt: string, apiKey: string): Promise<string | null> {
-  const url = `${LLM_API_BASE}/${LLM_MODEL}:generateContent?key=${apiKey}`
-  const body = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.3,
-      maxOutputTokens: LLM_MAX_TOKENS,
-    },
-  }
-
-  let response: Response
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
-    })
-  } catch {
-    return null
-  }
-
-  if (!response.ok) return null
-
-  try {
-    const data = await response.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-    }
-    return extractLLMText(data) ?? null
-  } catch {
-    return null
-  }
-}
-
-/** Extract text from LLM response, trying multiple paths. */
-function extractLLMText(data: {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-}): string | undefined {
-  const parts = data.candidates?.[0]?.content?.parts
-  if (!parts) return undefined
-  for (const part of parts) {
-    if (part.text && part.text.trim().length > 0) return part.text.trim()
-  }
-  return undefined
 }
 
 /** Parse LLM response as JSON array of wiki articles. */
@@ -238,27 +205,46 @@ function tryParseArticles(raw: string): WikiArticle[] | null {
   }
 }
 
-/** Type guard for a valid wiki article shape. */
+/** Type guard for a valid wiki article shape. Rejects unsafe paths. */
 function isValidArticle(item: unknown): item is WikiArticle {
   if (typeof item !== 'object' || item === null) return false
   const obj = item as Record<string, unknown>
-  return typeof obj.path === 'string' && typeof obj.content === 'string'
-    && obj.path.length > 0 && obj.content.length > 0
+  if (typeof obj.path !== 'string' || typeof obj.content !== 'string') return false
+  if (obj.path.length === 0 || obj.content.length === 0) return false
+  // Reject path traversal attempts from LLM output
+  if (!isSafeArticlePath(obj.path)) {
+    console.warn(`[KB Compiler] rejected unsafe article path: ${obj.path}`)
+    return false
+  }
+  return true
 }
 
 // ── LLM Compilation ─────────────────────────────────────────────────────────
 
 let consecutiveLLMFailures = 0
 
+/** Collect existing wiki content to pass as LLM context. */
+function collectExistingWikiContext(): string | undefined {
+  const sections: string[] = []
+  const index = readArticle('INDEX.md')
+  if (index) sections.push('## INDEX.md\n' + index)
+  const profile = readArticle('self/profile.md')
+  if (profile) sections.push('## self/profile.md\n' + profile)
+  const overview = readArticle('patterns/overview.md')
+  if (overview) sections.push('## patterns/overview.md\n' + overview)
+  return sections.length > 0 ? sections.join('\n\n') : undefined
+}
+
 /** Compile events using the LLM. Returns articles or null on failure. */
 async function compileWithLLM(
   events: KBEventUnion[],
-  apiKey: string,
+  _apiKey: string,
 ): Promise<{ articles: WikiArticle[]; warnings: string[] } | null> {
-  const existingIndex = readArticle('INDEX.md')
-  const prompt = buildCompilationPrompt(events, existingIndex)
+  const existingWiki = collectExistingWikiContext()
+  const prompt = buildCompilationPrompt(events, existingWiki)
 
-  const responseText = await callLLM(prompt, apiKey)
+  const result = await callGemini({ prompt, temperature: 0.3 })
+  const responseText = result?.text ?? null
   if (!responseText) {
     consecutiveLLMFailures++
     return null
@@ -483,7 +469,9 @@ export async function compile(opts?: { full?: boolean }): Promise<CompileResult>
 
   if (hasKey && hasConsent) {
     mode = 'gemini'
-    const llmResult = await compileWithLLM(newEvents, apiKey)
+    // Pass ALL events to LLM so it has full context for analysis.
+    // The LLM prompt includes existing wiki content for incremental updates.
+    const llmResult = await compileWithLLM(allEvents, apiKey)
     if (llmResult) {
       articles = llmResult.articles
       warnings.push(...llmResult.warnings)
@@ -493,10 +481,14 @@ export async function compile(opts?: { full?: boolean }): Promise<CompileResult>
       if (consecutiveLLMFailures >= 3) {
         warnings.push('WARNING: 3+ consecutive LLM failures — check API key and quota')
       }
-      articles = compileWithTemplate(newEvents)
+      // Template mode does statistical aggregation — must use ALL events
+      // to avoid erasing historical data with only new events.
+      articles = compileWithTemplate(allEvents)
     }
   } else {
-    articles = compileWithTemplate(newEvents)
+    // Template mode does statistical aggregation — must use ALL events
+    // to avoid erasing historical data with only new events.
+    articles = compileWithTemplate(allEvents)
   }
 
   for (const article of articles) writeArticle(article.path, article.content)
