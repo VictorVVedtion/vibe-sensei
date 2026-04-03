@@ -11,6 +11,13 @@ if [[ "${BYPASS_LEADER_RULES:-0}" == "1" ]]; then
     exit 0
 fi
 
+# ── Worktree agent 自动绕过 ──
+# 在 worktree 中运行的 agent 是被 Leader 派遣的，允许修改代码
+CURRENT_DIR="$(pwd)"
+if [[ "${CURRENT_DIR}" == *"/worktrees/agent-"* ]]; then
+    exit 0
+fi
+
 # ── jq 依赖检测：缺失时放行，绝不误拦截 ──
 if ! command -v jq &>/dev/null; then
     exit 0
