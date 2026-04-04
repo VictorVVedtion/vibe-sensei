@@ -35,15 +35,15 @@ export const DEFAULT_CHART_OPTIONS: Partial<ChartOptions> = {
   priceDecimals: 2,
 }
 
-/** Deep-sea Cthulhu theme color constants */
+/** Trading terminal color constants — matches DESIGN.md (green up, red down) */
 export const CHART_COLORS = {
-  bullish: 'cyan' as const,       // bioluminescent cyan
-  bearish: 'magenta' as const,    // abyssal purple
-  axis: 'gray' as const,          // dim blue-gray
-  title: 'white' as const,        // title text
-  priceUp: 'cyan' as const,       // up price numbers
-  priceDown: 'magenta' as const,  // down price numbers
-  priceLine: 'yellow' as const,   // current price indicator — deep-sea searchlight
+  bullish: 'green' as const,      // #00FF41 — profit / up
+  bearish: 'red' as const,        // #FF003C — loss / down
+  axis: 'gray' as const,          // dim gray for price labels
+  title: 'white' as const,        // bright header
+  priceUp: 'green' as const,      // up price numbers
+  priceDown: 'red' as const,      // down price numbers
+  priceLine: 'yellow' as const,   // current price indicator
   crosshair: 'yellow' as const,   // crosshair lines
   volume: undefined,               // follows candle color
 }

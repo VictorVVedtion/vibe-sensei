@@ -73,7 +73,7 @@ export function CandlestickChart({
   const priceDecimals = inferPriceDecimals(symbol, candles)
 
   // ── Compute max candles that fit ─────────────────────────────
-  const colWidth = chartWidth > 120 ? 2 : 1
+  const colWidth = 2  // 1 char candle + 1 char spacing gap
   const samplePrice = candles.length > 0 ? candles[0].close : 100
   const labelWidth = Math.max(samplePrice.toFixed(priceDecimals).length, 6)
   const rightAxisWidth = 1 + 1 + labelWidth

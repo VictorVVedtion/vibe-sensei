@@ -1,12 +1,14 @@
 /**
- * render-candles.ts — Pure function rendering engine for terminal candlestick charts.
+ * render-candles.ts — Braille high-resolution candlestick chart renderer.
  *
- * Input: Candle[] (OHLCV data) + ChartOptions (terminal dimensions, display prefs)
- * Output: ChartLine[] — array of lines, each line an array of colored segments.
+ * Uses Unicode Braille characters (U+2800–U+28FF) where each terminal character
+ * cell maps to a 2×4 subpixel grid, giving 8× the effective resolution of the
+ * previous block-character approach. Candle bodies, wicks, and overlays are drawn
+ * into a subpixel buffer, then encoded to Braille characters with per-character
+ * coloring via the existing ChartSegment model.
  *
- * Deep-sea Cthulhu theme: cyan (bullish) / magenta (bearish), unified fine-line
- * wicks, right-side Y-axis, current price indicator, border frame, background
- * grid dots. Ink's <Text color="cyan"> handles coloring; we never emit raw ANSI.
+ * Deep-sea Cthulhu theme: green (bullish) / red (bearish), right-side Y-axis,
+ * current price indicator, border frame, volume bars below chart.
  */
 
 import type { Candle } from '../../services/exchange/types.js'
@@ -21,41 +23,64 @@ export interface RenderResult {
   visibleCandles: Candle[]
 }
 
-// ── Unicode characters ──────────────────────────────────────────────
+// ── Braille encoding ──────────────────────────────────────────────
 
-const BLOCK_BULL  = '\u2588'  // █  bullish body — solid, radiant
-const BLOCK_BEAR  = '\u2593'  // ▓  bearish body — shaded, devoured
-const WICK_TOP    = '\u2577'  // ╷  upper wick (fine line)
-const WICK_BOTTOM = '\u2575'  // ╵  lower wick (fine line)
-const WICK_MID    = '\u2502'  // │  body-adjacent wick (fine line)
-const DOJI_CROSS  = '\u253C'  // ┼  doji (open ≈ close)
+const BRAILLE_BASE = 0x2800
+
+/**
+ * Bit values for each dot in a 2×4 Braille cell.
+ * DOT_BITS[dx][dy]: dx=0 left col, dx=1 right col; dy=0..3 top→bottom.
+ *
+ *   [d0][d3]     bits: 0x01  0x08
+ *   [d1][d4]           0x02  0x10
+ *   [d2][d5]           0x04  0x20
+ *   [d6][d7]           0x40  0x80
+ */
+const DOT_BITS = [
+  [0x01, 0x02, 0x04, 0x40],  // left column  (dx=0)
+  [0x08, 0x10, 0x20, 0x80],  // right column (dx=1)
+] as const
+
+// ── Subpixel layout constants ─────────────────────────────────────
+
+/** Candle body width in subpixels */
+const BODY_PX = 3
+/** Wick X offset within slot (centered in 0..BODY_PX-1) */
+const WICK_X = 1
+/** Total slot width in subpixels (body + 1px gap) */
+const SLOT_PX = 4
+/** Terminal columns per candle slot (SLOT_PX / 2) */
+const COL_WIDTH = 2
+
+// ── Pixel colors (internal to renderer) ───────────────────────────
+
+const PX_NONE  = 0
+const PX_GREEN = 1   // bullish
+const PX_RED   = 2   // bearish
+const PX_YELLOW = 3  // price line
+const PX_GRAY  = 4   // crosshair
+
+/** Map internal pixel color → ChartSegment color string */
+const PX_TO_SEG: (ChartSegment['color'] | undefined)[] = [
+  undefined,              // PX_NONE
+  CHART_COLORS.bullish,   // PX_GREEN  → 'green'
+  CHART_COLORS.bearish,   // PX_RED    → 'red'
+  CHART_COLORS.priceLine, // PX_YELLOW → 'yellow'
+  'gray',                 // PX_GRAY
+]
+
+// ── Non-Braille characters (borders, axis, volume) ────────────────
 
 const VOLUME_BLOCKS = [' ', '\u2581', '\u2582', '\u2583', '\u2584', '\u2585', '\u2586', '\u2587', '\u2588']
-//                      0     ▁        ▂        ▃        ▄        ▅        ▆        ▇        █
 
-// Border frame characters
-const BORDER_TL   = '\u250C'  // ┌
-const BORDER_TR   = '\u2510'  // ┐
-const BORDER_BL   = '\u2514'  // └
-const BORDER_BR   = '\u2518'  // ┘
 const BORDER_H    = '\u2500'  // ─
-const BORDER_V    = '\u2502'  // │
+const BORDER_BR   = '\u2518'  // ┘
+const TICK_UP     = '\u2534'  // ┴
+const AXIS_TEE_R  = '\u2502'  // │
+const PRICE_DASH  = '\u2504'  // ┄
+const PRICE_ARROW = '\u25B6'  // ▶
 
-// Y-axis (right side)
-const AXIS_TEE_R  = '\u2502'  // │  right-side axis separator
-
-// X-axis
-const TICK_UP     = '\u2534'  // ┴  X-axis tick
-const HLINE       = '\u2500'  // ─  horizontal line
-
-// Current price indicator
-const PRICE_DASH  = '\u2508'  // ┈  dashed line
-const PRICE_ARROW = '\u25B6'  // ▶  arrow pointing to price
-
-// Background grid
-const GRID_DOT    = '\u00B7'  // ·  dim bubble dot
-
-// ── Nice number rounding ────────────────────────────────────────────
+// ── Nice number rounding ──────────────────────────────────────────
 
 function niceStep(range: number, targetTicks: number): number {
   const rough = range / targetTicks
@@ -82,7 +107,7 @@ function niceMax(val: number, step: number): number {
   return Math.ceil(val / step) * step
 }
 
-// ── Segment helpers ─────────────────────────────────────────────────
+// ── Segment helpers ───────────────────────────────────────────────
 
 function seg(text: string, color?: ChartSegment['color'], dim?: boolean): ChartSegment {
   return dim ? { text, color, dim } : color ? { text, color } : { text }
@@ -92,35 +117,164 @@ function dimSeg(text: string): ChartSegment {
   return { text, color: 'gray', dim: true }
 }
 
-// ── Price formatting ────────────────────────────────────────────────
+// ── Price formatting ──────────────────────────────────────────────
 
 function formatPrice(price: number, decimals: number, labelWidth: number): string {
-  const s = price.toFixed(decimals)
-  return s.padStart(labelWidth)
+  return price.toFixed(decimals).padStart(labelWidth)
 }
 
-// ── Compute candle column width ─────────────────────────────────────
+// ── Pixel buffer ──────────────────────────────────────────────────
 
-function candleColumnWidth(availableWidth: number): number {
-  if (availableWidth > 120) return 2
-  return 1
+interface PixelBuffer {
+  width: number    // subpixel columns
+  height: number   // subpixel rows
+  dots: Uint8Array // 1=on, 0=off; index = y * width + x
+  colors: Uint8Array // pixel color at each dot
 }
 
-// ── Grid dot interval ───────────────────────────────────────────────
-
-function isGridDotColumn(candleIdx: number, totalCandles: number): boolean {
-  // Place grid dots at roughly every 4th candle position, skip first and last
-  const interval = Math.max(4, Math.ceil(totalCandles / 12))
-  return candleIdx > 0 && candleIdx < totalCandles - 1 && candleIdx % interval === 0
+function createBuffer(w: number, h: number): PixelBuffer {
+  return { width: w, height: h, dots: new Uint8Array(w * h), colors: new Uint8Array(w * h) }
 }
 
-// ── Crosshair Unicode characters ────────────────────────────────────
+function setDot(buf: PixelBuffer, x: number, y: number, color: number): void {
+  if (x < 0 || x >= buf.width || y < 0 || y >= buf.height) return
+  const idx = y * buf.width + x
+  buf.dots[idx] = 1
+  buf.colors[idx] = color
+}
 
-const CROSSHAIR_V  = '\u2502'  // │  vertical crosshair line
-const CROSSHAIR_H  = '\u2500'  // ─  horizontal crosshair line
-const CROSSHAIR_X  = '\u253C'  // ┼  crosshair intersection
+/** Read one terminal cell (col, row) from the buffer → Braille char + dominant color. */
+function readCell(buf: PixelBuffer, col: number, row: number): { char: string; color: number } {
+  let bitmask = 0
+  const counts = [0, 0, 0, 0, 0]  // indexed by PX_*
+  const bx = col * 2
+  const by = row * 4
 
-// ── Main rendering function ─────────────────────────────────────────
+  for (let dx = 0; dx < 2; dx++) {
+    const px = bx + dx
+    if (px >= buf.width) continue
+    for (let dy = 0; dy < 4; dy++) {
+      const py = by + dy
+      if (py >= buf.height) continue
+      const idx = py * buf.width + px
+      if (buf.dots[idx]) {
+        bitmask |= DOT_BITS[dx][dy]
+        counts[buf.colors[idx]]++
+      }
+    }
+  }
+
+  if (bitmask === 0) return { char: ' ', color: PX_NONE }
+
+  // Dominant color: highest count, tie-break favors lower index (candle > overlay)
+  let best = PX_NONE
+  let bestCount = 0
+  for (let c = 1; c < counts.length; c++) {
+    if (counts[c] > bestCount) {
+      bestCount = counts[c]
+      best = c
+    }
+  }
+
+  return { char: String.fromCharCode(BRAILLE_BASE + bitmask), color: best }
+}
+
+// ── Drawing primitives ────────────────────────────────────────────
+
+function drawCandle(
+  buf: PixelBuffer,
+  index: number,
+  highY: number,
+  lowY: number,
+  bodyTopY: number,
+  bodyBotY: number,
+  color: number,
+): void {
+  const sx = index * SLOT_PX
+
+  // Wick — 1px centered
+  const wx = sx + WICK_X
+  for (let y = highY; y <= lowY; y++) {
+    setDot(buf, wx, y, color)
+  }
+
+  // Body — 3px wide, overwrites wick dots in body range
+  for (let y = bodyTopY; y <= bodyBotY; y++) {
+    for (let dx = 0; dx < BODY_PX; dx++) {
+      setDot(buf, sx + dx, y, color)
+    }
+  }
+}
+
+function drawPriceLine(buf: PixelBuffer, subY: number): void {
+  if (subY < 0 || subY >= buf.height) return
+  for (let x = 0; x < buf.width; x++) {
+    // Only draw on empty subpixels, with a dashed pattern
+    if (!buf.dots[subY * buf.width + x] && x % 3 !== 2) {
+      setDot(buf, x, subY, PX_YELLOW)
+    }
+  }
+}
+
+function drawCrosshairIntoBuffer(
+  buf: PixelBuffer,
+  subCol: number,
+  subRow: number,
+): void {
+  // Vertical line
+  if (subCol >= 0 && subCol < buf.width) {
+    for (let y = 0; y < buf.height; y++) {
+      if (!buf.dots[y * buf.width + subCol]) {
+        setDot(buf, subCol, y, PX_GRAY)
+      }
+    }
+  }
+  // Horizontal line
+  if (subRow >= 0 && subRow < buf.height) {
+    for (let x = 0; x < buf.width; x++) {
+      if (!buf.dots[subRow * buf.width + x]) {
+        setDot(buf, x, subRow, PX_GRAY)
+      }
+    }
+  }
+  // Intersection — always yellow
+  if (subCol >= 0 && subCol < buf.width && subRow >= 0 && subRow < buf.height) {
+    setDot(buf, subCol, subRow, PX_YELLOW)
+  }
+}
+
+// ── Buffer → ChartLine[] ─────────────────────────────────────────
+
+function bufferToChartLines(buf: PixelBuffer, termCols: number): ChartLine[] {
+  const termRows = Math.ceil(buf.height / 4)
+  const result: ChartLine[] = []
+
+  for (let row = 0; row < termRows; row++) {
+    const line: ChartSegment[] = []
+    let runText = ''
+    let runColor: ChartSegment['color'] | undefined
+
+    for (let col = 0; col < termCols; col++) {
+      const { char, color } = readCell(buf, col, row)
+      const segColor = PX_TO_SEG[color]
+
+      if (segColor === runColor) {
+        runText += char
+      } else {
+        if (runText) line.push(seg(runText, runColor))
+        runText = char
+        runColor = segColor
+      }
+    }
+    if (runText) line.push(seg(runText, runColor))
+
+    result.push(line)
+  }
+
+  return result
+}
+
+// ── Main rendering function ───────────────────────────────────────
 
 export function renderCandlestickChart(
   candles: Candle[],
@@ -140,9 +294,9 @@ export function renderCandlestickChart(
 
   if (candles.length === 0) {
     const emptyLayout: ChartLayout = {
-      leftBorderWidth: 1, rightAxisWidth: 8, chartHeight: opts.height,
-      chartAreaWidth: opts.width - 10, colWidth: 1, visibleCandleCount: 0,
-      priceMax: 0, priceMin: 0, priceRange: 0, headerLines: 2,
+      leftBorderWidth: 0, rightAxisWidth: 8, chartHeight: opts.height,
+      chartAreaWidth: opts.width - 10, colWidth: COL_WIDTH, visibleCandleCount: 0,
+      priceMax: 0, priceMin: 0, priceRange: 0, headerLines: 1,
       priceDecimals: opts.priceDecimals,
     }
     return {
@@ -152,23 +306,17 @@ export function renderCandlestickChart(
     }
   }
 
-  const colWidth = candleColumnWidth(opts.width)
+  const colWidth = COL_WIDTH
 
-  // Layout: [border│] [chart area] [border│ space label]
-  // Y-axis is on the RIGHT side now
+  // ── Layout ────────────────────────────────────────────────
   const samplePrice = candles[0].close
-  const labelWidth = Math.max(
-    samplePrice.toFixed(opts.priceDecimals).length,
-    6,
-  )
-  // Right-side axis: │ + space + label
+  const labelWidth = Math.max(samplePrice.toFixed(opts.priceDecimals).length, 6)
   const rightAxisWidth = 1 + 1 + labelWidth
-  // Left border: │
-  const leftBorderWidth = 1
+  const leftBorderWidth = 0
   const chartAreaWidth = opts.width - leftBorderWidth - rightAxisWidth - 1
   const maxCandles = Math.max(1, Math.floor(chartAreaWidth / colWidth))
 
-  // Apply visible range for zoom/pan, or default to showing the last N candles
+  // ── Visible range ─────────────────────────────────────────
   let visibleCandles: Candle[]
   if (visibleRange) {
     const start = Math.max(0, visibleRange.start)
@@ -178,18 +326,17 @@ export function renderCandlestickChart(
     visibleCandles = candles.slice(-maxCandles)
   }
 
-  // Actual chart content width (candles may not fill the whole area)
   const candleContentWidth = visibleCandles.length * colWidth
   const innerWidth = Math.max(candleContentWidth, chartAreaWidth)
+  const chartHeight = opts.height
 
-  // ── Price range ───────────────────────────────────────────────
+  // ── Price range ───────────────────────────────────────────
   let rawMin = Infinity
   let rawMax = -Infinity
   for (const c of visibleCandles) {
     if (c.low < rawMin) rawMin = c.low
     if (c.high > rawMax) rawMax = c.high
   }
-
   const rawRange = rawMax - rawMin
   const padding = rawRange * 0.05 || rawMax * 0.01 || 1
   const step = niceStep(rawRange + padding * 2, opts.height)
@@ -197,214 +344,93 @@ export function renderCandlestickChart(
   const priceMax = niceMax(rawMax + padding, step)
   const priceRange = priceMax - priceMin || 1
 
-  const chartHeight = opts.height
+  // ── Subpixel space ────────────────────────────────────────
+  const subW = visibleCandles.length * SLOT_PX
+  const subH = chartHeight * 4
+  const buf = createBuffer(subW, subH)
 
-  // Map a price to a row index (0 = top = highest price)
-  function priceToRow(price: number): number {
-    const ratio = (priceMax - price) / priceRange
-    return Math.round(ratio * (chartHeight - 1))
+  function priceToSubY(price: number): number {
+    return Math.round(((priceMax - price) / priceRange) * (subH - 1))
   }
 
-  // ── Find current price row (last candle's close) ──────────────
-  const lastCandle = visibleCandles[visibleCandles.length - 1]
-  const currentPriceRow = priceToRow(lastCandle.close)
-
-  // ── Build price chart grid ────────────────────────────────────
-
-  type Cell = { char: string; color?: ChartSegment['color']; dim?: boolean }
-  const grid: Cell[][] = []
-  for (let row = 0; row < chartHeight; row++) {
-    const line: Cell[] = []
-    for (let col = 0; col < visibleCandles.length * colWidth; col++) {
-      line.push({ char: ' ' })
-    }
-    grid.push(line)
+  function priceToTermRow(price: number): number {
+    return Math.round(((priceMax - price) / priceRange) * (chartHeight - 1))
   }
 
-  // Seed background grid dots (before drawing candles, so candles overwrite)
-  for (let row = 0; row < chartHeight; row++) {
-    for (let i = 0; i < visibleCandles.length; i++) {
-      if (isGridDotColumn(i, visibleCandles.length)) {
-        const col = i * colWidth
-        if (col < grid[row].length) {
-          grid[row][col] = { char: GRID_DOT, color: 'gray', dim: true }
-        }
-      }
-    }
-  }
-
-  // Draw each candle
+  // ── Draw candles ──────────────────────────────────────────
   for (let i = 0; i < visibleCandles.length; i++) {
     const c = visibleCandles[i]
     const bullish = c.close >= c.open
-    const color: ChartSegment['color'] = bullish ? CHART_COLORS.bullish : CHART_COLORS.bearish
-    const bodyChar = bullish ? BLOCK_BULL : BLOCK_BEAR
+    const color = bullish ? PX_GREEN : PX_RED
 
-    const highRow = priceToRow(c.high)
-    const lowRow = priceToRow(c.low)
-    const openRow = priceToRow(c.open)
-    const closeRow = priceToRow(c.close)
+    const highY = priceToSubY(c.high)
+    const lowY = priceToSubY(c.low)
+    const openY = priceToSubY(c.open)
+    const closeY = priceToSubY(c.close)
+    const bodyTopY = Math.min(openY, closeY)
+    const bodyBotY = Math.max(openY, closeY)
 
-    const bodyTop = Math.min(openRow, closeRow)
-    const bodyBottom = Math.max(openRow, closeRow)
-
-    const colStart = i * colWidth
-
-    // Is it a doji? (open ≈ close within 1 row)
-    const isDoji = bodyTop === bodyBottom
-
-    for (let row = highRow; row <= lowRow; row++) {
-      for (let cw = 0; cw < colWidth; cw++) {
-        const col = colStart + cw
-        if (col >= grid[0].length) break
-
-        if (isDoji && row === bodyTop) {
-          // Doji cross
-          grid[row][col] = { char: DOJI_CROSS, color }
-        } else if (row >= bodyTop && row <= bodyBottom) {
-          // Body — different Unicode for bull vs bear
-          grid[row][col] = { char: bodyChar, color }
-        } else {
-          // Wick — only draw on the first column of multi-column candles
-          if (cw === 0 || colWidth === 1) {
-            // Use fine wick characters based on position
-            let wickChar: string
-            if (row === highRow) {
-              wickChar = WICK_TOP  // ╷ at the very top
-            } else if (row === lowRow) {
-              wickChar = WICK_BOTTOM  // ╵ at the very bottom
-            } else {
-              wickChar = WICK_MID  // │ for body-adjacent wicks
-            }
-            grid[row][col] = { char: wickChar, color }
-          }
-        }
-      }
-    }
+    drawCandle(buf, i, highY, lowY, bodyTopY, bodyBotY, color)
   }
 
-  // ── Overlay current price indicator line ──────────────────────
-  // Draw ┈ dashes across the chart at the current price row,
-  // but only on cells that are empty (space or grid dot).
-  if (currentPriceRow >= 0 && currentPriceRow < chartHeight) {
-    const priceRow = grid[currentPriceRow]
-    for (let col = 0; col < priceRow.length; col++) {
-      const cell = priceRow[col]
-      if (cell.char === ' ' || cell.char === GRID_DOT) {
-        priceRow[col] = { char: PRICE_DASH, color: CHART_COLORS.priceLine, dim: false }
-      }
-    }
-  }
+  // ── Price line overlay ────────────────────────────────────
+  const lastCandle = visibleCandles[visibleCandles.length - 1]
+  const priceLineSubY = priceToSubY(lastCandle.close)
+  drawPriceLine(buf, priceLineSubY)
 
-  // ── Overlay crosshair ────────────────────────────────────────
+  const currentPriceTermRow = priceToTermRow(lastCandle.close)
+
+  // ── Crosshair overlay ─────────────────────────────────────
   if (crosshair && crosshair.active) {
-    const cCol = crosshair.col
-    const cRow = crosshair.row
-
-    // Vertical crosshair line (full height at the crosshair column)
-    if (cCol >= 0 && cCol < (visibleCandles.length * colWidth)) {
-      for (let row = 0; row < chartHeight; row++) {
-        if (row === cRow) continue // intersection handled below
-        const cell = grid[row][cCol]
-        if (cell && (cell.char === ' ' || cell.char === GRID_DOT)) {
-          grid[row][cCol] = { char: CROSSHAIR_V, color: CHART_COLORS.crosshair, dim: true }
-        }
-      }
-    }
-
-    // Horizontal crosshair line (full width at the crosshair row)
-    if (cRow >= 0 && cRow < chartHeight) {
-      const rowCells = grid[cRow]
-      for (let col = 0; col < rowCells.length; col++) {
-        if (col === cCol) continue // intersection handled below
-        const cell = rowCells[col]
-        if (cell.char === ' ' || cell.char === GRID_DOT) {
-          rowCells[col] = { char: CROSSHAIR_H, color: CHART_COLORS.crosshair, dim: true }
-        }
-      }
-    }
-
-    // Crosshair intersection
-    if (cCol >= 0 && cCol < (visibleCandles.length * colWidth) &&
-        cRow >= 0 && cRow < chartHeight) {
-      grid[cRow][cCol] = { char: CROSSHAIR_X, color: CHART_COLORS.crosshair }
-    }
+    // Convert terminal crosshair coords to subpixel space
+    // Snap horizontal to candle wick center
+    const candleIdx = Math.floor(crosshair.col / colWidth)
+    const subCol = candleIdx * SLOT_PX + WICK_X
+    // Center vertically within terminal row
+    const subRow = crosshair.row * 4 + 2
+    drawCrosshairIntoBuffer(buf, subCol, subRow)
   }
 
-  // ── Assemble chart lines ──────────────────────────────────────
+  // ── Convert buffer → Braille segments ─────────────────────
+  const termCandleCols = Math.ceil(subW / 2)
+  const brailleLines = bufferToChartLines(buf, termCandleCols)
 
+  // ── Assemble output lines ─────────────────────────────────
   const lines: ChartLine[] = []
 
-  // Title line — shows hovered candle data when crosshair is active
+  // Title line
   const hoveredCandleIdx = crosshair && crosshair.active
     ? Math.floor(crosshair.col / colWidth)
     : -1
   const titleCandle = (hoveredCandleIdx >= 0 && hoveredCandleIdx < visibleCandles.length)
     ? visibleCandles[hoveredCandleIdx]
     : lastCandle
-  const titleLine = buildTitleLine(titleCandle, opts)
-  lines.push(titleLine)
+  lines.push(buildTitleLine(titleCandle, opts))
 
-  // Top border: ┌────────────────────────────────┐
-  const topBorder = buildTopBorder(innerWidth)
-  lines.push(topBorder)
-
-  // Price rows with right-side Y-axis
+  // Price rows: Braille chart + right-side Y-axis
   for (let row = 0; row < chartHeight; row++) {
-    const line: ChartLine = []
+    const line: ChartLine = [...(brailleLines[row] || [])]
     const price = priceMax - (row / (chartHeight - 1)) * priceRange
     const label = formatPrice(price, opts.priceDecimals, labelWidth)
 
-    // Left border
-    line.push(dimSeg(BORDER_V))
-
-    // Chart cells — group consecutive same-color cells for efficiency
-    const rowCells = grid[row]
-    let runText = ''
-    let runColor: ChartSegment['color'] | undefined
-    let runDim: boolean | undefined
-
-    for (const cell of rowCells) {
-      const cellColor = cell.color
-      const cellDim = cell.dim
-      if (cellColor === runColor && cellDim === runDim) {
-        runText += cell.char
-      } else {
-        if (runText) {
-          line.push(seg(runText, runColor, runDim))
-        }
-        runText = cell.char
-        runColor = cellColor
-        runDim = cellDim
-      }
-    }
-    if (runText) {
-      line.push(seg(runText, runColor, runDim))
-    }
-
-    // Pad remaining chart area
-    const usedCols = rowCells.length
+    // Pad chart area to full width
+    const usedCols = termCandleCols
     if (usedCols < innerWidth) {
-      // If this is the price line row, fill with dashes
-      if (row === currentPriceRow) {
-        const remaining = innerWidth - usedCols
-        line.push(seg(PRICE_DASH.repeat(remaining), CHART_COLORS.priceLine))
+      if (row === currentPriceTermRow) {
+        line.push(seg(PRICE_DASH.repeat(innerWidth - usedCols), CHART_COLORS.priceLine))
       } else {
         line.push(seg(' '.repeat(innerWidth - usedCols)))
       }
     }
 
-    // Right border + price indicator
+    // Right axis
     const isCrosshairRow = crosshair && crosshair.active && row === crosshair.row
-    if (row === currentPriceRow) {
-      // Arrow pointing to current price label
+    if (row === currentPriceTermRow) {
       line.push(seg(PRICE_ARROW, CHART_COLORS.priceLine))
       line.push(seg(' ' + label, CHART_COLORS.priceLine))
     } else if (isCrosshairRow) {
-      // Highlight the crosshair row price on the right axis
-      const crosshairPrice = priceMax - (row / (chartHeight - 1)) * priceRange
-      const crosshairLabel = formatPrice(crosshairPrice, opts.priceDecimals, labelWidth)
-      line.push(seg(CROSSHAIR_H, CHART_COLORS.crosshair, true))
+      const crosshairLabel = formatPrice(price, opts.priceDecimals, labelWidth)
+      line.push(seg(BORDER_H, CHART_COLORS.crosshair, true))
       line.push(seg(' ' + crosshairLabel, CHART_COLORS.crosshair))
     } else {
       line.push(dimSeg(AXIS_TEE_R + ' ' + label))
@@ -413,24 +439,22 @@ export function renderCandlestickChart(
     lines.push(line)
   }
 
-  // Bottom border: └──────┬──────┬──────┬─────┘
-  const bottomBorder = buildBottomBorder(visibleCandles, colWidth, innerWidth)
-  lines.push(bottomBorder)
+  // Bottom border
+  lines.push(buildBottomBorder(visibleCandles, colWidth, innerWidth))
 
   // Time labels
-  const timeLabelsLine = buildTimeLabels(visibleCandles, colWidth, leftBorderWidth, opts.timeframe, innerWidth)
-  lines.push(timeLabelsLine)
+  lines.push(buildTimeLabels(visibleCandles, colWidth, leftBorderWidth, opts.timeframe, innerWidth))
 
-  // Volume bars (outside border frame)
+  // Volume bars
   if (opts.showVolume && opts.volumeHeight > 0) {
-    lines.push([seg('')]) // spacer
+    lines.push([seg('')])
     const volumeLines = buildVolumeLines(visibleCandles, colWidth, leftBorderWidth, opts.volumeHeight)
     for (const vl of volumeLines) {
       lines.push(vl)
     }
   }
 
-  // ── Build layout metadata ────────────────────────────────────
+  // ── Layout metadata ───────────────────────────────────────
   const layout: ChartLayout = {
     leftBorderWidth,
     rightAxisWidth,
@@ -441,20 +465,20 @@ export function renderCandlestickChart(
     priceMax,
     priceMin,
     priceRange,
-    headerLines: 2,  // title line + top border
+    headerLines: 1,
     priceDecimals: opts.priceDecimals,
   }
 
   return { lines, layout, visibleCandles }
 }
 
-// ── Title line ──────────────────────────────────────────────────────
+// ── Title line ────────────────────────────────────────────────────
 
 function buildTitleLine(lastCandle: Candle, opts: ChartOptions): ChartLine {
   const line: ChartLine = []
   const d = opts.priceDecimals
 
-  line.push(seg(BLOCK_BULL + ' ', CHART_COLORS.bullish))
+  line.push(seg('\u2588 ', CHART_COLORS.bullish))
   line.push(seg('VIBE SENSEI', 'white'))
   line.push(dimSeg(' \u2500 '))
   line.push(seg(opts.symbol, CHART_COLORS.bullish))
@@ -474,7 +498,6 @@ function buildTitleLine(lastCandle: Candle, opts: ChartOptions): ChartLine {
   line.push(dimSeg('C:'))
   line.push(seg(lastCandle.close.toFixed(d), 'white'))
 
-  // Change percentage
   const pctChange = lastCandle.open !== 0
     ? ((lastCandle.close - lastCandle.open) / lastCandle.open) * 100
     : 0
@@ -486,11 +509,7 @@ function buildTitleLine(lastCandle: Candle, opts: ChartOptions): ChartLine {
   return line
 }
 
-// ── Border frame ────────────────────────────────────────────────────
-
-function buildTopBorder(innerWidth: number): ChartLine {
-  return [dimSeg(BORDER_TL + BORDER_H.repeat(innerWidth) + BORDER_TR)]
-}
+// ── Bottom border ─────────────────────────────────────────────────
 
 function buildBottomBorder(
   candles: Candle[],
@@ -500,7 +519,7 @@ function buildBottomBorder(
   const labelInterval = computeLabelInterval(candles.length, colWidth)
   const candleContentWidth = candles.length * colWidth
 
-  let bottomStr = BORDER_BL
+  let bottomStr = ''
   for (let i = 0; i < innerWidth; i++) {
     if (i < candleContentWidth) {
       const candleIdx = Math.floor(i / colWidth)
@@ -515,7 +534,7 @@ function buildBottomBorder(
   return [dimSeg(bottomStr)]
 }
 
-// ── Time labels ─────────────────────────────────────────────────────
+// ── Time labels ───────────────────────────────────────────────────
 
 function buildTimeLabels(
   candles: Candle[],
@@ -525,12 +544,9 @@ function buildTimeLabels(
   innerWidth: number,
 ): ChartLine {
   const line: ChartLine = []
-  // Align with left border
   line.push(dimSeg(' '.repeat(leftOffset)))
 
   const labelInterval = computeLabelInterval(candles.length, colWidth)
-
-  // Build a character buffer for time labels
   const bufLen = Math.min(candles.length * colWidth, innerWidth)
   const buf = new Array<string>(bufLen).fill(' ')
 
@@ -558,7 +574,6 @@ function formatTimeLabel(
   const hours = date.getUTCHours().toString().padStart(2, '0')
   const minutes = date.getUTCMinutes().toString().padStart(2, '0')
 
-  // Check if this candle crosses a day boundary
   const showDate = index === 0 || (
     index > 0 &&
     new Date(candles[index - 1].timestamp).getUTCDate() !== date.getUTCDate()
@@ -583,12 +598,9 @@ function formatTimeLabel(
 }
 
 function computeLabelInterval(candleCount: number, colWidth: number): number {
-  // Labels need at least 5 characters of space between them
   const minLabelSpacing = 5
   const minInterval = Math.ceil(minLabelSpacing / colWidth)
-  // Aim for roughly 8-12 labels across the chart
   const idealInterval = Math.max(minInterval, Math.ceil(candleCount / 10))
-  // Round to a "nice" interval
   if (idealInterval <= 1) return 1
   if (idealInterval <= 2) return 2
   if (idealInterval <= 4) return 4
@@ -598,7 +610,7 @@ function computeLabelInterval(candleCount: number, colWidth: number): number {
   return Math.ceil(idealInterval / 5) * 5
 }
 
-// ── Volume bars ─────────────────────────────────────────────────────
+// ── Volume bars ───────────────────────────────────────────────────
 
 function buildVolumeLines(
   candles: Candle[],
@@ -606,35 +618,28 @@ function buildVolumeLines(
   leftOffset: number,
   volumeHeight: number,
 ): ChartLine[] {
-  // Find max volume for scaling
   let maxVol = 0
   for (const c of candles) {
     if (c.volume > maxVol) maxVol = c.volume
   }
   if (maxVol === 0) maxVol = 1
 
-  // Total fractional height in "eighth-blocks" units
   const totalEighths = volumeHeight * 8
-
-  // Pre-compute volume levels per candle (in eighths)
   const levels: number[] = candles.map(c =>
     Math.round((c.volume / maxVol) * totalEighths),
   )
 
-  // Build volume rows from top (highest) to bottom (lowest)
   const resultLines: ChartLine[] = []
   const labelPrefix = ' '.repeat(leftOffset)
 
   for (let row = 0; row < volumeHeight; row++) {
     const line: ChartLine = []
     if (row === 0) {
-      const volLabel = 'Vol '
-      line.push(dimSeg(volLabel))
+      line.push(dimSeg('Vol '))
     } else {
       line.push(dimSeg(labelPrefix))
     }
 
-    // For each candle, determine what character to show in this row
     const rowFromBottom = volumeHeight - 1 - row
     const rowStartEighth = rowFromBottom * 8
     const rowEndEighth = (rowFromBottom + 1) * 8
@@ -657,7 +662,7 @@ function buildVolumeLines(
         char = ' '
       }
 
-      const cellStr = colWidth === 2 ? char + char : char
+      const cellStr = colWidth === 2 ? char + ' ' : char
       const cellColor = char === ' ' ? undefined : color
 
       if (cellColor === runColor) {
