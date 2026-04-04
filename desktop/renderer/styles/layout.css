@@ -67,7 +67,7 @@
 
 .panel-sidebar ::-webkit-scrollbar-thumb {
   background: #253550;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
 .panel-sidebar ::-webkit-scrollbar-thumb:hover {
@@ -252,7 +252,7 @@
 .status-bar .mode-badge {
   background: #182233;
   border: 1px solid #253550;
-  border-radius: 3px;
+  border-radius: 0;
   padding: 1px 6px;
   font-size: 10px;
   color: #00D4FF;

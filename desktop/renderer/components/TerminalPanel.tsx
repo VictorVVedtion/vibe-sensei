@@ -230,7 +230,7 @@ const overlayContainerStyle: React.CSSProperties = {
 const overlayCardStyle: React.CSSProperties = {
   background: 'rgba(10, 22, 40, 0.85)',
   border: '1px solid #253550',
-  borderRadius: 8,
+  borderRadius: 0,
   padding: '24px 32px',
   display: 'flex',
   flexDirection: 'column',
@@ -243,7 +243,7 @@ const reconnectButtonStyle: React.CSSProperties = {
   background: '#00D4FF',
   color: '#0A1628',
   border: 'none',
-  borderRadius: 4,
+  borderRadius: 0,
   padding: '8px 20px',
   fontSize: 13,
   fontWeight: 600,

@@ -97,7 +97,7 @@ export function PositionsList({ positions }: PositionsListProps) {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     background: '#0F1924',
-    borderRadius: 6,
+    borderRadius: 0,
     border: '1px solid #253550',
     overflow: 'hidden',
   },
@@ -120,7 +120,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     color: '#00D4FF',
     background: '#182233',
-    borderRadius: 8,
+    borderRadius: 0,
     padding: '1px 6px',
     fontWeight: 600,
   },
