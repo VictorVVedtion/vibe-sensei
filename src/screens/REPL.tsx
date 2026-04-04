@@ -4159,9 +4159,22 @@ export function REPL({
       })()
     }
 
+    // Regime poller: keep market regime cache warm for companion insights
+    void (async () => {
+      try {
+        const { startRegimePoller } = await import('../services/companion/regime-poller.js')
+        startRegimePoller()
+      } catch {
+        // Regime poller is best-effort
+      }
+    })()
+
     // Cleanup on unmount
     return () => {
       void diagnosticTracker.shutdown();
+      void import('../services/companion/regime-poller.js').then(
+        m => m.stopRegimePoller()
+      ).catch(() => {})
     };
     // TODO: fix this
     // eslint-disable-next-line react-hooks/exhaustive-deps

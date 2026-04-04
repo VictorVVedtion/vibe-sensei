@@ -605,7 +605,7 @@ Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7
 ### Sprint 73: Core Cleanup — Feature Gates + Dead Code + Chart Fixes
 - Agent: opus
 - Dependencies: none
-- Status: PENDING
+- Status: MERGED
 - Priority: P0
 - Timeout: 240
 - Description: Three cleanup tasks on the existing uncommitted changes. (1) Remove remaining 6 feature('BUDDY') gates: src/commands.ts:119, src/components/PromptInput/PromptInput.tsx:312+1789+1984, src/buddy/prompt.ts:18, src/utils/attachments.ts:865. Remove the feature() call and keep the inner code unconditional. (2) Dead code cleanup in CompanionSprite.tsx: remove unused imports (useTerminalSize, stringWidth, Theme, renderSprite, spriteFrameCount, MASTER_PORTRAITS), unused constants (IDLE_SEQUENCE, PET_HEARTS, MIN_COLS_FOR_FULL_SPRITE, SPRITE_BODY_WIDTH, NAME_ROW_PAD, SPRITE_PADDING_X, BUBBLE_WIDTH, NARROW_QUIP_CAP), unused function spriteColWidth(), and unused variable colWidth at line 219. (3) Chart fixes: in CandlestickChart.tsx change colWidth from 1 to 2 to match render-candles.ts COL_WIDTH=2. In render-candles.ts and CandlestickChart.tsx revert getHours()/getMonth()/getDate() back to getUTCHours()/getUTCMonth()/getUTCDate() and add ' UTC' suffix to the info bar dateStr.
@@ -613,7 +613,7 @@ Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7
 ### Sprint 74: Guardian Display Singleton + LiveChart Hardening
 - Agent: opus
 - Dependencies: Sprint 73
-- Status: PENDING
+- Status: MERGED
 - Priority: P0
 - Timeout: 300
 - Description: (1) Create src/buddy/guardian-display.ts as a module-level singleton (NOT a React hook with timer) that provides getGuardianDisplay(): {displayText, fading, emotionColor, emotion}. Owns a single tick counter with adaptive rate: 500ms when reaction active, 5000ms when idle. Both CompanionSprite and CompanionFloatingBubble consume this singleton via a thin useGuardianDisplay() hook that subscribes to changes. This avoids the double-instance problem in fullscreen where both components mount simultaneously (REPL.tsx:4617 + REPL.tsx:5047). (2) LiveChart hardening in src/tools/ChartTool/UI.tsx: add global incrementing generationId — each new LiveChart instance gets the next ID, refresh callback checks if its ID is still current before updating state. Add consecutiveFails counter: after 3 failures show dim '⚠ stale' in chart title. Add exponential backoff on failures: base interval → 2x → 4x → cap at 60s. Reset to base on success. Add empty state: if initial candles are empty, show 'No candle data for {symbol}'. (3) Narrow terminal guard: if terminal columns < 40, hide SpeechBubble and show only minimalistFaceRow. If < 20, return null (hide companion entirely).
@@ -637,7 +637,7 @@ Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7
 ### Sprint 77: Volume Spike + Price Line + drawPriceLine Integration
 - Agent: opus
 - Dependencies: Sprint 73
-- Status: PENDING
+- Status: MERGED
 - Priority: P1
 - Timeout: 180
 - Description: (1) Volume spike highlight in render-candles.ts buildVolumeLines(): compute avgVolume of visible candles, for any candle with volume > 2x avgVolume mark it as spike. Spikes get bold color (same bullish/bearish but without dim). Non-spikes keep current rendering. The averaging window is the visible candle set. (2) Current price horizontal line: in renderCandlestickChart(), after drawCandles(), call the existing but unused drawPriceLine() function to draw a dim dotted line (PRICE_DASH '┄') across the currentPriceRow. This makes the last close price immediately visible across the full chart width. The function already exists at render-candles.ts:160 — just uncomment/wire the call. (3) Verify crosshair coordinate math still works correctly with colWidth=2 (from Sprint 73 fix) — the hoveredIdx calculation in renderCandlestickChart uses crosshair.col which should map correctly since both CandlestickChart.tsx and render-candles.ts now agree on COL_WIDTH=2.
