@@ -1,0 +1,53 @@
+/**
+ * Vibe Sensei — TradingView widget internal dark theme overrides.
+ * This CSS is loaded inside the TradingView iframe via custom_css_url.
+ * It targets internal TradingView elements to match our Matrix green aesthetic.
+ */
+
+/* Override the main chart background */
+.chart-markup-table {
+  background: #131722 !important;
+}
+
+/* Header toolbar styling */
+.header-chart-panel {
+  background: #0D1117 !important;
+  border-bottom: 1px solid #1e222d !important;
+}
+
+/* Bottom toolbar / status bar */
+.bottom-widgetbar-content {
+  background: #0D1117 !important;
+  border-top: 1px solid #1e222d !important;
+}
+
+/* Drawing toolbar */
+.drawing-toolbar {
+  background: #0D1117 !important;
+  border-right: 1px solid #1e222d !important;
+}
+
+/* Study/indicator panel */
+.tv-side-toolbar {
+  background: #0D1117 !important;
+  border: 1px solid #1e222d !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #131722;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2e39;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #363a45;
+}
