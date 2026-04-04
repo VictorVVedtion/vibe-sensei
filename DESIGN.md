@@ -1,27 +1,33 @@
 # DESIGN.md -- Vibe Sensei Terminal Design System
 
 ## Philosophy
-Deep-sea nuclear submarine control room. Cold, precise, brutal.
-Cthulhu mythos depth expressed through restraint, not decoration.
+Matrix terminal. Phosphor green on black. Cold, precise, brutal.
+Hacker aesthetic expressed through restraint, not decoration.
 
-## Abyssal Palette (4-color system)
+## Matrix Green Palette
 
 | Token        | Usage                       | Ink Color Name | Hex Reference |
 |--------------|-----------------------------|----------------|---------------|
-| abyss-up     | Up / positive / success     | cyan           | #00FFA3       |
-| abyss-down   | Down / negative / danger    | magenta        | #8B008B       |
-| abyss-dim    | Background / border / minor | gray           | #3B4252       |
-| abyss-bright | Highlight / current price   | white          | #ECEFF4       |
+| PRIMARY      | Main accent, active states  | green          | #00FF41       |
+| BACKGROUND   | Main background             | -              | #0D1117       |
+| UP/PROFIT    | Up / positive / success     | green          | #20C20E       |
+| DOWN/LOSS    | Down / negative / danger    | red            | #FF003C       |
+| DIM/MUTED    | Secondary text, labels      | green (dim)    | #008F11       |
+| BORDER       | Panel borders, dividers     | -              | #002B0E       |
+| FOREGROUND   | Default text color          | green          | #00FF41       |
 
 Additional:
-| abyss-warn   | Warning                     | yellow         | #EBCB8B       |
-| abyss-ghost  | Ghost whisper               | gray (dim)     | #4C566A       |
+| WARNING      | Warning                     | yellow         | #FFEA00       |
+| CRITICAL     | Emergencies                 | red            | #FF003C       |
+| SELECTION    | Selection background        | -              | #004D1A       |
+| SECONDARY_BG | Secondary background        | -              | #0A0F0A       |
+| CARD_BG      | Card / control background   | -              | #0D150D       |
 
 ## Border Language
 - Do not use border shape to distinguish rarity
 - All borders use single line: top-left top-right bottom-left bottom-right horizontal vertical
 - Rarity distinguished by color brightness:
-  - Legendary: cyan (bright)
+  - Legendary: green (bright)
   - Epic: white
   - Rare: gray (standard)
   - Uncommon: gray (dim)
@@ -44,7 +50,7 @@ compatibility and colorless-terminal fallback. This is intentional.
 ## Message Type Visual Language
 - Master dialogue:   rounded bubble (existing)
 - System warning:    full-line inverse (no border)
-- Ghost whisper:     dim gray text, no border, italic feel (...text... - Name)
+- Ghost whisper:     dim green text, no border, italic feel (...text... - Name)
 - Council conclusion: >> prefix indent
 - Gate status:       inverse tag [OK] / [XX]
 
