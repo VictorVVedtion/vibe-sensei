@@ -110,7 +110,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 600,
     title: 'Vibe Sensei',
-    backgroundColor: '#0A1628',
+    backgroundColor: '#0D1117',
     show: false,
     webPreferences: {
       nodeIntegration: false,

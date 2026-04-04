@@ -38,7 +38,7 @@ const ASSET_COLORS: Record<string, string> = {
 }
 
 function getAssetColor(currency: string): string {
-  return ASSET_COLORS[currency.toUpperCase()] ?? '#00D4FF'
+  return ASSET_COLORS[currency.toUpperCase()] ?? '#00FF41'
 }
 
 export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplayProps) {
@@ -91,9 +91,9 @@ export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplay
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0F1924',
+    background: '#0A0F0A',
     borderRadius: 6,
-    border: '1px solid #253550',
+    border: '1px solid #002B0E',
     overflow: 'hidden',
   },
   headerBar: {
@@ -101,13 +101,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 10px',
-    background: '#0A1628',
-    borderBottom: '1px solid #253550',
+    background: '#0D1117',
+    borderBottom: '1px solid #002B0E',
   },
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#7B8AA0',
+    color: '#008F11',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
@@ -116,11 +116,11 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'baseline',
     padding: '10px 10px 8px',
-    borderBottom: '1px solid #182233',
+    borderBottom: '1px solid #0D150D',
   },
   totalLabel: {
     fontSize: 10,
-    color: '#7B8AA0',
+    color: '#008F11',
   },
   totalValue: {
     fontSize: 18,
@@ -134,7 +134,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   assetRow: {
     padding: '6px 10px',
-    borderBottom: '1px solid #182233',
+    borderBottom: '1px solid #0D150D',
   },
   assetInfo: {
     display: 'flex',
@@ -149,12 +149,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   assetAmount: {
     fontSize: 11,
-    color: '#E2E4ED',
+    color: '#00FF41',
     fontVariantNumeric: 'tabular-nums',
   },
   allocTrack: {
     height: 3,
-    background: '#0A1628',
+    background: '#0D1117',
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 2,
@@ -166,12 +166,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   assetPct: {
     fontSize: 9,
-    color: '#7B8AA0',
+    color: '#008F11',
     fontWeight: 600,
   },
   assetBreakdown: {
     fontSize: 8,
-    color: '#7B8AA0',
+    color: '#008F11',
   },
   empty: {
     padding: '12px 10px',
@@ -179,6 +179,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emptyText: {
     fontSize: 11,
-    color: '#7B8AA0',
+    color: '#008F11',
   },
 }

@@ -70,10 +70,10 @@ export function RiskGauge({ score }: RiskGaugeProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0F1924',
+    background: '#0A0F0A',
     borderRadius: 6,
     padding: '8px 12px',
-    border: '1px solid #253550',
+    border: '1px solid #002B0E',
   },
   header: {
     display: 'flex',
@@ -84,7 +84,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#7B8AA0',
+    color: '#008F11',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
@@ -125,7 +125,7 @@ const styles: Record<string, React.CSSProperties> = {
     top: -2,
     width: 4,
     height: 12,
-    background: '#0F1924',
+    background: '#0A0F0A',
     border: '2px solid',
     borderRadius: 2,
     transform: 'translateX(-50%)',
@@ -138,7 +138,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   labelText: {
     fontSize: 8,
-    color: '#7B8AA0',
+    color: '#008F11',
     fontVariantNumeric: 'tabular-nums',
   },
 }

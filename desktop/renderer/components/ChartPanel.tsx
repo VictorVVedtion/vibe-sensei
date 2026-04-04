@@ -118,32 +118,32 @@ export function ChartPanel({
       width: container.clientWidth,
       height: container.clientHeight,
       layout: {
-        background: { type: 'solid' as const, color: '#0A1628' },
-        textColor: '#E2E4ED',
+        background: { type: 'solid' as const, color: '#0D1117' },
+        textColor: '#00FF41',
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#182233' },
-        horzLines: { color: '#182233' },
+        vertLines: { color: '#0D150D' },
+        horzLines: { color: '#0D150D' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: '#253550',
+          color: '#002B0E',
           width: 1,
           style: LineStyle.Dashed,
         },
         horzLine: {
-          color: '#253550',
+          color: '#002B0E',
           width: 1,
           style: LineStyle.Dashed,
         },
       },
       rightPriceScale: {
-        borderColor: '#182233',
+        borderColor: '#0D150D',
       },
       timeScale: {
-        borderColor: '#182233',
+        borderColor: '#0D150D',
         timeVisible: true,
         secondsVisible: false,
       },

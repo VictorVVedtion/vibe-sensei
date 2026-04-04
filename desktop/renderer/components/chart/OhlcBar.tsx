@@ -33,7 +33,7 @@ export function OhlcBar({
     ? displayData.close >= displayData.open
       ? '#00E5A0'
       : '#FF4D6A'
-    : '#7B8AA0'
+    : '#008F11'
 
   return (
     <div className="ohlc-bar-panel">
