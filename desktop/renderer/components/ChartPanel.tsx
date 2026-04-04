@@ -16,6 +16,15 @@ import '../styles/theme.css'
 
 const WS_RECONNECT_DELAY = 3000
 
+const TIMEFRAME_RANGES: Record<string, number> = {
+  '1': 4 * 60 * 60,         // 1m: 4 hours = 240 candles
+  '5': 12 * 60 * 60,        // 5m: 12 hours = 144 candles
+  '15': 2 * 24 * 60 * 60,   // 15m: 2 days = 192 candles
+  '60': 7 * 24 * 60 * 60,   // 1H: 7 days = 168 candles
+  '240': 30 * 24 * 60 * 60, // 4H: 30 days = 180 candles
+  '1D': 180 * 24 * 60 * 60, // 1D: 180 days = 180 candles
+}
+
 interface ChartPanelProps {
   onSymbolChange?: (symbol: string) => void
   onPriceUpdate?: (price: number, prevClose: number | null) => void
@@ -217,13 +226,14 @@ export function ChartPanel({
     setError(null)
 
     const now = Math.floor(Date.now() / 1000)
-    const thirtyDaysAgo = now - 30 * 24 * 60 * 60
+    const rangeSeconds = TIMEFRAME_RANGES[resolution] ?? 7 * 24 * 60 * 60
+    const from = now - rangeSeconds
 
     try {
       const url =
         `${udfBase}/history?symbol=${encodeURIComponent(symbol)}` +
         `&resolution=${encodeURIComponent(resolution)}` +
-        `&from=${thirtyDaysAgo}&to=${now}`
+        `&from=${from}&to=${now}`
 
       const res = await fetch(url)
       if (!res.ok) {
