@@ -112,7 +112,7 @@ function GuardianInfo() {
         <Text dimColor>   &quot;{info.quote}&quot;</Text>
       )}
       {balance !== null && (
-        <Text>{"$"} Paper: {balance} USDT</Text>
+        <Text>{"[$]"} Paper: {balance} USDT</Text>
       )}
     </Box>
   );
