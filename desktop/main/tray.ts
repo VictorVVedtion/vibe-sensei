@@ -4,7 +4,7 @@ import * as path from 'path'
 let trayInstance: Tray | null = null
 
 export function createTray(mainWindow: BrowserWindow): Tray {
-  const iconPath = path.join(__dirname, '..', 'assets', 'tray-icon.png')
+  const iconPath = path.join(__dirname, '..', 'assets', 'TrayIconTemplate.png')
   const icon = nativeImage.createFromPath(iconPath)
   const tray = new Tray(icon.resize({ width: 16, height: 16 }))
 
