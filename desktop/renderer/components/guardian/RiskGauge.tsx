@@ -10,20 +10,24 @@ function getSeverityLabel(score: number): string {
 }
 
 function getSeverityColor(score: number): string {
-  if (score <= 20) return '#20C20E'
+  if (score <= 20) return '#00FF41'
   if (score <= 50) return '#FFEA00'
-  if (score <= 75) return '#D4A843'
+  if (score <= 75) return '#FF8C00'
   return '#FF003C'
+}
+
+function buildAsciiBar(score: number): string {
+  const totalBlocks = 20
+  const filled = Math.round((score / 100) * totalBlocks)
+  const empty = totalBlocks - filled
+  return '\u2588'.repeat(filled) + '\u2591'.repeat(empty)
 }
 
 export function RiskGauge({ score }: RiskGaugeProps) {
   const clamped = Math.max(0, Math.min(100, score))
   const color = getSeverityColor(clamped)
   const label = getSeverityLabel(clamped)
-
-  // Build gradient stops for the track background
-  const trackGradient =
-    'linear-gradient(to right, #20C20E 0%, #FFEA00 35%, #D4A843 65%, #FF003C 100%)'
+  const bar = buildAsciiBar(clamped)
 
   return (
     <div
@@ -34,111 +38,47 @@ export function RiskGauge({ score }: RiskGaugeProps) {
       aria-valuemax={100}
       aria-label={`Risk score ${clamped} out of 100, severity ${label}`}
     >
-      <div style={styles.header}>
-        <span style={styles.title}>Risk</span>
-        <span style={{ ...styles.scoreLabel, color }}>
-          {clamped} <span style={styles.severityTag}>{label}</span>
-        </span>
-      </div>
-      <div style={styles.trackOuter}>
-        <div style={{ ...styles.track, background: trackGradient }}>
-          <div
-            style={{
-              ...styles.trackOverlay,
-              width: `${100 - clamped}%`,
-            }}
-          />
-        </div>
-        <div
-          style={{
-            ...styles.indicator,
-            left: `${clamped}%`,
-            borderColor: color,
-          }}
-        />
-      </div>
-      <div style={styles.labels}>
-        <span style={styles.labelText}>0</span>
-        <span style={styles.labelText}>25</span>
-        <span style={styles.labelText}>50</span>
-        <span style={styles.labelText}>75</span>
-        <span style={styles.labelText}>100</span>
-      </div>
+      <span style={styles.title}>RISK</span>
+      <span style={{ ...styles.bar, color }}>{bar}</span>
+      <span style={{ ...styles.score, color }}>{clamped}</span>
+      <span style={{ ...styles.label, color }}>{label}</span>
     </div>
   )
 }
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0A0F0A',
-    borderRadius: 6,
+    background: '#0F1924',
     padding: '8px 12px',
-    border: '1px solid #002B0E',
-  },
-  header: {
+    border: '1px solid #253550',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 8,
+    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace",
   },
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#008F11',
-    textTransform: 'uppercase' as const,
+    color: '#7B8AA0',
     letterSpacing: 0.5,
+    flexShrink: 0,
   },
-  scoreLabel: {
+  bar: {
+    fontSize: 12,
+    lineHeight: 1,
+    letterSpacing: 0,
+    flexShrink: 0,
+  },
+  score: {
     fontSize: 13,
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
   },
-  severityTag: {
+  label: {
     fontSize: 9,
     fontWeight: 600,
     letterSpacing: 0.5,
-  },
-  trackOuter: {
-    position: 'relative' as const,
-    height: 8,
-    marginBottom: 4,
-  },
-  track: {
-    position: 'absolute' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 8,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  trackOverlay: {
-    position: 'absolute' as const,
-    top: 0,
-    right: 0,
-    height: '100%',
-    background: 'rgba(10, 22, 40, 0.7)',
-    transition: 'width 0.4s ease',
-  },
-  indicator: {
-    position: 'absolute' as const,
-    top: -2,
-    width: 4,
-    height: 12,
-    background: '#0A0F0A',
-    border: '2px solid',
-    borderRadius: 2,
-    transform: 'translateX(-50%)',
-    transition: 'left 0.4s ease',
-    zIndex: 1,
-  },
-  labels: {
-    display: 'flex',
-    justifyContent: 'space-between',
-  },
-  labelText: {
-    fontSize: 8,
-    color: '#008F11',
-    fontVariantNumeric: 'tabular-nums',
+    flexShrink: 0,
   },
 }

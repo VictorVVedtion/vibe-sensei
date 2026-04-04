@@ -19,8 +19,8 @@ function AllocationBar({ pct, color }: { pct: number; color: string }) {
           height: '100%',
           width: `${Math.max(0, Math.min(100, pct))}%`,
           background: color,
-          borderRadius: 2,
-          transition: 'width 0.4s ease',
+          borderRadius: 0,
+
         }}
       />
     </div>
@@ -91,9 +91,9 @@ export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplay
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0A0F0A',
-    borderRadius: 6,
-    border: '1px solid #002B0E',
+    background: '#0F1924',
+    borderRadius: 0,
+    border: '1px solid #253550',
     overflow: 'hidden',
   },
   headerBar: {
@@ -101,13 +101,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 10px',
-    background: '#0D1117',
-    borderBottom: '1px solid #002B0E',
+    background: '#0A1628',
+    borderBottom: '1px solid #253550',
   },
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#008F11',
+    color: '#7B8AA0',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
@@ -116,16 +116,16 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'baseline',
     padding: '10px 10px 8px',
-    borderBottom: '1px solid #0D150D',
+    borderBottom: '1px solid #182233',
   },
   totalLabel: {
     fontSize: 10,
-    color: '#008F11',
+    color: '#7B8AA0',
   },
   totalValue: {
     fontSize: 18,
     fontWeight: 700,
-    color: '#20C20E',
+    color: '#00FF41',
     fontVariantNumeric: 'tabular-nums',
   },
   list: {
@@ -134,7 +134,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   assetRow: {
     padding: '6px 10px',
-    borderBottom: '1px solid #0D150D',
+    borderBottom: '1px solid #182233',
   },
   assetInfo: {
     display: 'flex',
@@ -149,13 +149,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   assetAmount: {
     fontSize: 11,
-    color: '#00FF41',
+    color: '#E2E4ED',
     fontVariantNumeric: 'tabular-nums',
   },
   allocTrack: {
     height: 3,
-    background: '#0D1117',
-    borderRadius: 2,
+    background: '#0A1628',
+    borderRadius: 0,
     overflow: 'hidden',
     marginBottom: 2,
   },
@@ -166,12 +166,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   assetPct: {
     fontSize: 9,
-    color: '#008F11',
+    color: '#7B8AA0',
     fontWeight: 600,
   },
   assetBreakdown: {
     fontSize: 8,
-    color: '#008F11',
+    color: '#7B8AA0',
   },
   empty: {
     padding: '12px 10px',
@@ -179,6 +179,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emptyText: {
     fontSize: 11,
-    color: '#008F11',
+    color: '#7B8AA0',
   },
 }

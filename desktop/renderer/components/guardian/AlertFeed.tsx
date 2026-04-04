@@ -13,7 +13,7 @@ const SEVERITY_ICONS: Record<AlertSeverity, string> = {
 }
 
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
-  info: '#008F11',
+  info: '#7B8AA0',
   warning: '#FFBB33',
   critical: '#D4A843',
   emergency: '#FF003C',
@@ -76,9 +76,9 @@ export function AlertFeed({ alerts }: AlertFeedProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0A0F0A',
-    borderRadius: 6,
-    border: '1px solid #002B0E',
+    background: '#0F1924',
+    borderRadius: 0,
+    border: '1px solid #253550',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -90,22 +90,22 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 10px',
-    background: '#0D1117',
-    borderBottom: '1px solid #002B0E',
+    background: '#0A1628',
+    borderBottom: '1px solid #253550',
     flexShrink: 0,
   },
   title: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#008F11',
+    color: '#7B8AA0',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
   count: {
     fontSize: 10,
     color: '#00FF41',
-    background: '#0D150D',
-    borderRadius: 8,
+    background: '#182233',
+    borderRadius: 0,
     padding: '1px 6px',
     fontWeight: 600,
   },
@@ -121,7 +121,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'flex-start',
     gap: 6,
     padding: '6px 10px',
-    borderBottom: '1px solid #0D150D',
+    borderBottom: '1px solid #182233',
   },
   icon: {
     fontSize: 11,
@@ -148,7 +148,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timestamp: {
     fontSize: 9,
-    color: '#008F11',
+    color: '#7B8AA0',
     flexShrink: 0,
     fontVariantNumeric: 'tabular-nums',
   },
@@ -164,6 +164,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emptyText: {
     fontSize: 11,
-    color: '#008F11',
+    color: '#7B8AA0',
   },
 }

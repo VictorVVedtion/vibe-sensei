@@ -16,6 +16,15 @@ import '../styles/theme.css'
 
 const WS_RECONNECT_DELAY = 3000
 
+const TIMEFRAME_RANGES: Record<string, number> = {
+  '1': 4 * 60 * 60,         // 1m: 4 hours = 240 candles
+  '5': 12 * 60 * 60,        // 5m: 12 hours = 144 candles
+  '15': 2 * 24 * 60 * 60,   // 15m: 2 days = 192 candles
+  '60': 7 * 24 * 60 * 60,   // 1H: 7 days = 168 candles
+  '240': 30 * 24 * 60 * 60, // 4H: 30 days = 180 candles
+  '1D': 180 * 24 * 60 * 60, // 1D: 180 days = 180 candles
+}
+
 interface ChartPanelProps {
   onSymbolChange?: (symbol: string) => void
   onPriceUpdate?: (price: number, prevClose: number | null) => void
@@ -67,7 +76,7 @@ function mapVolumeData(udf: UdfHistoryResponse): HistogramData<Time>[] {
     result.push({
       time: udf.t[i] as Time,
       value: udf.v[i],
-      color: isUp ? 'rgba(0, 229, 160, 0.35)' : 'rgba(255, 77, 106, 0.35)',
+      color: isUp ? 'rgba(0, 255, 65, 0.15)' : 'rgba(255, 0, 60, 0.15)',
     })
   }
   return result
@@ -118,32 +127,32 @@ export function ChartPanel({
       width: container.clientWidth,
       height: container.clientHeight,
       layout: {
-        background: { type: 'solid' as const, color: '#0D1117' },
-        textColor: '#00FF41',
+        background: { type: 'solid' as const, color: '#0A1628' },
+        textColor: '#E2E4ED',
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#0D150D' },
-        horzLines: { color: '#0D150D' },
+        vertLines: { color: 'rgba(0, 143, 17, 0.08)' },
+        horzLines: { color: 'rgba(0, 143, 17, 0.08)' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: '#002B0E',
+          color: '#253550',
           width: 1,
           style: LineStyle.Dashed,
         },
         horzLine: {
-          color: '#002B0E',
+          color: '#253550',
           width: 1,
           style: LineStyle.Dashed,
         },
       },
       rightPriceScale: {
-        borderColor: '#0D150D',
+        borderColor: '#182233',
       },
       timeScale: {
-        borderColor: '#0D150D',
+        borderColor: '#182233',
         timeVisible: true,
         secondsVisible: false,
       },
@@ -151,12 +160,12 @@ export function ChartPanel({
     })
 
     const candleSeries = chart.addCandlestickSeries({
-      upColor: '#20C20E',
-      downColor: '#FF003C',
-      borderUpColor: '#20C20E',
-      borderDownColor: '#FF003C',
-      wickUpColor: '#20C20E',
-      wickDownColor: '#FF003C',
+      upColor: 'transparent',        // Hollow green
+      downColor: '#FF003C',          // Solid red
+      borderUpColor: '#00FF41',      // Green border
+      borderDownColor: '#FF003C',    // Red border
+      wickUpColor: '#00FF41',        // Green wick
+      wickDownColor: '#FF003C',      // Red wick
     })
 
     const volumeSeries = chart.addHistogramSeries({
@@ -217,13 +226,14 @@ export function ChartPanel({
     setError(null)
 
     const now = Math.floor(Date.now() / 1000)
-    const thirtyDaysAgo = now - 30 * 24 * 60 * 60
+    const rangeSeconds = TIMEFRAME_RANGES[resolution] ?? 7 * 24 * 60 * 60
+    const from = now - rangeSeconds
 
     try {
       const url =
         `${udfBase}/history?symbol=${encodeURIComponent(symbol)}` +
         `&resolution=${encodeURIComponent(resolution)}` +
-        `&from=${thirtyDaysAgo}&to=${now}`
+        `&from=${from}&to=${now}`
 
       const res = await fetch(url)
       if (!res.ok) {
