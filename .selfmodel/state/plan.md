@@ -645,7 +645,7 @@ Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7
 ### Sprint 78: Attentive State + Signal Priority + Responsive Polish
 - Agent: opus
 - Dependencies: Sprint 74, Sprint 76
-- Status: PENDING
+- Status: MERGED
 - Priority: P1
 - Timeout: 240
 - Description: (1) Attentive middle state: in guardian-display.ts, after a trade executes and passes risk checks (no CRITICAL/EMERGENCY alert), emit a brief 'attentive' display for ~5 seconds. Text: archetype-specific trade-acknowledgment quote (e.g., trend_follower: 'Position opened. Watching the momentum.' — 9 archetypes × 2 quotes). Brightness: medium tier (between dim idle and bright alert). This fills the gap between silent idle and loud risk alert that both design voices flagged. (2) Signal priority chain enforcement in guardian-display.ts: when multiple signals compete, use strict priority: reaction (from guardian-observer) > stale indicator > attentive (post-trade) > care (10min idle) > time greeting (morning/late/weekend) > regime-filtered quote > generic idle quote. Higher priority always wins. Lower priority waits until higher clears. (3) Responsive polish: in CompanionSprite.tsx, check terminal columns. < 40 cols: hide SpeechBubble, show only face + name row with truncated name if needed. < 20 cols: return null. In CompanionFloatingBubble: same column check, return null if < 40. (4) Emotion decision table document: add a comment block in guardian-display.ts mapping (regime, drawdown%, portfolioHeat, timeOfDay) → emotion state → color. This serves as the behavioral spec both design voices requested.
