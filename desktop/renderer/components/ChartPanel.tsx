@@ -76,7 +76,7 @@ function mapVolumeData(udf: UdfHistoryResponse): HistogramData<Time>[] {
     result.push({
       time: udf.t[i] as Time,
       value: udf.v[i],
-      color: isUp ? 'rgba(0, 229, 160, 0.35)' : 'rgba(255, 77, 106, 0.35)',
+      color: isUp ? 'rgba(0, 255, 65, 0.15)' : 'rgba(255, 0, 60, 0.15)',
     })
   }
   return result
