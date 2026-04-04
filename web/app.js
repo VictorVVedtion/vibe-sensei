@@ -125,24 +125,24 @@
       width: chartContainer.clientWidth,
       height: chartContainer.clientHeight,
       layout: {
-        background: { type: 'solid', color: '#0A1628' },
-        textColor: '#E2E4ED',
+        background: { type: 'solid', color: '#0D1117' },
+        textColor: '#00FF41',
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#253550' },
-        horzLines: { color: '#253550' },
+        vertLines: { color: '#002B0E' },
+        horzLines: { color: '#002B0E' },
       },
       crosshair: {
         mode: LightweightCharts.CrosshairMode.Normal,
-        vertLine: { color: '#7B8AA0', width: 1, style: LightweightCharts.LineStyle.Dashed },
-        horzLine: { color: '#7B8AA0', width: 1, style: LightweightCharts.LineStyle.Dashed },
+        vertLine: { color: '#008F11', width: 1, style: LightweightCharts.LineStyle.Dashed },
+        horzLine: { color: '#008F11', width: 1, style: LightweightCharts.LineStyle.Dashed },
       },
       rightPriceScale: {
-        borderColor: '#253550',
+        borderColor: '#002B0E',
       },
       timeScale: {
-        borderColor: '#253550',
+        borderColor: '#002B0E',
         timeVisible: true,
         secondsVisible: false,
       },
@@ -150,12 +150,12 @@
     });
 
     candleSeries = chart.addCandlestickSeries({
-      upColor: '#00E5A0',
-      downColor: '#FF4D6A',
-      borderUpColor: '#00E5A0',
-      borderDownColor: '#FF4D6A',
-      wickUpColor: '#00E5A0',
-      wickDownColor: '#FF4D6A',
+      upColor: '#20C20E',
+      downColor: '#FF003C',
+      borderUpColor: '#20C20E',
+      borderDownColor: '#FF003C',
+      wickUpColor: '#20C20E',
+      wickDownColor: '#FF003C',
     });
 
     volumeSeries = chart.addHistogramSeries({
@@ -195,7 +195,7 @@
       return;
     }
     var isUp = candle.close >= candle.open;
-    var color = isUp ? '#00E5A0' : '#FF4D6A';
+    var color = isUp ? '#20C20E' : '#FF003C';
     ohlcBar.innerHTML =
       '<span><span class="label">O</span> <span style="color:' + color + '">' + formatPrice(candle.open) + '</span></span>' +
       '<span><span class="label">H</span> <span style="color:' + color + '">' + formatPrice(candle.high) + '</span></span>' +
@@ -444,7 +444,7 @@
     var marker = {
       time: time,
       position: isBuy ? 'belowBar' : 'aboveBar',
-      color: isBuy ? '#00E5A0' : '#FF4D6A',
+      color: isBuy ? '#20C20E' : '#FF003C',
       shape: isBuy ? 'arrowUp' : 'arrowDown',
       text: text || (isBuy ? 'BUY' : 'SELL') + ' @ ' + formatPrice(price),
     };
