@@ -478,22 +478,22 @@ function formatTimeLabel(
   candles: Candle[],
 ): string {
   const date = new Date(timestamp)
-  const hours = date.getHours().toString().padStart(2, '0')
-  const minutes = date.getMinutes().toString().padStart(2, '0')
+  const hours = date.getUTCHours().toString().padStart(2, '0')
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0')
 
   const showDate = index === 0 || (
     index > 0 &&
-    new Date(candles[index - 1].timestamp).getDate() !== date.getDate()
+    new Date(candles[index - 1].timestamp).getUTCDate() !== date.getUTCDate()
   )
 
   if (showDate && (timeframe === '1d' || timeframe === '1w')) {
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    const day = date.getDate().toString().padStart(2, '0')
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0')
+    const day = date.getUTCDate().toString().padStart(2, '0')
     return `${month}/${day}`
   }
 
   if (showDate) {
-    const day = date.getDate().toString().padStart(2, '0')
+    const day = date.getUTCDate().toString().padStart(2, '0')
     return `${day} `
   }
 
