@@ -15,7 +15,6 @@
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
     "electron-store": "^10.0.0",
-    "lightweight-charts": "^4.2.3",
     "node-pty": "^1.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
