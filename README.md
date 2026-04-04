@@ -239,8 +239,8 @@ Vibe Sensei's visual identity draws from the deep ocean. The palette is built ar
 
 | Element | Value | Notes |
 |---------|-------|-------|
-| Background | `#0A1628` | Deep-sea navy, the color of the abyssal zone |
-| Accent | `#00D4FF` | Bioluminescent cyan, the glow of deep-sea life |
+| Background | `#0D1117` | Dark green-black, the color of a CRT terminal |
+| Accent | `#00FF41` | Matrix phosphor green, the glow of the terminal |
 | Aesthetic | Japanese-inspired | Clean lines, deliberate spacing, quiet authority |
 | Mascot | Vane | Deep-sea sensei octopus with hachimaki (鉢巻) headband |
 
