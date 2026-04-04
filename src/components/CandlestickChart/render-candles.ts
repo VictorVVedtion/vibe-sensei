@@ -526,15 +526,21 @@ function buildVolumeLines(
   volumeHeight: number,
 ): ChartLine[] {
   let maxVol = 0
+  let totalVol = 0
   for (const c of candles) {
     if (c.volume > maxVol) maxVol = c.volume
+    totalVol += c.volume
   }
   if (maxVol === 0) maxVol = 1
+  const avgVol = candles.length > 0 ? totalVol / candles.length : 0
 
   const totalEighths = volumeHeight * 8
   const levels: number[] = candles.map(c =>
     Math.round((c.volume / maxVol) * totalEighths),
   )
+
+  // Spike detection: volume > 2x average
+  const spikes: boolean[] = candles.map(c => c.volume > 2 * avgVol)
 
   const resultLines: ChartLine[] = []
   const labelPrefix = ' '.repeat(leftOffset)
@@ -549,6 +555,7 @@ function buildVolumeLines(
 
     let runText = ''
     let runColor: ChartSegment['color'] | undefined
+    let runDim: boolean | undefined
 
     for (let i = 0; i < candles.length; i++) {
       const level = levels[i]
@@ -561,16 +568,19 @@ function buildVolumeLines(
       else char = ' '
 
       const cellColor = char === ' ' ? undefined : color
+      // Non-spike bars are dimmed; spike bars stay full brightness
+      const cellDim = (char !== ' ' && !spikes[i]) ? true : undefined
 
-      if (cellColor === runColor) {
+      if (cellColor === runColor && cellDim === runDim) {
         runText += char + ' '.repeat(colWidth - 1)
       } else {
-        if (runText) line.push(seg(runText, runColor))
+        if (runText) line.push(seg(runText, runColor, runDim))
         runText = char + ' '.repeat(colWidth - 1)
         runColor = cellColor
+        runDim = cellDim
       }
     }
-    if (runText) line.push(seg(runText, runColor))
+    if (runText) line.push(seg(runText, runColor, runDim))
     resultLines.push(line)
   }
 
