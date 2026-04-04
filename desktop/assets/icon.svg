@@ -6,7 +6,7 @@
       <stop offset="100%" stop-color="#0E4D64" />
     </radialGradient>
     <!-- Headband glow -->
-    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+    <filter id="greenGlow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="3" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
@@ -24,7 +24,7 @@
   </defs>
 
   <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="#0A1628" />
+  <circle cx="256" cy="256" r="240" fill="#0D1117" />
 
   <!-- Octopus mantle (head dome) - large rounded shape -->
   <ellipse cx="256" cy="210" rx="145" ry="130" fill="url(#bodyGlow)" />
@@ -33,20 +33,20 @@
   <ellipse cx="256" cy="300" rx="110" ry="50" fill="#0E4D64" />
 
   <!-- Hachimaki headband -->
-  <rect x="111" y="175" width="290" height="22" rx="5" fill="#00D4FF" opacity="0.9" filter="url(#cyanGlow)" />
+  <rect x="111" y="175" width="290" height="22" rx="5" fill="#00FF41" opacity="0.9" filter="url(#greenGlow)" />
   <!-- Headband knot tails (right side) -->
-  <path d="M401,176 Q425,160 435,152" stroke="#00D4FF" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.75" />
-  <path d="M401,197 Q430,198 442,188" stroke="#00D4FF" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.55" />
+  <path d="M401,176 Q425,160 435,152" stroke="#00FF41" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.75" />
+  <path d="M401,197 Q430,198 442,188" stroke="#00FF41" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.55" />
 
   <!-- Eyes - outer glow rings -->
-  <circle cx="208" cy="240" r="24" fill="#00D4FF" opacity="0.15" />
-  <circle cx="304" cy="240" r="24" fill="#00D4FF" opacity="0.15" />
+  <circle cx="208" cy="240" r="24" fill="#00FF41" opacity="0.15" />
+  <circle cx="304" cy="240" r="24" fill="#00FF41" opacity="0.15" />
   <!-- Eyes - main cyan -->
-  <circle cx="208" cy="240" r="18" fill="#00D4FF" filter="url(#eyeGlow)" />
-  <circle cx="304" cy="240" r="18" fill="#00D4FF" filter="url(#eyeGlow)" />
+  <circle cx="208" cy="240" r="18" fill="#00FF41" filter="url(#eyeGlow)" />
+  <circle cx="304" cy="240" r="18" fill="#00FF41" filter="url(#eyeGlow)" />
   <!-- Eyes - dark pupils -->
-  <circle cx="212" cy="238" r="8" fill="#0A1628" />
-  <circle cx="308" cy="238" r="8" fill="#0A1628" />
+  <circle cx="212" cy="238" r="8" fill="#0D1117" />
+  <circle cx="308" cy="238" r="8" fill="#0D1117" />
   <!-- Eyes - tiny highlight specular -->
   <circle cx="204" cy="234" r="3" fill="#FFFFFF" opacity="0.7" />
   <circle cx="300" cy="234" r="3" fill="#FFFFFF" opacity="0.7" />
@@ -66,8 +66,8 @@
         stroke="#0E4D64" stroke-width="26" fill="none" stroke-linecap="round" />
 
   <!-- Tentacle tips - bioluminescent glow -->
-  <circle cx="90" cy="460" r="10" fill="#00D4FF" opacity="0.5" filter="url(#eyeGlow)" />
-  <circle cx="168" cy="472" r="9" fill="#00D4FF" opacity="0.5" filter="url(#eyeGlow)" />
-  <circle cx="344" cy="472" r="9" fill="#00D4FF" opacity="0.5" filter="url(#eyeGlow)" />
-  <circle cx="422" cy="460" r="10" fill="#00D4FF" opacity="0.5" filter="url(#eyeGlow)" />
+  <circle cx="90" cy="460" r="10" fill="#00FF41" opacity="0.5" filter="url(#eyeGlow)" />
+  <circle cx="168" cy="472" r="9" fill="#00FF41" opacity="0.5" filter="url(#eyeGlow)" />
+  <circle cx="344" cy="472" r="9" fill="#00FF41" opacity="0.5" filter="url(#eyeGlow)" />
+  <circle cx="422" cy="460" r="10" fill="#00FF41" opacity="0.5" filter="url(#eyeGlow)" />
 </svg>

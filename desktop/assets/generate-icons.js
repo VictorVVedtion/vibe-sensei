@@ -34,23 +34,23 @@ const TRAY_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   </defs>
 
   <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="#0A1628" />
+  <circle cx="256" cy="256" r="240" fill="#0D1117" />
 
   <!-- Octopus mantle — larger, fills more of the circle -->
   <ellipse cx="256" cy="240" rx="175" ry="160" fill="url(#bodyGlow)" />
 
   <!-- Hachimaki headband — thicker for visibility -->
-  <rect x="81" y="190" width="350" height="30" rx="6" fill="#00D4FF" opacity="0.95" />
+  <rect x="81" y="190" width="350" height="30" rx="6" fill="#00FF41" opacity="0.95" />
   <!-- Headband knot tails -->
-  <path d="M431,190 Q460,170 470,158" stroke="#00D4FF" stroke-width="14" fill="none" stroke-linecap="round" opacity="0.75" />
-  <path d="M431,220 Q465,222 478,208" stroke="#00D4FF" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.55" />
+  <path d="M431,190 Q460,170 470,158" stroke="#00FF41" stroke-width="14" fill="none" stroke-linecap="round" opacity="0.75" />
+  <path d="M431,220 Q465,222 478,208" stroke="#00FF41" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.55" />
 
   <!-- Eyes — larger for small size readability -->
-  <circle cx="200" cy="280" r="28" fill="#00D4FF" />
-  <circle cx="312" cy="280" r="28" fill="#00D4FF" />
+  <circle cx="200" cy="280" r="28" fill="#00FF41" />
+  <circle cx="312" cy="280" r="28" fill="#00FF41" />
   <!-- Pupils -->
-  <circle cx="206" cy="276" r="12" fill="#0A1628" />
-  <circle cx="318" cy="276" r="12" fill="#0A1628" />
+  <circle cx="206" cy="276" r="12" fill="#0D1117" />
+  <circle cx="318" cy="276" r="12" fill="#0D1117" />
   <!-- Highlights -->
   <circle cx="194" cy="270" r="5" fill="#FFFFFF" opacity="0.8" />
   <circle cx="306" cy="270" r="5" fill="#FFFFFF" opacity="0.8" />
