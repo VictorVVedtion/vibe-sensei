@@ -37,7 +37,6 @@
 }
 
 .panel:focus {
-  outline: none;
   outline: 1px solid #00FF41;
 }
 
