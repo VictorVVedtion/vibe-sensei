@@ -57,5 +57,6 @@ compatibility and colorless-terminal fallback. This is intentional.
 ## Information Hierarchy
 - P0: Candlestick chart / price / position PnL
 - P1: Risk warning / gate status
-- P2: Master dialogue / bubble
-- P3: Octopus / master portrait (collapsed by default)
+- P2: Master dialogue / bubble (reaction → bright)
+- P2.5: Guardian idle quote (dim, persistent, low visual weight)
+- P3: Master portrait / sprite (always visible, anchors the companion)

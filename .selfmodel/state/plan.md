@@ -1,11 +1,11 @@
 # Project Plan: Vibe Sensei — Trading Terminal
 
 ## Plan Meta
-- Total Phases: 13
-- Total Sprints: 63
+- Total Phases: 15
+- Total Sprints: 78
 - Created: 2026-04-01T17:45:00Z
-- Last Updated: 2026-04-03T09:00:00Z
-- Current Phase: 11
+- Last Updated: 2026-04-04T08:15:00Z
+- Current Phase: 15
 
 ## Phase 0: Core Trading Loop — COMPLETE
 
@@ -596,3 +596,56 @@ Phase 13 complete. 68 fine-grained CLI tests found 3 bugs and 3 weak areas. Phas
 - Priority: P1
 - Timeout: 180
 - Description: Fix 3 bugs from E2E deep testing. (1) Create CancelOrderTool: wrap exchange.cancelOrder() as a new tool, register in tools.ts. (2) Add symbol validation to ShowChart and AutoResearch tools — reject unknown symbols instead of showing fake $50K data. (3) Improve price fallback: when market data source fails to connect, block market orders or use per-symbol cached prices instead of universal $50K DEFAULT_PRICE.
+
+## Phase 15: Companion Always-On + Ambient Intelligence
+
+### Gate
+Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7.5/10) + Eng Review (5 issues resolved) + Codex Outside Voice (9 findings, regime fusion architecture designed). Autoplan CLEARED. User's existing uncommitted changes provide the base (10 files, +315/-434 lines: CompanionSprite minimalist rewrite, Braille→ASCII chart, LiveChart auto-refresh, desktop dev fix).
+
+### Sprint 73: Core Cleanup — Feature Gates + Dead Code + Chart Fixes
+- Agent: opus
+- Dependencies: none
+- Status: PENDING
+- Priority: P0
+- Timeout: 240
+- Description: Three cleanup tasks on the existing uncommitted changes. (1) Remove remaining 6 feature('BUDDY') gates: src/commands.ts:119, src/components/PromptInput/PromptInput.tsx:312+1789+1984, src/buddy/prompt.ts:18, src/utils/attachments.ts:865. Remove the feature() call and keep the inner code unconditional. (2) Dead code cleanup in CompanionSprite.tsx: remove unused imports (useTerminalSize, stringWidth, Theme, renderSprite, spriteFrameCount, MASTER_PORTRAITS), unused constants (IDLE_SEQUENCE, PET_HEARTS, MIN_COLS_FOR_FULL_SPRITE, SPRITE_BODY_WIDTH, NAME_ROW_PAD, SPRITE_PADDING_X, BUBBLE_WIDTH, NARROW_QUIP_CAP), unused function spriteColWidth(), and unused variable colWidth at line 219. (3) Chart fixes: in CandlestickChart.tsx change colWidth from 1 to 2 to match render-candles.ts COL_WIDTH=2. In render-candles.ts and CandlestickChart.tsx revert getHours()/getMonth()/getDate() back to getUTCHours()/getUTCMonth()/getUTCDate() and add ' UTC' suffix to the info bar dateStr.
+
+### Sprint 74: Guardian Display Singleton + LiveChart Hardening
+- Agent: opus
+- Dependencies: Sprint 73
+- Status: PENDING
+- Priority: P0
+- Timeout: 300
+- Description: (1) Create src/buddy/guardian-display.ts as a module-level singleton (NOT a React hook with timer) that provides getGuardianDisplay(): {displayText, fading, emotionColor, emotion}. Owns a single tick counter with adaptive rate: 500ms when reaction active, 5000ms when idle. Both CompanionSprite and CompanionFloatingBubble consume this singleton via a thin useGuardianDisplay() hook that subscribes to changes. This avoids the double-instance problem in fullscreen where both components mount simultaneously (REPL.tsx:4617 + REPL.tsx:5047). (2) LiveChart hardening in src/tools/ChartTool/UI.tsx: add global incrementing generationId — each new LiveChart instance gets the next ID, refresh callback checks if its ID is still current before updating state. Add consecutiveFails counter: after 3 failures show dim '⚠ stale' in chart title. Add exponential backoff on failures: base interval → 2x → 4x → cap at 60s. Reset to base on success. Add empty state: if initial candles are empty, show 'No candle data for {symbol}'. (3) Narrow terminal guard: if terminal columns < 40, hide SpeechBubble and show only minimalistFaceRow. If < 20, return null (hide companion entirely).
+
+### Sprint 75: Lightweight Regime Poller + Primary Symbol Resolution
+- Agent: opus
+- Dependencies: Sprint 74
+- Status: PENDING
+- Priority: P0
+- Timeout: 300
+- Description: Create src/services/companion/regime-poller.ts as a module-level singleton with start()/stop() lifecycle. On start(): resolve primary symbol via priority chain — (1) check portfolio positions via getConnectedExchange().getPositions(), use first position's symbol, (2) if no positions, check diary.getLastTradedSymbol() if diary has trades, (3) default to 'BTC/USDT'. Every 5 minutes: call getConnectedExchange().getCandles(primarySymbol, '4h', 65) and pass to the EXISTING computeRegime() from src/services/market/regime.ts (use 65 candles, same as MarketFeed, to avoid creating a weaker second model per Codex finding). Write result to the existing regime cache via setLatestRegime(). If MarketFeed is also running (UDF WebSocket connected), MarketFeed data takes priority (it polls more frequently). If exchange not connected: no-op, leave regime cache empty. On primary symbol change (position opened/closed): update and re-poll immediately. Expose getRegimePollerStatus(): {symbol, lastPoll, regime}. Wire start() call into companion boot in REPL.tsx alongside existing companion initialization (after getCompanion() succeeds). Stop on process exit.
+
+### Sprint 76: Context-Aware Idle Quotes + Time Greetings + Emotion Colors
+- Agent: opus
+- Dependencies: Sprint 74, Sprint 75
+- Status: PENDING
+- Priority: P1
+- Timeout: 300
+- Description: (1) Extend idle-quotes.ts: add regime relevance tags to existing 54 quotes. Each quote gets optional tags: regimes it's most relevant for (e.g., value_investor quote 'Margin of safety' → ['ranging','compressing']). Add CARE_QUOTES array (6 quotes per archetype for idle >10min). Add TIME_QUOTES: morning (05-10), late_night (00-05), weekend (Sat/Sun). Extend getIdleQuote() signature to accept context: {regime?, isLateNight?, isMorning?, isWeekend?, isIdle10min?}. Priority chain: care (10min idle) > lateNight > morning/weekend > regime-filtered > generic. (2) Idle detection: add public getLastActivityTime(): number to src/utils/activityManager.ts that returns the private lastUserActivityTime value. In guardian-display.ts singleton, check Date.now() - getLastActivityTime() > 600000 for care mode. (3) Time detection: in guardian-display.ts, compute hour = new Date().getHours(), dayOfWeek = new Date().getDay(). Map to context flags. Reuse proactive-monitor.ts patterns for consistency but don't duplicate — proactive-monitor handles long-session warnings (2h/4h), idle-quotes handles ambient mood. (4) Emotion colors in guardian-display.ts: read regime from cache via getLatestRegime(). Map: volatile/compressing → 'worried' → red, trending_up/trending_down → 'happy' → bright green, ranging → 'neutral' → dim green, expanding → 'stern' → yellow. No regime data → 'neutral'. Return emotionColor from getGuardianDisplay(). CompanionSprite wraps renderFace() Text with the color. (5) Three-tier brightness: normal idle = dimColor={true}, care/lateNight/volatile = normal color (medium), reaction from guardian-observer = bold (bright).
+
+### Sprint 77: Volume Spike + Price Line + drawPriceLine Integration
+- Agent: opus
+- Dependencies: Sprint 73
+- Status: PENDING
+- Priority: P1
+- Timeout: 180
+- Description: (1) Volume spike highlight in render-candles.ts buildVolumeLines(): compute avgVolume of visible candles, for any candle with volume > 2x avgVolume mark it as spike. Spikes get bold color (same bullish/bearish but without dim). Non-spikes keep current rendering. The averaging window is the visible candle set. (2) Current price horizontal line: in renderCandlestickChart(), after drawCandles(), call the existing but unused drawPriceLine() function to draw a dim dotted line (PRICE_DASH '┄') across the currentPriceRow. This makes the last close price immediately visible across the full chart width. The function already exists at render-candles.ts:160 — just uncomment/wire the call. (3) Verify crosshair coordinate math still works correctly with colWidth=2 (from Sprint 73 fix) — the hoveredIdx calculation in renderCandlestickChart uses crosshair.col which should map correctly since both CandlestickChart.tsx and render-candles.ts now agree on COL_WIDTH=2.
+
+### Sprint 78: Attentive State + Signal Priority + Responsive Polish
+- Agent: opus
+- Dependencies: Sprint 74, Sprint 76
+- Status: PENDING
+- Priority: P1
+- Timeout: 240
+- Description: (1) Attentive middle state: in guardian-display.ts, after a trade executes and passes risk checks (no CRITICAL/EMERGENCY alert), emit a brief 'attentive' display for ~5 seconds. Text: archetype-specific trade-acknowledgment quote (e.g., trend_follower: 'Position opened. Watching the momentum.' — 9 archetypes × 2 quotes). Brightness: medium tier (between dim idle and bright alert). This fills the gap between silent idle and loud risk alert that both design voices flagged. (2) Signal priority chain enforcement in guardian-display.ts: when multiple signals compete, use strict priority: reaction (from guardian-observer) > stale indicator > attentive (post-trade) > care (10min idle) > time greeting (morning/late/weekend) > regime-filtered quote > generic idle quote. Higher priority always wins. Lower priority waits until higher clears. (3) Responsive polish: in CompanionSprite.tsx, check terminal columns. < 40 cols: hide SpeechBubble, show only face + name row with truncated name if needed. < 20 cols: return null. In CompanionFloatingBubble: same column check, return null if < 40. (4) Emotion decision table document: add a comment block in guardian-display.ts mapping (regime, drawdown%, portfolioHeat, timeOfDay) → emotion state → color. This serves as the behavioral spec both design voices requested.

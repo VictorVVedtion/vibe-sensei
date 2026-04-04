@@ -1,5 +1,4 @@
 import { c as _c } from "react/compiler-runtime";
-import { feature } from 'bun:bundle';
 import figures from 'figures';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
@@ -15,8 +14,10 @@ import { renderFace, renderSprite, spriteFrameCount } from './sprites.js';
 import { MASTER_PORTRAITS } from './sprite-atlas.js';
 import type { Emotion } from './sprite-atlas.js';
 import type { Master } from './types.js';
-import { RARITY_COLORS } from './types.js';
+import { RARITY_COLORS, MASTER_NAMES } from './types.js';
 import { inferEmotionFromReaction } from '../services/companion/expression.js';
+import { getIdleQuote } from './idle-quotes.js';
+import { getMasterArchetype } from './persona.js';
 const TICK_MS = 500;
 const BUBBLE_SHOW = 20; // ticks → ~10s at 500ms
 const FADE_WINDOW = 6; // last ~3s the bubble dims so you know it's about to go
@@ -169,13 +170,7 @@ function spriteColWidth(nameWidth: number): number {
 // Narrow terminals: 0 — REPL.tsx stacks the one-liner on its own row
 // (above input in fullscreen, below in scrollback), so no reservation.
 export function companionReservedColumns(terminalColumns: number, speaking: boolean): number {
-  if (!feature('BUDDY')) return 0;
-  const companion = getCompanion();
-  if (!companion || getGlobalConfig().companionMuted) return 0;
-  if (terminalColumns < MIN_COLS_FOR_FULL_SPRITE) return 0;
-  const nameWidth = stringWidth(companion.name);
-  const bubble = speaking && !isFullscreenActive() ? BUBBLE_WIDTH : 0;
-  return spriteColWidth(nameWidth) + SPRITE_PADDING_X + bubble;
+  return 0; // Minimalist permanent design stacks vertically, preserving full horizontal prompt space
 }
 export function CompanionSprite(): React.ReactNode {
   const reaction = useAppState(s => s.companionReaction);
@@ -216,95 +211,51 @@ export function CompanionSprite(): React.ReactNode {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick intentionally captured at reaction-change, not tracked
   }, [reaction, setAppState]);
-  if (!feature('BUDDY')) return null;
   const companion = getCompanion();
   if (!companion || getGlobalConfig().companionMuted) return null;
   const color = RARITY_COLORS[companion.rarity];
-  const colWidth = spriteColWidth(stringWidth(companion.name));
+  // Use the Guardian master's real name, not the companion's custom name
+  const guardianName = MASTER_NAMES[companion.species as Master] ?? companion.name;
+  const colWidth = spriteColWidth(stringWidth(guardianName));
   const bubbleAge = reaction ? tick - lastSpokeTick.current : 0;
-  const fading = reaction !== undefined && bubbleAge >= BUBBLE_SHOW - FADE_WINDOW;
+  // Idle = dim (P2.5 visual weight). Speaking = bright. Fading = transition to dim.
+  const isIdle = reaction === undefined;
+  const fading = isIdle || (bubbleAge >= BUBBLE_SHOW - FADE_WINDOW);
   const petAge = petAt ? tick - petStartTick : Infinity;
   const petting = petAge * TICK_MS < PET_BURST_MS;
 
   // Derive current emotion from reaction text
   const currentEmotion: Emotion = petting ? 'happy' : inferEmotionFromReaction(reaction);
 
-  // Narrow terminals: collapse to one-line face. When speaking, the quip
-  // replaces the name beside the face (no room for a bubble).
-  if (columns < MIN_COLS_FOR_FULL_SPRITE) {
-    const quip = reaction && reaction.length > NARROW_QUIP_CAP ? reaction.slice(0, NARROW_QUIP_CAP - 1) + '…' : reaction;
-    const label = quip ? `"${quip}"` : focused ? ` ${companion.name} ` : companion.name;
-    return <Box paddingX={1} alignSelf="flex-end">
-        <Text>
-          {petting && <Text color="autoAccept">{figures.heart} </Text>}
-          <Text bold color={color}>
-            {renderFace(companion)}
-          </Text>{' '}
-          <Text italic dimColor={!focused && !reaction} bold={focused} inverse={focused && !reaction} color={reaction ? fading ? 'inactive' : color : focused ? color : undefined}>
-            {label}
-          </Text>
-        </Text>
-      </Box>;
-  }
-  const frameCount = spriteFrameCount(companion.species);
-  const heartFrame = petting ? PET_HEARTS[petAge % PET_HEARTS.length] : null;
-  let spriteFrame: number;
-  let blink = false;
-  if (reaction || petting) {
-    // Excited: cycle all fidget frames fast
-    spriteFrame = tick % frameCount;
-  } else {
-    const step = IDLE_SEQUENCE[tick % IDLE_SEQUENCE.length]!;
-    if (step === -1) {
-      spriteFrame = 0;
-      blink = true;
-    } else {
-      spriteFrame = step % frameCount;
-    }
-  }
+  const archetype = getMasterArchetype(companion.species as Master);
+  const displayReaction = reaction || getIdleQuote(archetype, tick);
 
-  // Blink fix: use portrait.eyeChars for accurate eye replacement instead of companion.eye
-  const portrait = MASTER_PORTRAITS[companion.species as Master];
-  const blinkChars = portrait?.eyeChars ?? [companion.eye];
-  const body = renderSprite(companion, spriteFrame, currentEmotion).map(line => {
-    if (!blink) return line;
-    let result = line;
-    for (const char of blinkChars) {
-      result = result.replaceAll(char, '-');
-    }
-    return result;
-  });
-  const sprite = heartFrame ? [heartFrame, ...body] : body;
-
-  // Name row doubles as hint row — unfocused shows dim name + ↓ discovery,
-  // focused shows inverse name. The enter-to-open hint lives in
-  // PromptInputFooter's right column so this row stays one line and the
-  // sprite doesn't jump up when selected. flexShrink=0 stops the
-  // inline-bubble row wrapper from squeezing the sprite to fit.
-  const spriteColumn = <Box flexDirection="column" flexShrink={0} alignItems="center" width={colWidth}>
-      {sprite.map((line, i) => <Text key={i} color={i === 0 && heartFrame ? 'autoAccept' : color}>
-          {line}
-        </Text>)}
-      <Text italic bold={focused} dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
-        {focused ? ` ${companion.name} ` : companion.name}
+  const minimalistFaceRow = (
+    <Box>
+      {petting && <Text color="autoAccept">{figures.heart} </Text>}
+      <Text bold color={color}>
+        {renderFace(companion)}
       </Text>
-    </Box>;
-  if (!reaction) {
-    return <Box paddingX={1}>{spriteColumn}</Box>;
+      <Text dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
+        {' '}{guardianName}
+      </Text>
+    </Box>
+  );
+
+  // In fullscreen mode, the speech bubble renders separately in CompanionFloatingBubble 
+  // above the overflow clip boundary to prevent getting cut off.
+  if (isFullscreenActive()) {
+    return <Box paddingX={1} alignSelf="flex-end">{minimalistFaceRow}</Box>;
   }
 
-  // Fullscreen: bubble renders separately via CompanionFloatingBubble in
-  // FullscreenLayout's bottomFloat slot (the bottom slot's overflowY:hidden
-  // would clip a position:absolute overlay here). Sprite body only.
-  // Non-fullscreen: bubble sits inline beside the sprite (input shrinks)
-  // because floating into Static scrollback can't be cleared.
-  if (isFullscreenActive()) {
-    return <Box paddingX={1}>{spriteColumn}</Box>;
-  }
-  return <Box flexDirection="row" alignItems="flex-end" paddingX={1} flexShrink={0}>
-      <SpeechBubble text={reaction} color={color} fading={fading} tail="right" />
-      {spriteColumn}
-    </Box>;
+  // In static scrollback, we stack the continuous idle bubble vertically.
+  // No quip truncation -- allow full text
+  return (
+    <Box flexDirection="column" paddingX={1} alignItems="flex-end" flexShrink={0}>
+      <SpeechBubble text={displayReaction} color={color} fading={fading} tail="down" />
+      {minimalistFaceRow}
+    </Box>
+  );
 }
 
 // Floating bubble overlay for fullscreen mode. Mounted in FullscreenLayout's
@@ -340,9 +291,7 @@ export function CompanionFloatingBubble() {
   let t3;
   if ($[2] !== reaction) {
     t2 = () => {
-      if (!reaction) {
-        return;
-      }
+      // Always tick — idle quotes need rotation even without a reaction
       const timer = setInterval(_temp3, TICK_MS, setTick);
       return () => clearInterval(timer);
     };
@@ -355,18 +304,18 @@ export function CompanionFloatingBubble() {
     t3 = $[4];
   }
   useEffect(t2, t3);
-  if (!feature("BUDDY") || !reaction) {
-    return null;
-  }
   const companion = getCompanion();
   if (!companion || getGlobalConfig().companionMuted) {
     return null;
   }
-  const t4 = tick >= BUBBLE_SHOW - FADE_WINDOW;
+  const archetype = getMasterArchetype(companion.species as Master);
+  const displayReaction = reaction || getIdleQuote(archetype, tick);
+  // Idle = dim (P2.5). Speaking = bright until fade window.
+  const t4 = !reaction || tick >= BUBBLE_SHOW - FADE_WINDOW;
   let t5;
-  if ($[5] !== reaction || $[6] !== t4) {
-    t5 = <SpeechBubble text={reaction} color={RARITY_COLORS[companion.rarity]} fading={t4} tail="down" />;
-    $[5] = reaction;
+  if ($[5] !== displayReaction || $[6] !== t4) {
+    t5 = <SpeechBubble text={displayReaction} color={RARITY_COLORS[companion.rarity]} fading={t4} tail="down" />;
+    $[5] = displayReaction;
     $[6] = t4;
     $[7] = t5;
   } else {

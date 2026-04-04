@@ -110,14 +110,12 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 600,
     title: 'Vibe Sensei',
-    backgroundColor: '#0A1628',
+    backgroundColor: '#0B0E14',
     show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: isDev
-        ? path.join(__dirname, 'preload.ts')
-        : path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.js'),
     },
   }
 
@@ -125,6 +123,10 @@ function createWindow(): void {
   if (isMac) {
     windowOptions.titleBarStyle = 'hiddenInset'
     windowOptions.trafficLightPosition = { x: 12, y: 12 }
+    windowOptions.vibrancy = 'under-window'
+    windowOptions.visualEffectState = 'active'
+    // Let vibrancy show through — backgroundColor must be transparent
+    windowOptions.backgroundColor = '#00000000'
   } else {
     windowOptions.frame = false
   }

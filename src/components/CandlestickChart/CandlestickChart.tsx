@@ -68,12 +68,12 @@ export function CandlestickChart({
 
   // ── Chart dimensions ─────────────────────────────────────────
   const chartHeight = Math.min(Math.max(rows - 10, 8), 20)
-  const chartWidth = columns - 2 // 2 columns padding
+  const chartWidth = columns - 6 // leave margin for REPL message indentation
 
   const priceDecimals = inferPriceDecimals(symbol, candles)
 
   // ── Compute max candles that fit ─────────────────────────────
-  const colWidth = 2  // 1 char candle + 1 char spacing gap
+  const colWidth = 1  // 1 column per data point (line chart mode)
   const samplePrice = candles.length > 0 ? candles[0].close : 100
   const labelWidth = Math.max(samplePrice.toFixed(priceDecimals).length, 6)
   const rightAxisWidth = 1 + 1 + labelWidth
@@ -365,7 +365,7 @@ function buildInfoBar(
   const arrow = pctChange >= 0 ? '^' : 'v'
 
   const ts = new Date(candle.timestamp)
-  const dateStr = `${(ts.getUTCMonth() + 1).toString().padStart(2, '0')}/${ts.getUTCDate().toString().padStart(2, '0')} ${ts.getUTCHours().toString().padStart(2, '0')}:${ts.getUTCMinutes().toString().padStart(2, '0')}`
+  const dateStr = `${(ts.getMonth() + 1).toString().padStart(2, '0')}/${ts.getDate().toString().padStart(2, '0')} ${ts.getHours().toString().padStart(2, '0')}:${ts.getMinutes().toString().padStart(2, '0')}`
 
   return `${symbol} ${timeframe.toUpperCase()} | ${dateStr} | O ${o} H ${h} L ${l} C ${c} | Vol ${vol} | ${arrow} ${sign}${pctChange.toFixed(2)}%`
 }

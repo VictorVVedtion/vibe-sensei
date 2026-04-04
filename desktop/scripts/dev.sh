@@ -22,11 +22,15 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
+# ── Build main process (CJS) ────────────────────────────────────────────────
+# Root package.json has "type":"module" which breaks Electron's raw TS loading.
+# Build to CJS first, then launch from dist/.
+echo "Building main process..."
+npm run build:main
+
 # ── Launch dev environment ───────────────────────────────────────────────────
-# Dev mode: pass main/index.ts directly so Electron loads raw TypeScript
-# (package.json "main" points to dist/main/index.js for production)
 npx concurrently \
   --names "vite,electron" \
   --prefix-colors "cyan,green" \
   "npx vite --config vite.config.ts" \
-  "sleep 3 && npx electron main/index.ts"
+  "sleep 3 && npx electron ."
