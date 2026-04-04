@@ -621,7 +621,7 @@ Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7
 ### Sprint 75: Lightweight Regime Poller + Primary Symbol Resolution
 - Agent: opus
 - Dependencies: Sprint 74
-- Status: PENDING
+- Status: MERGED
 - Priority: P0
 - Timeout: 300
 - Description: Create src/services/companion/regime-poller.ts as a module-level singleton with start()/stop() lifecycle. On start(): resolve primary symbol via priority chain — (1) check portfolio positions via getConnectedExchange().getPositions(), use first position's symbol, (2) if no positions, check diary.getLastTradedSymbol() if diary has trades, (3) default to 'BTC/USDT'. Every 5 minutes: call getConnectedExchange().getCandles(primarySymbol, '4h', 65) and pass to the EXISTING computeRegime() from src/services/market/regime.ts (use 65 candles, same as MarketFeed, to avoid creating a weaker second model per Codex finding). Write result to the existing regime cache via setLatestRegime(). If MarketFeed is also running (UDF WebSocket connected), MarketFeed data takes priority (it polls more frequently). If exchange not connected: no-op, leave regime cache empty. On primary symbol change (position opened/closed): update and re-poll immediately. Expose getRegimePollerStatus(): {symbol, lastPoll, regime}. Wire start() call into companion boot in REPL.tsx alongside existing companion initialization (after getCompanion() succeeds). Stop on process exit.
@@ -629,7 +629,7 @@ Phase 14 complete. CEO Review (SCOPE EXPANSION, 6/6 accepted) + Design Review (7
 ### Sprint 76: Context-Aware Idle Quotes + Time Greetings + Emotion Colors
 - Agent: opus
 - Dependencies: Sprint 74, Sprint 75
-- Status: PENDING
+- Status: MERGED
 - Priority: P1
 - Timeout: 300
 - Description: (1) Extend idle-quotes.ts: add regime relevance tags to existing 54 quotes. Each quote gets optional tags: regimes it's most relevant for (e.g., value_investor quote 'Margin of safety' → ['ranging','compressing']). Add CARE_QUOTES array (6 quotes per archetype for idle >10min). Add TIME_QUOTES: morning (05-10), late_night (00-05), weekend (Sat/Sun). Extend getIdleQuote() signature to accept context: {regime?, isLateNight?, isMorning?, isWeekend?, isIdle10min?}. Priority chain: care (10min idle) > lateNight > morning/weekend > regime-filtered > generic. (2) Idle detection: add public getLastActivityTime(): number to src/utils/activityManager.ts that returns the private lastUserActivityTime value. In guardian-display.ts singleton, check Date.now() - getLastActivityTime() > 600000 for care mode. (3) Time detection: in guardian-display.ts, compute hour = new Date().getHours(), dayOfWeek = new Date().getDay(). Map to context flags. Reuse proactive-monitor.ts patterns for consistency but don't duplicate — proactive-monitor handles long-session warnings (2h/4h), idle-quotes handles ambient mood. (4) Emotion colors in guardian-display.ts: read regime from cache via getLatestRegime(). Map: volatile/compressing → 'worried' → red, trending_up/trending_down → 'happy' → bright green, ranging → 'neutral' → dim green, expanding → 'stern' → yellow. No regime data → 'neutral'. Return emotionColor from getGuardianDisplay(). CompanionSprite wraps renderFace() Text with the color. (5) Three-tier brightness: normal idle = dimColor={true}, care/lateNight/volatile = normal color (medium), reaction from guardian-observer = bold (bright).
