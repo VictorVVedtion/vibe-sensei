@@ -81,7 +81,6 @@
   font-family: inherit;
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
 }
 
 .tf-btn:hover {
@@ -103,7 +102,6 @@
   font-size: 12px;
   margin-left: auto;
   opacity: 0;
-  transition: opacity 0.2s;
 }
 
 .loading-indicator.visible {

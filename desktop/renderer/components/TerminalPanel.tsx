@@ -140,7 +140,7 @@ export function TerminalPanel() {
           height: '100%',
           padding: 4,
           opacity: overlay.kind !== 'none' ? 0.3 : 1,
-          transition: 'opacity 200ms ease',
+
         }}
       />
       {overlay.kind !== 'none' && (
