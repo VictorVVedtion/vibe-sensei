@@ -1,53 +1,40 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import {
+  createChart,
+  CrosshairMode,
+  LineStyle,
+  type IChartApi,
+  type ISeriesApi,
+  type CandlestickData,
+  type HistogramData,
+  type Time,
+} from 'lightweight-charts'
 import { useUdfPort } from '../hooks/useUdfPort'
 import '../styles/theme.css'
-import '../styles/chart-theme.css'
 
-/**
- * Declarations for TradingView Charting Library globals.
- * These are loaded dynamically via <script> tags from the UDF server.
- */
-declare global {
-  interface Window {
-    TradingView: {
-      widget: new (config: TradingViewWidgetConfig) => TradingViewWidgetInstance
-    }
-    Datafeeds: {
-      UDFCompatibleDatafeed: new (
-        url: string,
-        updateFrequency?: number,
-        options?: Record<string, unknown>,
-      ) => unknown
-    }
-  }
-}
+const WS_RECONNECT_DELAY = 3000
 
-interface TradingViewWidgetConfig {
-  symbol: string
-  interval: string
-  container: string | HTMLElement
-  datafeed: unknown
-  library_path: string
-  locale: string
-  theme: string
-  custom_css_url?: string
-  autosize: boolean
-  timezone: string
-  fullscreen?: boolean
-  disabled_features: string[]
-  enabled_features: string[]
-  overrides: Record<string, string | number>
-  loading_screen: { backgroundColor: string; foregroundColor: string }
-}
+const SYMBOLS = [
+  'BTCUSDT',
+  'ETHUSDT',
+  'SOLUSDT',
+  'BNBUSDT',
+  'XRPUSDT',
+  'DOGEUSDT',
+  'ADAUSDT',
+  'AVAXUSDT',
+  'DOTUSDT',
+  'LINKUSDT',
+]
 
-interface TradingViewWidgetInstance {
-  onChartReady: (callback: () => void) => void
-  activeChart: () => {
-    setSymbol: (symbol: string, callback?: () => void) => void
-    setResolution: (resolution: string, callback?: () => void) => void
-  }
-  remove: () => void
-}
+const TIMEFRAMES: Array<{ label: string; resolution: string }> = [
+  { label: '1m', resolution: '1' },
+  { label: '5m', resolution: '5' },
+  { label: '15m', resolution: '15' },
+  { label: '1H', resolution: '60' },
+  { label: '4H', resolution: '240' },
+  { label: '1D', resolution: 'D' },
+]
 
 interface ChartPanelProps {
   onSymbolChange?: (symbol: string) => void
@@ -57,28 +44,67 @@ interface ChartPanelProps {
   ) => void
 }
 
-/**
- * Load a script tag dynamically and resolve when loaded.
- * Reuses already-loaded scripts by checking the DOM for existing tags.
- */
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`)
-    if (existing) {
-      resolve()
-      return
-    }
-    const script = document.createElement('script')
-    script.src = src
-    script.async = true
-    script.onload = () => resolve()
-    script.onerror = () =>
-      reject(new Error(`Failed to load script: ${src}`))
-    document.head.appendChild(script)
-  })
+interface UdfHistoryResponse {
+  s: string
+  t: number[]
+  o: number[]
+  h: number[]
+  l: number[]
+  c: number[]
+  v: number[]
 }
 
-const CONTAINER_ID = 'tv_chart_container'
+interface TickerMessage {
+  type: string
+  data: {
+    symbol: string
+    last: number
+    bid: number
+    ask: number
+  }
+}
+
+interface OhlcData {
+  open: number
+  high: number
+  low: number
+  close: number
+}
+
+function formatPrice(price: number): string {
+  if (price >= 1000) return price.toFixed(2)
+  if (price >= 1) return price.toFixed(4)
+  return price.toFixed(6)
+}
+
+function mapCandleData(udf: UdfHistoryResponse): CandlestickData<Time>[] {
+  if (!udf || udf.s !== 'ok' || !udf.t || udf.t.length === 0) return []
+  const result: CandlestickData<Time>[] = []
+  for (let i = 0; i < udf.t.length; i++) {
+    result.push({
+      time: udf.t[i] as Time,
+      open: udf.o[i],
+      high: udf.h[i],
+      low: udf.l[i],
+      close: udf.c[i],
+    })
+  }
+  return result
+}
+
+function mapVolumeData(udf: UdfHistoryResponse): HistogramData<Time>[] {
+  if (!udf || udf.s !== 'ok' || !udf.t || udf.t.length === 0) return []
+  const result: HistogramData<Time>[] = []
+  for (let i = 0; i < udf.t.length; i++) {
+    const isUp = udf.c[i] >= udf.o[i]
+    result.push({
+      time: udf.t[i] as Time,
+      value: udf.v[i],
+      color: isUp ? 'rgba(0, 229, 160, 0.35)' : 'rgba(255, 77, 106, 0.35)',
+    })
+  }
+  return result
+}
 
 export function ChartPanel({
   onSymbolChange,
@@ -86,140 +112,222 @@ export function ChartPanel({
   onConnectionChange,
 }: ChartPanelProps) {
   const port = useUdfPort()
-  const widgetRef = useRef<TradingViewWidgetInstance | null>(null)
+  // Wrapper div managed by React -- never re-rendered by the chart
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const chartRef = useRef<IChartApi | null>(null)
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const wsReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const currentSymbolRef = useRef('BTCUSDT')
-  const lastPriceRef = useRef<number | null>(null)
+  // Track the manually-created child div so cleanup can remove it
+  const chartDivRef = useRef<HTMLDivElement | null>(null)
 
-  const [loading, setLoading] = useState(true)
+  const [symbol, setSymbol] = useState('BTCUSDT')
+  const [resolution, setResolution] = useState('60')
+  const [lastPrice, setLastPrice] = useState<number | null>(null)
+  const [prevClose, setPrevClose] = useState<number | null>(null)
+  const [crosshairData, setCrosshairData] = useState<OhlcData | null>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const lastCandleRef = useRef<OhlcData | null>(null)
+  const currentSymbolRef = useRef(symbol)
+  currentSymbolRef.current = symbol
 
   const udfBase = port ? `http://localhost:${port}` : null
 
-  // Initialize TradingView widget when port becomes available
-  const initWidget = useCallback(async () => {
-    if (!udfBase) return
+  // Notify parent of symbol changes
+  const handleSymbolChange = useCallback(
+    (s: string) => {
+      setSymbol(s)
+      onSymbolChange?.(s)
+    },
+    [onSymbolChange],
+  )
+
+  // Initialize chart -- create a detached child div for lightweight-charts to own
+  useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    // Create a child div via DOM API -- React will never touch this
+    const chartDiv = document.createElement('div')
+    chartDiv.style.width = '100%'
+    chartDiv.style.height = '100%'
+    wrapper.appendChild(chartDiv)
+    chartDivRef.current = chartDiv
+
+    const chart = createChart(chartDiv, {
+      width: chartDiv.clientWidth,
+      height: chartDiv.clientHeight,
+      layout: {
+        background: { type: 'solid' as const, color: '#0A1628' },
+        textColor: '#E2E4ED',
+        fontSize: 12,
+      },
+      grid: {
+        vertLines: { color: '#182233' },
+        horzLines: { color: '#182233' },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: '#253550',
+          width: 1,
+          style: LineStyle.Dashed,
+        },
+        horzLine: {
+          color: '#253550',
+          width: 1,
+          style: LineStyle.Dashed,
+        },
+      },
+      rightPriceScale: {
+        borderColor: '#182233',
+      },
+      timeScale: {
+        borderColor: '#182233',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      handleScroll: { vertTouchDrag: false },
+    })
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: '#00E5A0',
+      downColor: '#FF4D6A',
+      borderUpColor: '#00E5A0',
+      borderDownColor: '#FF4D6A',
+      wickUpColor: '#00E5A0',
+      wickDownColor: '#FF4D6A',
+    })
+
+    const volumeSeries = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+    })
+
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    })
+
+    chart.subscribeCrosshairMove((param) => {
+      if (!param || !param.time) {
+        setCrosshairData(lastCandleRef.current)
+        return
+      }
+      const data = param.seriesData.get(candleSeries) as
+        | CandlestickData<Time>
+        | undefined
+      if (data) {
+        setCrosshairData({
+          open: data.open,
+          high: data.high,
+          low: data.low,
+          close: data.close,
+        })
+      }
+    })
+
+    chartRef.current = chart
+    candleSeriesRef.current = candleSeries
+    volumeSeriesRef.current = volumeSeries
+
+    // Resize handler via ResizeObserver -- observe the wrapper, resize the chart
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(() => {
+        if (chartRef.current && wrapper) {
+          chartRef.current.resize(wrapper.clientWidth, wrapper.clientHeight)
+        }
+      })
+    })
+    resizeObserver.observe(wrapper)
+
+    return () => {
+      resizeObserver.disconnect()
+      // Remove the chart first (cleans up lightweight-charts internals)
+      try { chart.remove() } catch { /* already removed */ }
+      chartRef.current = null
+      candleSeriesRef.current = null
+      volumeSeriesRef.current = null
+      // Manually remove the child div -- React never knew about it
+      if (chartDiv.parentNode) {
+        chartDiv.parentNode.removeChild(chartDiv)
+      }
+      chartDivRef.current = null
+    }
+  }, [])
+
+  // Load data when symbol, resolution, or port changes
+  const loadData = useCallback(async () => {
+    if (!udfBase || !candleSeriesRef.current || !volumeSeriesRef.current) return
 
     setLoading(true)
     setError(null)
 
+    const now = Math.floor(Date.now() / 1000)
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60
+
     try {
-      // Load charting library scripts from the UDF server
-      await loadScript(`${udfBase}/charting_library/charting_library.standalone.js`)
-      await loadScript(`${udfBase}/datafeeds/udf/dist/bundle.js`)
+      const url =
+        `${udfBase}/history?symbol=${encodeURIComponent(symbol)}` +
+        `&resolution=${encodeURIComponent(resolution)}` +
+        `&from=${thirtyDaysAgo}&to=${now}`
 
-      // Verify globals are available
-      if (!window.TradingView || !window.Datafeeds) {
-        throw new Error(
-          'TradingView library failed to initialize. ' +
-          'Globals TradingView/Datafeeds not found on window.',
+      const res = await fetch(url)
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      }
+      const data: UdfHistoryResponse = await res.json()
+
+      const candles = mapCandleData(data)
+      const volumes = mapVolumeData(data)
+
+      if (candles.length === 0) {
+        setError(
+          `No candle data returned for ${symbol}. Is the UDF server running?`,
         )
-      }
-
-      // Destroy previous widget if any
-      if (widgetRef.current) {
-        try {
-          widgetRef.current.remove()
-        } catch (err) {
-          console.warn('[ChartPanel] Error removing previous widget:', err)
-        }
-        widgetRef.current = null
-      }
-
-      const datafeed = new window.Datafeeds.UDFCompatibleDatafeed(udfBase, undefined, {
-        maxResponseLength: 1000,
-        expectedOrder: 'latestFirst',
-      })
-
-      const widget = new window.TradingView.widget({
-        symbol: 'BTCUSDT',
-        interval: '60',
-        container: CONTAINER_ID,
-        datafeed,
-        library_path: `${udfBase}/charting_library/`,
-        locale: 'en',
-        theme: 'dark',
-        custom_css_url: `${udfBase}/charting_library/custom_chart.css`,
-        autosize: true,
-        timezone: 'Etc/UTC',
-        disabled_features: [
-          'use_localstorage_for_settings',
-          'header_compare',
-          'display_market_status',
-          'popup_hints',
-        ],
-        enabled_features: [
-          'study_templates',
-          'hide_left_toolbar_by_default',
-        ],
-        overrides: {
-          // Candle colors
-          'mainSeriesProperties.candleStyle.upColor': '#26a69a',
-          'mainSeriesProperties.candleStyle.downColor': '#ef5350',
-          'mainSeriesProperties.candleStyle.wickUpColor': '#26a69a',
-          'mainSeriesProperties.candleStyle.wickDownColor': '#ef5350',
-          'mainSeriesProperties.candleStyle.borderUpColor': '#26a69a',
-          'mainSeriesProperties.candleStyle.borderDownColor': '#ef5350',
-          // Background
-          'paneProperties.background': '#131722',
-          'paneProperties.backgroundType': 'solid',
-          'scalesProperties.backgroundColor': '#131722',
-          // Grid
-          'paneProperties.vertGridProperties.color': 'rgba(43, 43, 67, 0.4)',
-          'paneProperties.horzGridProperties.color': 'rgba(43, 43, 67, 0.4)',
-          // Text
-          'scalesProperties.textColor': '#d1d4dc',
-          // Volume
-          'volumePaneSize': 'medium',
-        },
-        loading_screen: {
-          backgroundColor: '#131722',
-          foregroundColor: '#00FF41',
-        },
-      })
-
-      widgetRef.current = widget
-
-      widget.onChartReady(() => {
         setLoading(false)
-        onConnectionChange?.('connected')
-        console.log('[ChartPanel] TradingView widget ready')
-      })
+        return
+      }
+
+      candleSeriesRef.current.setData(candles)
+      volumeSeriesRef.current.setData(volumes)
+      chartRef.current?.timeScale().fitContent()
+
+      const lastCandle = candles[candles.length - 1]
+      const prevCandle =
+        candles.length > 1 ? candles[candles.length - 2] : lastCandle
+      const ohlc: OhlcData = {
+        open: lastCandle.open,
+        high: lastCandle.high,
+        low: lastCandle.low,
+        close: lastCandle.close,
+      }
+      lastCandleRef.current = ohlc
+      setLastPrice(lastCandle.close)
+      setPrevClose(prevCandle.close)
+      setCrosshairData(ohlc)
+      onPriceUpdate?.(lastCandle.close, prevCandle.close)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(
-        `Could not initialize TradingView chart. ` +
-        `Make sure the UDF server is running on port ${port}. ${message}`,
+        `Could not load data from UDF server at ${udfBase}. ` +
+          `Make sure the server is running on port ${port}. ${message}`,
       )
+      console.error('[ChartPanel] Data load failed:', err)
+    } finally {
       setLoading(false)
-      console.error('[ChartPanel] Widget init failed:', err)
     }
-  }, [udfBase, port, onConnectionChange])
+  }, [udfBase, symbol, resolution, port, onPriceUpdate])
 
   useEffect(() => {
-    initWidget()
+    loadData()
+  }, [loadData])
 
-    return () => {
-      if (widgetRef.current) {
-        try {
-          widgetRef.current.remove()
-        } catch (err) {
-          console.warn('[ChartPanel] Error removing widget on cleanup:', err)
-        }
-        widgetRef.current = null
-      }
-    }
-  }, [initWidget])
-
-  // WebSocket connection for live price updates to parent
-  // TradingView widget handles its own real-time data via the UDF datafeed,
-  // but we still need to push price updates to the parent Layout component
-  // for the status bar display.
+  // WebSocket connection for live ticker updates
   useEffect(() => {
     if (!port) return
-
-    const WS_RECONNECT_DELAY = 3000
 
     function connectWebSocket() {
       const wsUrl = `ws://localhost:${port}`
@@ -235,6 +343,7 @@ export function ChartPanel({
 
       ws.onopen = () => {
         console.log('[ChartPanel] WebSocket connected')
+        onConnectionChange?.('connected')
         if (wsReconnectTimerRef.current) {
           clearTimeout(wsReconnectTimerRef.current)
           wsReconnectTimerRef.current = null
@@ -243,26 +352,28 @@ export function ChartPanel({
 
       ws.onmessage = (event: MessageEvent) => {
         try {
-          const msg = JSON.parse(event.data)
+          const msg: TickerMessage = JSON.parse(event.data)
           if (msg.type === 'ticker' && msg.data) {
             const chartSymbol = msg.data.symbol.replace('/', '')
             if (chartSymbol !== currentSymbolRef.current) return
-
-            const prevPrice = lastPriceRef.current
-            lastPriceRef.current = msg.data.last
-            onPriceUpdate?.(msg.data.last, prevPrice)
-
-            // Notify parent of symbol if it changed
-            onSymbolChange?.(chartSymbol)
+            setLastPrice((prev) => {
+              setPrevClose(prev)
+              onPriceUpdate?.(msg.data.last, prev)
+              return msg.data.last
+            })
           }
         } catch (err) {
-          console.warn('[ChartPanel] Failed to parse WebSocket message:', err)
+          console.warn(
+            '[ChartPanel] Failed to parse WebSocket message:',
+            err,
+          )
         }
       }
 
       ws.onclose = () => {
         console.log('[ChartPanel] WebSocket disconnected')
         wsRef.current = null
+        onConnectionChange?.('reconnecting')
         scheduleReconnect()
       }
 
@@ -293,39 +404,125 @@ export function ChartPanel({
         wsRef.current = null
       }
     }
-  }, [port, onConnectionChange, onPriceUpdate, onSymbolChange])
+  }, [port, onConnectionChange, onPriceUpdate])
+
+  // Derive OHLC display data
+  const displayData = crosshairData
+  const isUp =
+    lastPrice !== null && prevClose !== null ? lastPrice >= prevClose : true
+  const priceColor = isUp ? '#00E5A0' : '#FF4D6A'
+  const ohlcColor = displayData
+    ? displayData.close >= displayData.open
+      ? '#00E5A0'
+      : '#FF4D6A'
+    : '#7B8AA0'
 
   return (
     <div className="chart-panel">
-      <div className="chart-container" id={CONTAINER_ID}>
+      {/* Chart controls -- symbol selector and timeframe buttons */}
+      <div className="chart-controls">
+        <span className="logo">VIBE SENSEI</span>
+        <div className="separator" />
+        <select
+          className="symbol-select"
+          value={symbol}
+          onChange={(e) => handleSymbolChange(e.target.value)}
+        >
+          {SYMBOLS.map((s) => (
+            <option key={s} value={s}>
+              {s.replace('USDT', '/USDT')}
+            </option>
+          ))}
+        </select>
+        <div className="separator" />
+        <div className="tf-group">
+          {TIMEFRAMES.map((tf) => (
+            <button
+              key={tf.resolution}
+              className={`tf-btn${resolution === tf.resolution ? ' active' : ''}`}
+              onClick={() => setResolution(tf.resolution)}
+            >
+              {tf.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chart container -- wrapper div that React manages, chart lives in a child div
+          created via document.createElement so React's reconciler never touches it */}
+      <div className="chart-container" style={{ position: 'relative' }}>
+        <div ref={wrapperRef} style={{ width: '100%', height: '100%' }} />
+        {/* Overlay elements are siblings, not children of the chart div,
+            so they cannot conflict with the chart library's DOM */}
         {loading && (
           <div
             className="loading-indicator visible"
             style={{
               position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
+              top: 8,
+              right: 16,
               zIndex: 5,
-              color: '#00FF41',
-              fontSize: '14px',
             }}
           >
-            Initializing chart...
+            Loading...
           </div>
         )}
         {error && (
           <div className="error-overlay">
-            <h3>Chart Error</h3>
+            <h3>Connection Error</h3>
             <p>{error}</p>
           </div>
         )}
         {!port && (
           <div className="error-overlay">
             <h3>Waiting for UDF Server</h3>
-            <p>Connecting to chart data server...</p>
+            <p>
+              Connecting to chart data server...
+            </p>
           </div>
         )}
+      </div>
+
+      {/* OHLC bar -- inlined from former OhlcBar component */}
+      <div className="ohlc-bar-panel">
+        <div className="price-info">
+          <span className="symbol-label">{symbol}</span>
+          {lastPrice !== null && (
+            <span className="last-price" style={{ color: priceColor }}>
+              {formatPrice(lastPrice)}
+            </span>
+          )}
+        </div>
+        <div className="ohlc-values">
+          {displayData ? (
+            <>
+              <span>
+                <span className="label">O</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.open)}
+                </span>
+              </span>
+              <span>
+                <span className="label">H</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.high)}
+                </span>
+              </span>
+              <span>
+                <span className="label">L</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.low)}
+                </span>
+              </span>
+              <span>
+                <span className="label">C</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.close)}
+                </span>
+              </span>
+            </>
+          ) : null}
+        </div>
       </div>
     </div>
   )
