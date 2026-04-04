@@ -8,8 +8,8 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: #0A1628;
-  color: #E2E4ED;
+  background: #0D1117;
+  color: #00FF41;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   overflow: hidden;
 }
@@ -17,20 +17,20 @@
 /* ── Controls Bar ── */
 
 .chart-controls {
-  background: #0F1924;
+  background: #0A0F0A;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  border-bottom: 1px solid #253550;
+  border-bottom: 1px solid #002B0E;
   flex-shrink: 0;
 }
 
 .chart-controls .logo {
   font-size: 14px;
   font-weight: 700;
-  color: #00D4FF;
+  color: #00FF41;
   margin-right: 8px;
   white-space: nowrap;
 }
@@ -38,16 +38,16 @@
 .chart-controls .separator {
   width: 1px;
   height: 24px;
-  background: #253550;
+  background: #002B0E;
   flex-shrink: 0;
 }
 
 /* ── Symbol Selector ── */
 
 .symbol-select {
-  background: #182233;
-  color: #E2E4ED;
-  border: 1px solid #253550;
+  background: #0D150D;
+  color: #00FF41;
+  border: 1px solid #002B0E;
   border-radius: 4px;
   padding: 6px 10px;
   font-family: inherit;
@@ -57,11 +57,11 @@
 }
 
 .symbol-select:hover {
-  border-color: #00D4FF;
+  border-color: #00FF41;
 }
 
 .symbol-select:focus {
-  border-color: #00D4FF;
+  border-color: #00FF41;
   box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
 }
 
@@ -73,9 +73,9 @@
 }
 
 .tf-btn {
-  background: #182233;
-  color: #E2E4ED;
-  border: 1px solid #253550;
+  background: #0D150D;
+  color: #00FF41;
+  border: 1px solid #002B0E;
   border-radius: 4px;
   padding: 6px 12px;
   font-family: inherit;
@@ -85,21 +85,21 @@
 }
 
 .tf-btn:hover {
-  background: #253550;
+  background: #002B0E;
   border-color: #354565;
 }
 
 .tf-btn.active {
-  background: #00D4FF;
-  border-color: #00D4FF;
-  color: #0A1628;
+  background: #00FF41;
+  border-color: #00FF41;
+  color: #0D1117;
   font-weight: 600;
 }
 
 /* ── Loading Indicator ── */
 
 .loading-indicator {
-  color: #00D4FF;
+  color: #00FF41;
   font-size: 12px;
   margin-left: auto;
   opacity: 0;
@@ -116,7 +116,7 @@
   flex: 1;
   min-height: 0;
   position: relative;
-  background: #0A1628;
+  background: #0D1117;
 }
 
 .chart-container .error-overlay {
@@ -140,7 +140,7 @@
 }
 
 .chart-container .error-overlay p {
-  color: #7B8AA0;
+  color: #008F11;
   font-size: 12px;
   line-height: 1.5;
 }
@@ -148,13 +148,13 @@
 /* ── OHLC Info Bar ── */
 
 .ohlc-bar-panel {
-  background: #0F1924;
+  background: #0A0F0A;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  border-top: 1px solid #253550;
+  border-top: 1px solid #002B0E;
   flex-shrink: 0;
   font-size: 12px;
 }
@@ -166,7 +166,7 @@
 }
 
 .ohlc-bar-panel .symbol-label {
-  color: #7B8AA0;
+  color: #008F11;
 }
 
 .ohlc-bar-panel .last-price {
@@ -185,7 +185,7 @@
 .ohlc-bar-panel .ohlc-values {
   display: flex;
   gap: 10px;
-  color: #7B8AA0;
+  color: #008F11;
   font-size: 11px;
 }
 
@@ -194,5 +194,5 @@
 }
 
 .ohlc-bar-panel .ohlc-values .label {
-  color: #7B8AA0;
+  color: #008F11;
 }
