@@ -10,11 +10,31 @@ import {
   type Time,
 } from 'lightweight-charts'
 import { useUdfPort } from '../hooks/useUdfPort'
-import { ChartControls } from './chart/ChartControls'
-import { OhlcBar, type OhlcData } from './chart/OhlcBar'
 import '../styles/theme.css'
 
 const WS_RECONNECT_DELAY = 3000
+
+const SYMBOLS = [
+  'BTCUSDT',
+  'ETHUSDT',
+  'SOLUSDT',
+  'BNBUSDT',
+  'XRPUSDT',
+  'DOGEUSDT',
+  'ADAUSDT',
+  'AVAXUSDT',
+  'DOTUSDT',
+  'LINKUSDT',
+]
+
+const TIMEFRAMES: Array<{ label: string; resolution: string }> = [
+  { label: '1m', resolution: '1' },
+  { label: '5m', resolution: '5' },
+  { label: '15m', resolution: '15' },
+  { label: '1H', resolution: '60' },
+  { label: '4H', resolution: '240' },
+  { label: '1D', resolution: 'D' },
+]
 
 interface ChartPanelProps {
   onSymbolChange?: (symbol: string) => void
@@ -42,6 +62,19 @@ interface TickerMessage {
     bid: number
     ask: number
   }
+}
+
+interface OhlcData {
+  open: number
+  high: number
+  low: number
+  close: number
+}
+
+function formatPrice(price: number): string {
+  if (price >= 1000) return price.toFixed(2)
+  if (price >= 1) return price.toFixed(4)
+  return price.toFixed(6)
 }
 
 function mapCandleData(udf: UdfHistoryResponse): CandlestickData<Time>[] {
@@ -79,12 +112,15 @@ export function ChartPanel({
   onConnectionChange,
 }: ChartPanelProps) {
   const port = useUdfPort()
-  const containerRef = useRef<HTMLDivElement>(null)
+  // Wrapper div managed by React -- never re-rendered by the chart
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null)
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const wsReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Track the manually-created child div so cleanup can remove it
+  const chartDivRef = useRef<HTMLDivElement | null>(null)
 
   const [symbol, setSymbol] = useState('BTCUSDT')
   const [resolution, setResolution] = useState('60')
@@ -109,14 +145,21 @@ export function ChartPanel({
     [onSymbolChange],
   )
 
-  // Initialize chart
+  // Initialize chart -- create a detached child div for lightweight-charts to own
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
 
-    const chart = createChart(container, {
-      width: container.clientWidth,
-      height: container.clientHeight,
+    // Create a child div via DOM API -- React will never touch this
+    const chartDiv = document.createElement('div')
+    chartDiv.style.width = '100%'
+    chartDiv.style.height = '100%'
+    wrapper.appendChild(chartDiv)
+    chartDivRef.current = chartDiv
+
+    const chart = createChart(chartDiv, {
+      width: chartDiv.clientWidth,
+      height: chartDiv.clientHeight,
       layout: {
         background: { type: 'solid' as const, color: '#0A1628' },
         textColor: '#E2E4ED',
@@ -190,22 +233,28 @@ export function ChartPanel({
     candleSeriesRef.current = candleSeries
     volumeSeriesRef.current = volumeSeries
 
-    // Resize handler via ResizeObserver
+    // Resize handler via ResizeObserver -- observe the wrapper, resize the chart
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(() => {
-        if (chartRef.current && container) {
-          chartRef.current.resize(container.clientWidth, container.clientHeight)
+        if (chartRef.current && wrapper) {
+          chartRef.current.resize(wrapper.clientWidth, wrapper.clientHeight)
         }
       })
     })
-    resizeObserver.observe(container)
+    resizeObserver.observe(wrapper)
 
     return () => {
       resizeObserver.disconnect()
-      chart.remove()
+      // Remove the chart first (cleans up lightweight-charts internals)
+      try { chart.remove() } catch { /* already removed */ }
       chartRef.current = null
       candleSeriesRef.current = null
       volumeSeriesRef.current = null
+      // Manually remove the child div -- React never knew about it
+      if (chartDiv.parentNode) {
+        chartDiv.parentNode.removeChild(chartDiv)
+      }
+      chartDivRef.current = null
     }
   }, [])
 
@@ -357,15 +406,54 @@ export function ChartPanel({
     }
   }, [port, onConnectionChange, onPriceUpdate])
 
+  // Derive OHLC display data
+  const displayData = crosshairData
+  const isUp =
+    lastPrice !== null && prevClose !== null ? lastPrice >= prevClose : true
+  const priceColor = isUp ? '#00E5A0' : '#FF4D6A'
+  const ohlcColor = displayData
+    ? displayData.close >= displayData.open
+      ? '#00E5A0'
+      : '#FF4D6A'
+    : '#7B8AA0'
+
   return (
     <div className="chart-panel">
-      <ChartControls
-        symbol={symbol}
-        resolution={resolution}
-        onSymbolChange={handleSymbolChange}
-        onResolutionChange={setResolution}
-      />
-      <div className="chart-container" ref={containerRef}>
+      {/* Chart controls -- symbol selector and timeframe buttons */}
+      <div className="chart-controls">
+        <span className="logo">VIBE SENSEI</span>
+        <div className="separator" />
+        <select
+          className="symbol-select"
+          value={symbol}
+          onChange={(e) => handleSymbolChange(e.target.value)}
+        >
+          {SYMBOLS.map((s) => (
+            <option key={s} value={s}>
+              {s.replace('USDT', '/USDT')}
+            </option>
+          ))}
+        </select>
+        <div className="separator" />
+        <div className="tf-group">
+          {TIMEFRAMES.map((tf) => (
+            <button
+              key={tf.resolution}
+              className={`tf-btn${resolution === tf.resolution ? ' active' : ''}`}
+              onClick={() => setResolution(tf.resolution)}
+            >
+              {tf.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chart container -- wrapper div that React manages, chart lives in a child div
+          created via document.createElement so React's reconciler never touches it */}
+      <div className="chart-container" style={{ position: 'relative' }}>
+        <div ref={wrapperRef} style={{ width: '100%', height: '100%' }} />
+        {/* Overlay elements are siblings, not children of the chart div,
+            so they cannot conflict with the chart library's DOM */}
         {loading && (
           <div
             className="loading-indicator visible"
@@ -394,12 +482,48 @@ export function ChartPanel({
           </div>
         )}
       </div>
-      <OhlcBar
-        symbol={symbol}
-        lastPrice={lastPrice}
-        prevClose={prevClose}
-        crosshairData={crosshairData}
-      />
+
+      {/* OHLC bar -- inlined from former OhlcBar component */}
+      <div className="ohlc-bar-panel">
+        <div className="price-info">
+          <span className="symbol-label">{symbol}</span>
+          {lastPrice !== null && (
+            <span className="last-price" style={{ color: priceColor }}>
+              {formatPrice(lastPrice)}
+            </span>
+          )}
+        </div>
+        <div className="ohlc-values">
+          {displayData ? (
+            <>
+              <span>
+                <span className="label">O</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.open)}
+                </span>
+              </span>
+              <span>
+                <span className="label">H</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.high)}
+                </span>
+              </span>
+              <span>
+                <span className="label">L</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.low)}
+                </span>
+              </span>
+              <span>
+                <span className="label">C</span>{' '}
+                <span style={{ color: ohlcColor }}>
+                  {formatPrice(displayData.close)}
+                </span>
+              </span>
+            </>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }
