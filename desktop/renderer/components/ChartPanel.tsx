@@ -132,8 +132,8 @@ export function ChartPanel({
         fontSize: 12,
       },
       grid: {
-        vertLines: { color: '#182233' },
-        horzLines: { color: '#182233' },
+        vertLines: { color: 'rgba(0, 143, 17, 0.08)' },
+        horzLines: { color: 'rgba(0, 143, 17, 0.08)' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
