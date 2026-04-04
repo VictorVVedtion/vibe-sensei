@@ -26,9 +26,9 @@ import { getProviderForModelId } from './registry.js'
 export function createProviderAwareCallModel(
   originalCallModel: (...args: any[]) => AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void>,
 ): (...args: any[]) => AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
-  return function* providerAwareCallModel(
+  return async function* providerAwareCallModel(
     ...args: any[]
-  ): any {
+  ): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
     // The first argument is an object with { messages, systemPrompt, thinkingConfig, tools, signal, options }
     const params = args[0]
     if (!params || typeof params !== 'object') {
