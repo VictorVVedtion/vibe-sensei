@@ -9,14 +9,12 @@ import type { AppState } from '../state/AppStateStore.js';
 import { getGlobalConfig } from '../utils/config.js';
 import { isFullscreenActive } from '../utils/fullscreen.js';
 import { getCompanion } from './companion.js';
+import { useGuardianDisplay, pushReaction } from './guardian-display.js';
 import { renderFace, renderSprite, spriteFrameCount } from './sprites.js';
 import { MASTER_PORTRAITS } from './sprite-atlas.js';
 import type { Emotion } from './sprite-atlas.js';
 import type { Master } from './types.js';
 import { RARITY_COLORS, MASTER_NAMES } from './types.js';
-import { inferEmotionFromReaction } from '../services/companion/expression.js';
-import { getIdleQuote } from './idle-quotes.js';
-import { getMasterArchetype } from './persona.js';
 const TICK_MS = 500;
 const BUBBLE_SHOW = 20; // ticks → ~10s at 500ms
 const FADE_WINDOW = 6; // last ~3s the bubble dims so you know it's about to go
@@ -210,24 +208,23 @@ export function CompanionSprite(): React.ReactNode {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick intentionally captured at reaction-change, not tracked
   }, [reaction, setAppState]);
+  // Guardian display singleton — shared text, fading, emotion
+  const { displayText, fading, emotion: singletonEmotion } = useGuardianDisplay();
+
+  // Sync AppState.companionReaction into the guardian-display singleton
+  useEffect(() => { pushReaction(reaction); }, [reaction]);
+
   const companion = getCompanion();
   if (!companion || getGlobalConfig().companionMuted) return null;
+
+  // Narrow terminal guard
+  if (columns < 20) return null;
+
   const color = RARITY_COLORS[companion.rarity];
-  // Use the Guardian master's real name, not the companion's custom name
   const guardianName = MASTER_NAMES[companion.species as Master] ?? companion.name;
-  const colWidth = spriteColWidth(stringWidth(guardianName));
-  const bubbleAge = reaction ? tick - lastSpokeTick.current : 0;
-  // Idle = dim (P2.5 visual weight). Speaking = bright. Fading = transition to dim.
-  const isIdle = reaction === undefined;
-  const fading = isIdle || (bubbleAge >= BUBBLE_SHOW - FADE_WINDOW);
   const petAge = petAt ? tick - petStartTick : Infinity;
   const petting = petAge * TICK_MS < PET_BURST_MS;
-
-  // Derive current emotion from reaction text
-  const currentEmotion: Emotion = petting ? 'happy' : inferEmotionFromReaction(reaction);
-
-  const archetype = getMasterArchetype(companion.species as Master);
-  const displayReaction = reaction || getIdleQuote(archetype, tick);
+  const currentEmotion: Emotion = petting ? 'happy' : singletonEmotion;
 
   const minimalistFaceRow = (
     <Box>
@@ -241,17 +238,20 @@ export function CompanionSprite(): React.ReactNode {
     </Box>
   );
 
-  // In fullscreen mode, the speech bubble renders separately in CompanionFloatingBubble 
-  // above the overflow clip boundary to prevent getting cut off.
+  // Narrow: show face only, no bubble
+  if (columns < 40) {
+    return <Box paddingX={1} alignSelf="flex-end">{minimalistFaceRow}</Box>;
+  }
+
+  // Fullscreen: bubble renders separately in CompanionFloatingBubble
   if (isFullscreenActive()) {
     return <Box paddingX={1} alignSelf="flex-end">{minimalistFaceRow}</Box>;
   }
 
-  // In static scrollback, we stack the continuous idle bubble vertically.
-  // No quip truncation -- allow full text
+  // Static scrollback: stack bubble + face vertically
   return (
     <Box flexDirection="column" paddingX={1} alignItems="flex-end" flexShrink={0}>
-      <SpeechBubble text={displayReaction} color={color} fading={fading} tail="down" />
+      <SpeechBubble text={displayText} color={color} fading={fading} tail="down" />
       {minimalistFaceRow}
     </Box>
   );
@@ -262,75 +262,11 @@ export function CompanionSprite(): React.ReactNode {
 // the ScrollBox region. CompanionSprite owns the clear-after-10s timer; this
 // just reads companionReaction and renders the fade.
 export function CompanionFloatingBubble() {
-  const $ = _c(8);
-  const reaction = useAppState(_temp);
-  let t0;
-  if ($[0] !== reaction) {
-    t0 = {
-      tick: 0,
-      forReaction: reaction
-    };
-    $[0] = reaction;
-    $[1] = t0;
-  } else {
-    t0 = $[1];
-  }
-  const [t1, setTick] = useState(t0);
-  const {
-    tick,
-    forReaction
-  } = t1;
-  if (reaction !== forReaction) {
-    setTick({
-      tick: 0,
-      forReaction: reaction
-    });
-  }
-  let t2;
-  let t3;
-  if ($[2] !== reaction) {
-    t2 = () => {
-      // Always tick — idle quotes need rotation even without a reaction
-      const timer = setInterval(_temp3, TICK_MS, setTick);
-      return () => clearInterval(timer);
-    };
-    t3 = [reaction];
-    $[2] = reaction;
-    $[3] = t2;
-    $[4] = t3;
-  } else {
-    t2 = $[3];
-    t3 = $[4];
-  }
-  useEffect(t2, t3);
+  const { displayText, fading } = useGuardianDisplay();
+  const { columns } = useTerminalSize();
   const companion = getCompanion();
-  if (!companion || getGlobalConfig().companionMuted) {
+  if (!companion || getGlobalConfig().companionMuted || columns < 40) {
     return null;
   }
-  const archetype = getMasterArchetype(companion.species as Master);
-  const displayReaction = reaction || getIdleQuote(archetype, tick);
-  // Idle = dim (P2.5). Speaking = bright until fade window.
-  const t4 = !reaction || tick >= BUBBLE_SHOW - FADE_WINDOW;
-  let t5;
-  if ($[5] !== displayReaction || $[6] !== t4) {
-    t5 = <SpeechBubble text={displayReaction} color={RARITY_COLORS[companion.rarity]} fading={t4} tail="down" />;
-    $[5] = displayReaction;
-    $[6] = t4;
-    $[7] = t5;
-  } else {
-    t5 = $[7];
-  }
-  return t5;
-}
-function _temp3(set) {
-  return set(_temp2);
-}
-function _temp2(s_0) {
-  return {
-    ...s_0,
-    tick: s_0.tick + 1
-  };
-}
-function _temp(s) {
-  return s.companionReaction;
+  return <SpeechBubble text={displayText} color={RARITY_COLORS[companion.rarity]} fading={fading} tail="down" />;
 }
