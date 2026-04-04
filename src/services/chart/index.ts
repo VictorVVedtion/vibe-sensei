@@ -32,8 +32,17 @@ export function startUdfServer(port: number): Promise<void> {
 
     // Serve the web frontend from the web/ directory at the project root.
     // pathResolve walks up from this compiled file to the project root.
-    const webDir = pathResolve(import.meta.dirname ?? __dirname, '..', '..', '..', 'web');
+    const projectRoot = pathResolve(import.meta.dirname ?? __dirname, '..', '..', '..');
+    const webDir = pathResolve(projectRoot, 'web');
     app.use(express.static(webDir));
+
+    // Serve TradingView Charting Library static files for the desktop Electron app.
+    // The charting_library directory contains the widget JS/CSS bundles.
+    // The datafeeds directory contains the UDF-compatible datafeed adapter.
+    const chartingLibDir = pathResolve(projectRoot, 'desktop', 'charting_library', 'charting_library');
+    const datafeedsDir = pathResolve(projectRoot, 'desktop', 'charting_library', 'datafeeds');
+    app.use('/charting_library', express.static(chartingLibDir));
+    app.use('/datafeeds', express.static(datafeedsDir));
 
     server = app.listen(port, () => {
       console.log(`UDF server listening on http://localhost:${port}`);
