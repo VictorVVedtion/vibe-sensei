@@ -36,7 +36,7 @@ export function Layout({
   prevClose,
 }: LayoutProps) {
   // Panel sizing state (percentages of available space)
-  const [terminalWidthPct, setTerminalWidthPct] = useState(55)
+  const [terminalWidthPct, setTerminalWidthPct] = useState(35)
   const [chartHeightPct, setChartHeightPct] = useState(60)
   const [focusedPanel, setFocusedPanel] = useState<FocusedPanel>('terminal')
 

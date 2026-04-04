@@ -49,7 +49,7 @@ const bridgeFilePath = path.join(
   `vibe-sensei-bridge-${process.pid}.jsonl`,
 )
 
-const isDev = process.env.VIBE_FORCE_PROD === "1" ? false : !app.isPackaged
+const isDev = process.env.VIBE_FORCE_PROD === '1' ? false : !app.isPackaged
 const isMac = process.platform === 'darwin'
 
 function checkBunRuntime(): boolean {
@@ -110,7 +110,7 @@ function createWindow(): void {
     minWidth: 800,
     minHeight: 600,
     title: 'Vibe Sensei',
-    backgroundColor: '#0D1117',
+    backgroundColor: '#0A1628',
     show: false,
     webPreferences: {
       nodeIntegration: false,

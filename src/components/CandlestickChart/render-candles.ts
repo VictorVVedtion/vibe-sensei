@@ -10,8 +10,16 @@
  */
 
 import type { Candle } from '../../services/exchange/types.js'
-import type { ChartLine, ChartSegment, ChartOptions } from './types.js'
+import type { ChartLine, ChartSegment, ChartOptions, CrosshairState, ChartLayout } from './types.js'
 import { DEFAULT_CHART_OPTIONS, CHART_COLORS } from './types.js'
+
+/** Result of the render function — chart lines plus layout metadata. */
+export interface RenderResult {
+  lines: ChartLine[]
+  layout: ChartLayout
+  /** The visible candles slice (after zoom/pan). */
+  visibleCandles: Candle[]
+}
 
 // ── Unicode characters ──────────────────────────────────────────────
 
@@ -106,12 +114,20 @@ function isGridDotColumn(candleIdx: number, totalCandles: number): boolean {
   return candleIdx > 0 && candleIdx < totalCandles - 1 && candleIdx % interval === 0
 }
 
+// ── Crosshair Unicode characters ────────────────────────────────────
+
+const CROSSHAIR_V  = '\u2502'  // │  vertical crosshair line
+const CROSSHAIR_H  = '\u2500'  // ─  horizontal crosshair line
+const CROSSHAIR_X  = '\u253C'  // ┼  crosshair intersection
+
 // ── Main rendering function ─────────────────────────────────────────
 
 export function renderCandlestickChart(
   candles: Candle[],
   partialOpts: Partial<ChartOptions> & Pick<ChartOptions, 'width' | 'symbol' | 'timeframe'>,
-): ChartLine[] {
+  crosshair?: CrosshairState,
+  visibleRange?: { start: number; end: number },
+): RenderResult {
   const opts: ChartOptions = {
     height: partialOpts.height ?? (DEFAULT_CHART_OPTIONS.height as number),
     showVolume: partialOpts.showVolume ?? (DEFAULT_CHART_OPTIONS.showVolume as boolean),
@@ -123,7 +139,17 @@ export function renderCandlestickChart(
   }
 
   if (candles.length === 0) {
-    return [[seg(`  No candle data for ${opts.symbol}`, 'gray')]]
+    const emptyLayout: ChartLayout = {
+      leftBorderWidth: 1, rightAxisWidth: 8, chartHeight: opts.height,
+      chartAreaWidth: opts.width - 10, colWidth: 1, visibleCandleCount: 0,
+      priceMax: 0, priceMin: 0, priceRange: 0, headerLines: 2,
+      priceDecimals: opts.priceDecimals,
+    }
+    return {
+      lines: [[seg(`  No candle data for ${opts.symbol}`, 'gray')]],
+      layout: emptyLayout,
+      visibleCandles: [],
+    }
   }
 
   const colWidth = candleColumnWidth(opts.width)
@@ -141,7 +167,16 @@ export function renderCandlestickChart(
   const leftBorderWidth = 1
   const chartAreaWidth = opts.width - leftBorderWidth - rightAxisWidth - 1
   const maxCandles = Math.max(1, Math.floor(chartAreaWidth / colWidth))
-  const visibleCandles = candles.slice(-maxCandles)
+
+  // Apply visible range for zoom/pan, or default to showing the last N candles
+  let visibleCandles: Candle[]
+  if (visibleRange) {
+    const start = Math.max(0, visibleRange.start)
+    const end = Math.min(candles.length, visibleRange.end)
+    visibleCandles = candles.slice(start, end)
+  } else {
+    visibleCandles = candles.slice(-maxCandles)
+  }
 
   // Actual chart content width (candles may not fill the whole area)
   const candleContentWidth = visibleCandles.length * colWidth
@@ -261,12 +296,53 @@ export function renderCandlestickChart(
     }
   }
 
+  // ── Overlay crosshair ────────────────────────────────────────
+  if (crosshair && crosshair.active) {
+    const cCol = crosshair.col
+    const cRow = crosshair.row
+
+    // Vertical crosshair line (full height at the crosshair column)
+    if (cCol >= 0 && cCol < (visibleCandles.length * colWidth)) {
+      for (let row = 0; row < chartHeight; row++) {
+        if (row === cRow) continue // intersection handled below
+        const cell = grid[row][cCol]
+        if (cell && (cell.char === ' ' || cell.char === GRID_DOT)) {
+          grid[row][cCol] = { char: CROSSHAIR_V, color: CHART_COLORS.crosshair, dim: true }
+        }
+      }
+    }
+
+    // Horizontal crosshair line (full width at the crosshair row)
+    if (cRow >= 0 && cRow < chartHeight) {
+      const rowCells = grid[cRow]
+      for (let col = 0; col < rowCells.length; col++) {
+        if (col === cCol) continue // intersection handled below
+        const cell = rowCells[col]
+        if (cell.char === ' ' || cell.char === GRID_DOT) {
+          rowCells[col] = { char: CROSSHAIR_H, color: CHART_COLORS.crosshair, dim: true }
+        }
+      }
+    }
+
+    // Crosshair intersection
+    if (cCol >= 0 && cCol < (visibleCandles.length * colWidth) &&
+        cRow >= 0 && cRow < chartHeight) {
+      grid[cRow][cCol] = { char: CROSSHAIR_X, color: CHART_COLORS.crosshair }
+    }
+  }
+
   // ── Assemble chart lines ──────────────────────────────────────
 
   const lines: ChartLine[] = []
 
-  // Title line
-  const titleLine = buildTitleLine(lastCandle, opts)
+  // Title line — shows hovered candle data when crosshair is active
+  const hoveredCandleIdx = crosshair && crosshair.active
+    ? Math.floor(crosshair.col / colWidth)
+    : -1
+  const titleCandle = (hoveredCandleIdx >= 0 && hoveredCandleIdx < visibleCandles.length)
+    ? visibleCandles[hoveredCandleIdx]
+    : lastCandle
+  const titleLine = buildTitleLine(titleCandle, opts)
   lines.push(titleLine)
 
   // Top border: ┌────────────────────────────────┐
@@ -319,10 +395,17 @@ export function renderCandlestickChart(
     }
 
     // Right border + price indicator
+    const isCrosshairRow = crosshair && crosshair.active && row === crosshair.row
     if (row === currentPriceRow) {
       // Arrow pointing to current price label
       line.push(seg(PRICE_ARROW, CHART_COLORS.priceLine))
       line.push(seg(' ' + label, CHART_COLORS.priceLine))
+    } else if (isCrosshairRow) {
+      // Highlight the crosshair row price on the right axis
+      const crosshairPrice = priceMax - (row / (chartHeight - 1)) * priceRange
+      const crosshairLabel = formatPrice(crosshairPrice, opts.priceDecimals, labelWidth)
+      line.push(seg(CROSSHAIR_H, CHART_COLORS.crosshair, true))
+      line.push(seg(' ' + crosshairLabel, CHART_COLORS.crosshair))
     } else {
       line.push(dimSeg(AXIS_TEE_R + ' ' + label))
     }
@@ -347,7 +430,22 @@ export function renderCandlestickChart(
     }
   }
 
-  return lines
+  // ── Build layout metadata ────────────────────────────────────
+  const layout: ChartLayout = {
+    leftBorderWidth,
+    rightAxisWidth,
+    chartHeight,
+    chartAreaWidth,
+    colWidth,
+    visibleCandleCount: visibleCandles.length,
+    priceMax,
+    priceMin,
+    priceRange,
+    headerLines: 2,  // title line + top border
+    priceDecimals: opts.priceDecimals,
+  }
+
+  return { lines, layout, visibleCandles }
 }
 
 // ── Title line ──────────────────────────────────────────────────────

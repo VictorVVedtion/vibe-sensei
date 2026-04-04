@@ -14,43 +14,10 @@ import type {
   Position,
   Ticker,
 } from './types.js';
-import { InvalidSymbolError } from './ccxt-client.js';
 
 const DEFAULT_INITIAL_BALANCE = 100_000;
 const DEFAULT_FEE_RATE = 0.001;
 const DEFAULT_PRICE = 50_000;
-
-/**
- * Per-symbol default prices for offline/fallback mode.
- * Used when no cached price exists for a known symbol.
- */
-const SYMBOL_DEFAULT_PRICES: Record<string, number> = {
-  'BTC/USDT': 65000,
-  'ETH/USDT': 2000,
-  'SOL/USDT': 80,
-  'BNB/USDT': 300,
-  'XRP/USDT': 0.50,
-  'ADA/USDT': 0.35,
-  'DOGE/USDT': 0.09,
-  'AVAX/USDT': 25,
-  'DOT/USDT': 5,
-  'LINK/USDT': 12,
-  'UNI/USDT': 7,
-  'ATOM/USDT': 8,
-  'LTC/USDT': 70,
-  'NEAR/USDT': 4,
-  'APT/USDT': 8,
-  'ARB/USDT': 0.80,
-  'OP/USDT': 1.50,
-  'SUI/USDT': 1.20,
-  'PEPE/USDT': 0.000008,
-  'MATIC/USDT': 0.50,
-};
-
-/**
- * Set of all valid trading symbols recognized by the paper exchange.
- */
-export const VALID_SYMBOLS = new Set(Object.keys(SYMBOL_DEFAULT_PRICES));
 
 interface PaperConfig {
   initialBalance?: number;
@@ -77,8 +44,10 @@ export class PaperExchange implements ExchangeInterface {
   private prices: Map<string, number>;
   private connected: boolean;
   private readonly feeRate: number;
+  private readonly marketDataSource: ExchangeInterface | null;
+  private marketDataConnected = false;
 
-  constructor(config?: PaperConfig) {
+  constructor(config?: PaperConfig, marketDataSource?: ExchangeInterface) {
     const initialBalance = config?.initialBalance ?? DEFAULT_INITIAL_BALANCE;
     this.feeRate = config?.feeRate ?? DEFAULT_FEE_RATE;
     this.balances = new Map([
@@ -89,6 +58,7 @@ export class PaperExchange implements ExchangeInterface {
     this.positions = new Map();
     this.prices = new Map();
     this.connected = false;
+    this.marketDataSource = marketDataSource ?? null;
   }
 
   async connect(): Promise<void> {
@@ -155,7 +125,7 @@ export class PaperExchange implements ExchangeInterface {
     const result: Position[] = [];
     for (const pos of this.positions.values()) {
       if (pos.quantity <= 0) continue;
-      const currentPrice = this.resolveSymbolPrice(pos.symbol);
+      const currentPrice = this.prices.get(pos.symbol) ?? pos.entryPrice;
       result.push(this.buildPosition(pos, currentPrice));
     }
     return result;
@@ -163,20 +133,52 @@ export class PaperExchange implements ExchangeInterface {
 
   async getCandles(
     symbol: string,
-    _timeframe: string,
+    timeframe: string,
     limit: number,
   ): Promise<Candle[]> {
     this.ensureConnected();
-    this.validateSymbol(symbol);
+    if (await this.ensureMarketDataConnected()) {
+      try {
+        const candles = await this.marketDataSource!.getCandles(
+          symbol,
+          timeframe,
+          limit,
+        );
+        if (candles.length > 0) {
+          this.prices.set(symbol, candles[candles.length - 1].close);
+          return candles;
+        }
+      } catch {
+        // Fall back to synthetic candles
+      }
+    }
     const price = this.resolveSymbolPrice(symbol);
     return this.generateSyntheticCandles(price, limit);
   }
 
   async getTicker(symbol: string): Promise<Ticker> {
     this.ensureConnected();
-    this.validateSymbol(symbol);
-    const price = this.resolveSymbolPrice(symbol);
-    return this.buildSyntheticTicker(symbol, price);
+    if (await this.ensureMarketDataConnected()) {
+      try {
+        const ticker = await this.marketDataSource!.getTicker(symbol);
+        this.prices.set(symbol, ticker.last);
+        return ticker;
+      } catch {
+        // Fall back to simulated ticker
+      }
+    }
+    const price = this.prices.get(symbol) ?? DEFAULT_PRICE;
+    const spread = price * 0.0005;
+    return {
+      symbol,
+      last: price,
+      bid: price - spread,
+      ask: price + spread,
+      high: price * 1.02,
+      low: price * 0.98,
+      volume: 1000,
+      timestamp: Date.now(),
+    };
   }
 
   /**
@@ -196,38 +198,22 @@ export class PaperExchange implements ExchangeInterface {
   }
 
   /**
-   * Validate that a symbol is known to the paper exchange.
-   * A symbol is valid if it has a cached price (from updatePrice)
-   * or is in the VALID_SYMBOLS set.
+   * Lazily connect the market data source. Returns true if available.
    */
-  private validateSymbol(symbol: string): void {
-    if (this.prices.has(symbol)) return;
-    if (VALID_SYMBOLS.has(symbol)) return;
-    throw new InvalidSymbolError(symbol);
+  private async ensureMarketDataConnected(): Promise<boolean> {
+    if (!this.marketDataSource) return false;
+    if (this.marketDataConnected) return true;
+    try {
+      await this.marketDataSource.connect();
+      this.marketDataConnected = true;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  /**
-   * Resolve the current price for a symbol.
-   * Priority: cached price > per-symbol default > universal fallback.
-   */
   private resolveSymbolPrice(symbol: string): number {
-    return this.prices.get(symbol)
-      ?? SYMBOL_DEFAULT_PRICES[symbol]
-      ?? DEFAULT_PRICE;
-  }
-
-  private buildSyntheticTicker(symbol: string, price: number): Ticker {
-    const spread = price * 0.0005;
-    return {
-      symbol,
-      last: price,
-      bid: price - spread,
-      ask: price + spread,
-      high: price * 1.02,
-      low: price * 0.98,
-      volume: 1000,
-      timestamp: Date.now(),
-    };
+    return this.prices.get(symbol) ?? DEFAULT_PRICE;
   }
 
   private ensureConnected(): void {
@@ -279,9 +265,7 @@ export class PaperExchange implements ExchangeInterface {
 
   private resolveExecutionPrice(order: Order): number {
     if (order.price != null && order.price > 0) return order.price;
-    return this.prices.get(order.symbol)
-      ?? SYMBOL_DEFAULT_PRICES[order.symbol]
-      ?? DEFAULT_PRICE;
+    return this.prices.get(order.symbol) ?? DEFAULT_PRICE;
   }
 
   private executeFill(order: Order, price: number, quantity: number): void {
@@ -402,7 +386,7 @@ export class PaperExchange implements ExchangeInterface {
 
   private reserveFundsForOrder(order: Order): void {
     if (order.side !== 'buy') return;
-    const price = order.price ?? order.stopPrice ?? this.resolveSymbolPrice(order.symbol);
+    const price = order.price ?? order.stopPrice ?? DEFAULT_PRICE;
     const cost = price * order.quantity;
     const fee = cost * this.feeRate;
     const usdt = this.getOrCreateBalance('USDT');
@@ -417,7 +401,7 @@ export class PaperExchange implements ExchangeInterface {
 
   private releaseFundsForOrder(order: Order): void {
     if (order.side !== 'buy') return;
-    const price = order.price ?? order.stopPrice ?? this.resolveSymbolPrice(order.symbol);
+    const price = order.price ?? order.stopPrice ?? DEFAULT_PRICE;
     const cost = price * order.quantity;
     const fee = cost * this.feeRate;
     const usdt = this.getOrCreateBalance('USDT');

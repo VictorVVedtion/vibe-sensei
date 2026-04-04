@@ -44,5 +44,49 @@ export const CHART_COLORS = {
   priceUp: 'cyan' as const,       // up price numbers
   priceDown: 'magenta' as const,  // down price numbers
   priceLine: 'yellow' as const,   // current price indicator — deep-sea searchlight
+  crosshair: 'yellow' as const,   // crosshair lines
   volume: undefined,               // follows candle color
+}
+
+/**
+ * Crosshair overlay state — describes where the crosshair should render.
+ * Coordinates are in chart-area space (0-indexed from the top-left of the
+ * price grid, not including borders/axis).
+ */
+export interface CrosshairState {
+  /** Column index within the chart grid (0-indexed) */
+  col: number
+  /** Row index within the chart grid (0-indexed) */
+  row: number
+  /** Whether the crosshair is currently active/visible */
+  active: boolean
+}
+
+/**
+ * Layout metadata returned by the render engine so the interactive
+ * component can map terminal coordinates to chart coordinates.
+ */
+export interface ChartLayout {
+  /** Number of columns used by the left border (always 1) */
+  leftBorderWidth: number
+  /** Width of the right axis area (border + space + label) */
+  rightAxisWidth: number
+  /** Number of rows in the price chart area */
+  chartHeight: number
+  /** Width of the chart content area in terminal columns */
+  chartAreaWidth: number
+  /** Column width per candle (1 or 2) */
+  colWidth: number
+  /** Number of visible candles */
+  visibleCandleCount: number
+  /** Price at the top of the chart */
+  priceMax: number
+  /** Price at the bottom of the chart */
+  priceMin: number
+  /** Total price range (priceMax - priceMin) */
+  priceRange: number
+  /** Number of title lines before the chart grid (title + top border) */
+  headerLines: number
+  /** Price decimal precision */
+  priceDecimals: number
 }

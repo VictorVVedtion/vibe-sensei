@@ -1,40 +1,45 @@
-/**
- * TradingView Charting Library — Vibe Sensei dark theme overrides.
- * These styles target the TradingView widget iframe's parent container
- * and any exposed customizable elements.
- */
-
-/* ── Chart container ── */
-
-#tv_chart_container {
+/* Chart panel wrapper styles */
+.chart-panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
+  background: #131722;
+  overflow: hidden;
 }
 
-#tv_chart_container iframe {
-  border: none !important;
+.chart-container {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
 }
 
-/* ── Override TradingView header bar ── */
-
-.chart-controls-bar {
-  background: #0D1117 !important;
-  border-bottom: 1px solid #002B0E !important;
+.chart-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 24px;
+  border: 1px solid #FF003C;
+  background: rgba(13, 17, 23, 0.95);
+  color: #FF003C;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  text-align: center;
+  max-width: 80%;
 }
 
-/* ── Loading state inside chart container ── */
+.chart-error h3 {
+  color: #FF003C;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
 
-.chart-container .loading-indicator {
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+.chart-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   color: #00FF41;
-}
-
-/* ── Remove border from chart panel when TradingView widget is active ── */
-
-.chart-panel {
-  border: none;
-}
-
-.chart-panel .chart-container {
-  border: none;
+  font-size: 12px;
 }

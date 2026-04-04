@@ -109,7 +109,7 @@ function GuardianInfo() {
         <Text> ({info.rarity} {info.stars})</Text>
       </Text>
       {info.quote && (
-        <Text dimColor>   &quot;{info.quote}&quot;</Text>
+        <Text dimColor>    &quot;{info.quote}&quot;</Text>
       )}
       {balance !== null && (
         <Text>{"[$]"} Paper: {balance} USDT</Text>

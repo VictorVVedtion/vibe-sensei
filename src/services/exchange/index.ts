@@ -1,7 +1,7 @@
 /**
  * Exchange service factory.
  * Returns a PaperExchange for paper mode (default) or CcxtClient for live trading.
- * Paper mode injects a read-only Binance CCXT client for real market prices.
+ * Market data sourced from Hyperliquid (no CCXT needed for read-only data).
  */
 
 export { CcxtClient } from './ccxt-client.js';
@@ -12,6 +12,7 @@ export {
   RateLimitError,
   NetworkError,
 } from './ccxt-client.js';
+export { HyperliquidClient } from './hyperliquid-client.js';
 export { PaperExchange } from './paper-trading.js';
 export type {
   Balance,
@@ -30,24 +31,21 @@ export type {
 
 import type { ExchangeConfig, ExchangeInterface } from './types.js';
 import { CcxtClient } from './ccxt-client.js';
+import { HyperliquidClient } from './hyperliquid-client.js';
 import { PaperExchange } from './paper-trading.js';
 
 /**
- * Create a read-only CCXT client for public market data.
- * Uses OKX public API (no API key required) for getTicker and getCandles.
- * Connection is deferred — PaperExchange connects lazily on first use.
+ * Create the market data source — Hyperliquid direct API (no CCXT).
+ * Used by PaperExchange for real candle/ticker data.
  */
 function createMarketDataSource(): ExchangeInterface {
-  return new CcxtClient({
-    mode: 'live',
-    exchange: 'okx',
-  });
+  return new HyperliquidClient();
 }
 
 /**
  * Create an exchange instance based on configuration.
  * Defaults to paper trading mode when no config is provided.
- * Paper mode receives a OKX market data source for real prices.
+ * Paper mode uses Hyperliquid as the market data source for real prices.
  */
 export function createExchange(config?: ExchangeConfig): ExchangeInterface {
   const resolvedConfig: ExchangeConfig = config ?? { mode: 'paper' };
@@ -56,6 +54,5 @@ export function createExchange(config?: ExchangeConfig): ExchangeInterface {
     return new CcxtClient(resolvedConfig);
   }
 
-  const marketData = createMarketDataSource();
-  return new PaperExchange(undefined, marketData);
+  return new PaperExchange(undefined, createMarketDataSource());
 }
