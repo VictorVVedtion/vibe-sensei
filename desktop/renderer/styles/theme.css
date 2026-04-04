@@ -1,5 +1,5 @@
-/* Vibe Sensei Desktop — Abyss color palette theme */
-/* Deep ocean bioluminescent trading terminal */
+/* Vibe Sensei Desktop — Dark theme */
+/* TradingView Charting Library handles its own controls and OHLC display */
 
 /* ── Chart Panel ── */
 
@@ -8,102 +8,18 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: #0A1628;
-  color: #E2E4ED;
+  background: #131722;
+  color: #d1d4dc;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   overflow: hidden;
-}
-
-/* ── Controls Bar ── */
-
-.chart-controls {
-  background: #0F1924;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border-bottom: 1px solid #253550;
-  flex-shrink: 0;
-}
-
-.chart-controls .logo {
-  font-size: 14px;
-  font-weight: 700;
-  color: #00D4FF;
-  margin-right: 8px;
-  white-space: nowrap;
-}
-
-.chart-controls .separator {
-  width: 1px;
-  height: 24px;
-  background: #253550;
-  flex-shrink: 0;
-}
-
-/* ── Symbol Selector ── */
-
-.symbol-select {
-  background: #182233;
-  color: #E2E4ED;
-  border: 1px solid #253550;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-family: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  outline: none;
-}
-
-.symbol-select:hover {
-  border-color: #00D4FF;
-}
-
-.symbol-select:focus {
-  border-color: #00D4FF;
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
-}
-
-/* ── Timeframe Buttons ── */
-
-.tf-group {
-  display: flex;
-  gap: 4px;
-}
-
-.tf-btn {
-  background: #182233;
-  color: #E2E4ED;
-  border: 1px solid #253550;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-
-.tf-btn:hover {
-  background: #253550;
-  border-color: #354565;
-}
-
-.tf-btn.active {
-  background: #00D4FF;
-  border-color: #00D4FF;
-  color: #0A1628;
-  font-weight: 600;
 }
 
 /* ── Loading Indicator ── */
 
 .loading-indicator {
-  color: #00D4FF;
-  font-size: 12px;
-  margin-left: auto;
+  color: #00FF41;
+  font-size: 14px;
   opacity: 0;
-  transition: opacity 0.2s;
 }
 
 .loading-indicator.visible {
@@ -116,7 +32,7 @@
   flex: 1;
   min-height: 0;
   position: relative;
-  background: #0A1628;
+  background: #131722;
 }
 
 .chart-container .error-overlay {
@@ -124,9 +40,9 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(10, 22, 40, 0.95);
-  border: 1px solid #FF4D6A;
-  border-radius: 8px;
+  background: rgba(13, 17, 23, 0.95);
+  border: 1px solid #FF003C;
+  border-radius: 0;
   padding: 24px 32px;
   text-align: center;
   max-width: 400px;
@@ -134,65 +50,13 @@
 }
 
 .chart-container .error-overlay h3 {
-  color: #FF4D6A;
+  color: #FF003C;
   margin-bottom: 8px;
   font-size: 14px;
 }
 
 .chart-container .error-overlay p {
-  color: #7B8AA0;
+  color: #008F11;
   font-size: 12px;
   line-height: 1.5;
-}
-
-/* ── OHLC Info Bar ── */
-
-.ohlc-bar-panel {
-  background: #0F1924;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  border-top: 1px solid #253550;
-  flex-shrink: 0;
-  font-size: 12px;
-}
-
-.ohlc-bar-panel .price-info {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.ohlc-bar-panel .symbol-label {
-  color: #7B8AA0;
-}
-
-.ohlc-bar-panel .last-price {
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.ohlc-bar-panel .last-price.up {
-  color: #00E5A0;
-}
-
-.ohlc-bar-panel .last-price.down {
-  color: #FF4D6A;
-}
-
-.ohlc-bar-panel .ohlc-values {
-  display: flex;
-  gap: 10px;
-  color: #7B8AA0;
-  font-size: 11px;
-}
-
-.ohlc-bar-panel .ohlc-values span {
-  white-space: nowrap;
-}
-
-.ohlc-bar-panel .ohlc-values .label {
-  color: #7B8AA0;
 }
