@@ -45,9 +45,8 @@ import { useMainLoopModel } from '../../hooks/useMainLoopModel.js';
 import { renderModelSetting } from '../../utils/model/model.js';
 const LEFT_PANEL_MAX_WIDTH = 50;
 
-// Guardian welcome info — dynamically loaded to avoid hard dependency on buddy modules.
-// Also provides guardian data for the Clawd banner via useGuardianData hook.
-function useGuardianData() {
+// Guardian welcome info — dynamically loaded to avoid hard dependency on buddy modules
+function GuardianInfo() {
   const [info, setInfo] = useState<{
     name: string;
     rarity: string;
@@ -100,16 +99,20 @@ function useGuardianData() {
     })();
   }, []);
 
-  return { info, balance };
-}
-
-function GuardianInfo({ info, balance }: { info: { name: string; rarity: string; stars: string; quote: string } | null; balance: string | null }) {
   if (!info) return null;
 
   return (
     <Box flexDirection="column" paddingLeft={2}>
+      <Text>
+        <Text>{"[*]"} Guardian: </Text>
+        <Text bold>{info.name}</Text>
+        <Text> ({info.rarity} {info.stars})</Text>
+      </Text>
       {info.quote && (
         <Text dimColor>   &quot;{info.quote}&quot;</Text>
+      )}
+      {balance !== null && (
+        <Text>{"[$]"} Paper: {balance} USDT</Text>
       )}
     </Box>
   );
@@ -117,7 +120,6 @@ function GuardianInfo({ info, balance }: { info: { name: string; rarity: string;
 
 export function LogoV2() {
   const $ = _c(94);
-  const guardianData = useGuardianData();
   const activities = getRecentActivitySync();
   const username = getGlobalConfig().oauthAccount?.displayName ?? "";
   const {
@@ -310,7 +312,7 @@ export function LogoV2() {
     }
     let t23;
     if ($[29] !== t18) {
-      t23 = <>{t11}{t12}{t13}{t14}{t15}{t16}{t17}<GuardianInfo info={guardianData.info} balance={guardianData.balance} />{t18}{t19}{t20}{t21}{t22}</>;
+      t23 = <>{t11}{t12}{t13}{t14}{t15}{t16}{t17}<GuardianInfo />{t18}{t19}{t20}{t21}{t22}</>;
       $[29] = t18;
       $[30] = t23;
     } else {
@@ -351,7 +353,7 @@ export function LogoV2() {
     }
     let t12;
     if ($[34] === Symbol.for("react.memo_cache_sentinel")) {
-      t12 = <Box marginY={1}><Clawd guardianName={guardianData.info?.name} guardianRarity={guardianData.info?.rarity} balance={guardianData.balance ?? undefined} /></Box>;
+      t12 = <Box marginY={1}><Clawd /></Box>;
       $[34] = t12;
     } else {
       t12 = $[34];
@@ -398,7 +400,7 @@ export function LogoV2() {
       t18 = $[42];
       t19 = $[43];
     }
-    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze><GuardianInfo info={guardianData.info} balance={guardianData.balance} />{t14}{t15}{t16}{t17}{t18}{t19}</>;
+    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze><GuardianInfo />{t14}{t15}{t16}{t17}{t18}{t19}</>;
   }
   const welcomeMessage_0 = formatWelcomeMessage(username);
   const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
@@ -442,7 +444,7 @@ export function LogoV2() {
   }
   let t19;
   if ($[48] === Symbol.for("react.memo_cache_sentinel")) {
-    t19 = <Clawd guardianName={guardianData.info?.name} guardianRarity={guardianData.info?.rarity} balance={guardianData.balance ?? undefined} />;
+    t19 = <Clawd />;
     $[48] = t19;
   } else {
     t19 = $[48];
@@ -587,7 +589,7 @@ export function LogoV2() {
   }
   let t41;
   if ($[90] !== t28 || $[91] !== t35 || $[92] !== t36) {
-    t41 = <>{t28}<GuardianInfo info={guardianData.info} balance={guardianData.balance} />{t29}{t30}{t31}{t32}{t33}{t34}{t35}{t36}{t37}{t38}{t39}{t40}</>;
+    t41 = <>{t28}<GuardianInfo />{t29}{t30}{t31}{t32}{t33}{t34}{t35}{t36}{t37}{t38}{t39}{t40}</>;
     $[90] = t28;
     $[91] = t35;
     $[92] = t36;

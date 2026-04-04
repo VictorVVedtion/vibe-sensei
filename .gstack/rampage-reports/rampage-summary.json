@@ -1,0 +1,34 @@
+{
+  "project": "vibe-sensei",
+  "timestamp": "2026-04-03T20:30:00Z",
+  "duration_seconds": 480,
+  "intensity": "standard",
+  "surfaces": ["api", "cli", "web"],
+  "overall_resilience": 89,
+  "per_surface": {
+    "api": {
+      "score": 85,
+      "coverage_pct": 100,
+      "journeys_total": 5,
+      "journeys_walked": 5,
+      "findings": { "critical": 0, "high": 2, "medium": 4, "low": 4 }
+    },
+    "cli": {
+      "score": 86,
+      "coverage_pct": 75,
+      "journeys_total": 4,
+      "journeys_walked": 3,
+      "findings": { "critical": 0, "high": 1, "medium": 2, "low": 0 }
+    },
+    "web": {
+      "score": 96,
+      "coverage_pct": 67,
+      "journeys_total": 3,
+      "journeys_walked": 2,
+      "findings": { "critical": 0, "high": 0, "medium": 0, "low": 1 }
+    }
+  },
+  "total_findings": { "critical": 0, "high": 3, "medium": 7, "low": 5 },
+  "personas_used": ["impatient", "confused", "explorer", "multitasker", "edge_case", "abandoner", "speedrunner"],
+  "verdict": "PASS"
+}

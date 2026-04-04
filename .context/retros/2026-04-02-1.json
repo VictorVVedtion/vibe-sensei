@@ -1,0 +1,35 @@
+{
+  "date": "2026-04-02",
+  "window": "7d",
+  "metrics": {
+    "commits": 54,
+    "contributors": 1,
+    "prs_merged": 0,
+    "insertions": 7250,
+    "deletions": 4203,
+    "net_loc": 3047,
+    "test_loc": 0,
+    "test_ratio": 0,
+    "active_days": 2,
+    "sessions": 4,
+    "deep_sessions": 2,
+    "avg_session_minutes": 38,
+    "loc_per_session_hour": 2850,
+    "feat_pct": 0.20,
+    "fix_pct": 0.07,
+    "peak_hour": 17,
+    "ai_assisted_commits": 39,
+    "sprints_completed": 24
+  },
+  "authors": {
+    "VictorVVedtion": {
+      "commits": 54,
+      "insertions": 7250,
+      "deletions": 4203,
+      "test_ratio": 0,
+      "top_area": "src/buddy/"
+    }
+  },
+  "streak_days": 1,
+  "tweetable": "Week of Mar 26: 54 commits, +7.2k LOC, 24 sprints shipped in 2 days, AI-assisted 72%"
+}
