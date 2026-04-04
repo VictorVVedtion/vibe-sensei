@@ -72,7 +72,7 @@
 }
 
 .panel-sidebar ::-webkit-scrollbar-thumb:hover {
-  background: #354565;
+  background: #004D1A;
 }
 
 /* ── Dividers ── */
@@ -232,7 +232,7 @@
 }
 
 .status-bar .connection-dot.connected {
-  background: #00E5A0;
+  background: #20C20E;
   box-shadow: 0 0 4px rgba(0, 229, 160, 0.4);
 }
 
@@ -243,7 +243,7 @@
 }
 
 .status-bar .connection-dot.disconnected {
-  background: #FF4D6A;
+  background: #FF003C;
   box-shadow: 0 0 4px rgba(255, 77, 106, 0.4);
 }
 
@@ -281,11 +281,11 @@
 }
 
 .status-bar .last-price-val.up {
-  color: #00E5A0;
+  color: #20C20E;
 }
 
 .status-bar .last-price-val.down {
-  color: #FF4D6A;
+  color: #FF003C;
 }
 
 /* ── PTY Reconnect Spinner ── */

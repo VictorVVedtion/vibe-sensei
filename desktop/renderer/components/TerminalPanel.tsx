@@ -161,7 +161,7 @@ function TerminalOverlay({
       <div style={overlayCardStyle}>
         {overlay.kind === 'disconnected' && (
           <>
-            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FF003C', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
             <div style={{ color: '#008F11', fontSize: 12 }}>
@@ -172,7 +172,7 @@ function TerminalOverlay({
 
         {overlay.kind === 'reconnecting' && (
           <>
-            <div style={{ color: '#FFBB33', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FFEA00', fontSize: 14, fontWeight: 600 }}>
               Reconnecting...
             </div>
             <div style={{ color: '#008F11', fontSize: 12 }}>
@@ -184,7 +184,7 @@ function TerminalOverlay({
 
         {overlay.kind === 'failed' && (
           <>
-            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FF003C', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
             <div style={{ color: '#008F11', fontSize: 12 }}>

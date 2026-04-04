@@ -23,7 +23,7 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 40, color: '#FF4D6A', background: '#0D1117', height: '100vh' }}>
+        <div style={{ padding: 40, color: '#FF003C', background: '#0D1117', height: '100vh' }}>
           <h1>Something went wrong</h1>
           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {this.state.error?.message}
