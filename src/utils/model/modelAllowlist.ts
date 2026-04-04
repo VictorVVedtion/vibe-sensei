@@ -98,6 +98,12 @@ function familyHasSpecificEntries(
  * 3. Full model IDs ("claude-opus-4-5-20251101") — exact match only
  */
 export function isModelAllowed(model: string): boolean {
+  // Non-Anthropic models bypass allowlist
+  try {
+    const { isNonAnthropicModel } = require('../../services/api/providers/validate.js')
+    if (isNonAnthropicModel(model)) return true
+  } catch { /* providers module not available */ }
+
   const settings = getSettings_DEPRECATED() || {}
   const { availableModels } = settings
   if (!availableModels) {

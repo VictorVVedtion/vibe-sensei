@@ -27,6 +27,13 @@ export async function validateModel(
     return { valid: false, error: 'Model name cannot be empty' }
   }
 
+  // Multi-provider: validate non-Anthropic models against catalog + credentials
+  try {
+    const { validateMultiProviderModel } = await import('../../services/api/providers/validate.js')
+    const multiResult = validateMultiProviderModel(normalizedModel)
+    if (multiResult !== null) return multiResult
+  } catch { /* providers module not available */ }
+
   // Check against availableModels allowlist before any API call
   if (!isModelAllowed(normalizedModel)) {
     return {
