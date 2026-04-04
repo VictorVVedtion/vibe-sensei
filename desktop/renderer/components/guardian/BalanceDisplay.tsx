@@ -38,7 +38,7 @@ const ASSET_COLORS: Record<string, string> = {
 }
 
 function getAssetColor(currency: string): string {
-  return ASSET_COLORS[currency.toUpperCase()] ?? '#00D4FF'
+  return ASSET_COLORS[currency.toUpperCase()] ?? '#00FF41'
 }
 
 export function BalanceDisplay({ balances, totalPortfolioValue }: BalanceDisplayProps) {
@@ -125,7 +125,7 @@ const styles: Record<string, React.CSSProperties> = {
   totalValue: {
     fontSize: 18,
     fontWeight: 700,
-    color: '#00E5A0',
+    color: '#00FF41',
     fontVariantNumeric: 'tabular-nums',
   },
   list: {

@@ -24,8 +24,8 @@ function formatPct(n: number): string {
 
 function PositionRow({ position }: { position: TradingPosition }) {
   const isProfit = position.unrealizedPnl >= 0
-  const pnlColor = isProfit ? '#00E5A0' : '#FF4D6A'
-  const sideColor = position.side === 'buy' ? '#00D4FF' : '#FF4D6A'
+  const pnlColor = isProfit ? '#00FF41' : '#FF003C'
+  const sideColor = position.side === 'buy' ? '#00FF41' : '#FF003C'
 
   return (
     <div
@@ -118,7 +118,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   count: {
     fontSize: 10,
-    color: '#00D4FF',
+    color: '#00FF41',
     background: '#182233',
     borderRadius: 0,
     padding: '1px 6px',

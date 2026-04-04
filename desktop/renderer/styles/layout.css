@@ -103,7 +103,7 @@
 
 .divider-horizontal:hover::after,
 .divider-horizontal.active::after {
-  background: #00D4FF;
+  background: #00FF41;
 }
 
 .divider-vertical {
@@ -121,7 +121,7 @@
 
 .divider-vertical:hover::after,
 .divider-vertical.active::after {
-  background: #00D4FF;
+  background: #00FF41;
 }
 
 /* ── Title Bar ── */
@@ -153,7 +153,7 @@
 .title-bar .app-name {
   font-size: 13px;
   font-weight: 600;
-  color: #00D4FF;
+  color: #00FF41;
   letter-spacing: 0.5px;
 }
 
@@ -229,7 +229,7 @@
 }
 
 .status-bar .connection-dot.connected {
-  background: #00E5A0;
+  background: #00FF41;
 }
 
 .status-bar .connection-dot.reconnecting {
@@ -238,7 +238,7 @@
 }
 
 .status-bar .connection-dot.disconnected {
-  background: #FF4D6A;
+  background: #FF003C;
 }
 
 @keyframes pulse-dot {
@@ -252,7 +252,7 @@
   border-radius: 0;
   padding: 1px 6px;
   font-size: 10px;
-  color: #00D4FF;
+  color: #00FF41;
   letter-spacing: 0.3px;
 }
 
@@ -275,11 +275,11 @@
 }
 
 .status-bar .last-price-val.up {
-  color: #00E5A0;
+  color: #00FF41;
 }
 
 .status-bar .last-price-val.down {
-  color: #FF4D6A;
+  color: #FF003C;
 }
 
 /* ── PTY Reconnect Spinner ── */

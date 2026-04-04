@@ -34,25 +34,25 @@ export function TerminalPanel() {
       theme: {
         background: '#0A1628',
         foreground: '#E2E4ED',
-        cursor: '#00D4FF',
+        cursor: '#00FF41',
         cursorAccent: '#0A1628',
         selectionBackground: '#253550',
         selectionForeground: '#ffffff',
         black: '#0A1628',
-        red: '#FF4D6A',
-        green: '#00E5A0',
+        red: '#FF003C',
+        green: '#00FF41',
         yellow: '#FFBB33',
         blue: '#6B4CF0',
         magenta: '#ff79c6',
-        cyan: '#00D4FF',
+        cyan: '#00FF41',
         white: '#E2E4ED',
         brightBlack: '#7B8AA0',
-        brightRed: '#FF4D6A',
-        brightGreen: '#00E5A0',
+        brightRed: '#FF003C',
+        brightGreen: '#00FF41',
         brightYellow: '#FFBB33',
         brightBlue: '#6B4CF0',
         brightMagenta: '#ff92df',
-        brightCyan: '#00D4FF',
+        brightCyan: '#00FF41',
         brightWhite: '#ffffff',
       },
     })
@@ -162,7 +162,7 @@ function TerminalOverlay({
       <div style={overlayCardStyle}>
         {overlay.kind === 'disconnected' && (
           <>
-            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FF003C', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
             <div style={{ color: '#7B8AA0', fontSize: 12 }}>
@@ -185,7 +185,7 @@ function TerminalOverlay({
 
         {overlay.kind === 'failed' && (
           <>
-            <div style={{ color: '#FF4D6A', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FF003C', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
             <div style={{ color: '#7B8AA0', fontSize: 12 }}>
@@ -208,7 +208,7 @@ function Spinner() {
         width: 20,
         height: 20,
         border: '2px solid #253550',
-        borderTopColor: '#00D4FF',
+        borderTopColor: '#00FF41',
         borderRadius: '50%',
         animation: 'pty-spinner 0.8s linear infinite',
       }}
@@ -240,7 +240,7 @@ const overlayCardStyle: React.CSSProperties = {
 }
 
 const reconnectButtonStyle: React.CSSProperties = {
-  background: '#00D4FF',
+  background: '#00FF41',
   color: '#0A1628',
   border: 'none',
   borderRadius: 0,

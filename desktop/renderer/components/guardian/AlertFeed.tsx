@@ -16,7 +16,7 @@ const SEVERITY_COLORS: Record<AlertSeverity, string> = {
   info: '#7B8AA0',
   warning: '#FFBB33',
   critical: '#D4A843',
-  emergency: '#FF4D6A',
+  emergency: '#FF003C',
 }
 
 function formatTimestamp(ts: number): string {
@@ -103,7 +103,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   count: {
     fontSize: 10,
-    color: '#00D4FF',
+    color: '#00FF41',
     background: '#182233',
     borderRadius: 0,
     padding: '1px 6px',
