@@ -178,6 +178,7 @@ function buildSnapshot(): GuardianDisplaySnapshot {
   // Signal Priority Chain: reaction > attentive > idle (with context)
   let displayText: string
   let fading: boolean
+  let context: IdleContext | undefined
 
   if (hasReaction) {
     // Priority 1: Active reaction from guardian-observer (bright)
@@ -189,7 +190,7 @@ function buildSnapshot(): GuardianDisplaySnapshot {
     fading = false
   } else {
     // Priority 3-6: Idle quotes with context chain (care > time > regime > generic)
-    const context = buildIdleContext()
+    context = buildIdleContext()
     displayText = getIdleQuote(archetype, tick, context)
 
     if (context.isIdle10min || context.isLateNight || context.regime === 'compressing' || context.regime === 'expanding') {

@@ -87,9 +87,10 @@ function LiveChart({
       if (myGen !== currentGeneration) return
       if (fresh.length > 0) {
         setCandles(fresh)
+        // Only reset fails on actual data received
+        setConsecutiveFails(0)
       }
-      // Success: reset backoff and consecutive fails
-      setConsecutiveFails(0)
+      // Empty response: don't reset fails — exchange may be returning empty for delisted/auth issues
       if (currentIntervalMs.current !== BASE_REFRESH_MS) {
         currentIntervalMs.current = BASE_REFRESH_MS
         resetInterval(myGen)
