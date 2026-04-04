@@ -160,12 +160,12 @@ export function ChartPanel({
     })
 
     const candleSeries = chart.addCandlestickSeries({
-      upColor: '#00E5A0',
-      downColor: '#FF4D6A',
-      borderUpColor: '#00E5A0',
-      borderDownColor: '#FF4D6A',
-      wickUpColor: '#00E5A0',
-      wickDownColor: '#FF4D6A',
+      upColor: 'transparent',        // Hollow green
+      downColor: '#FF003C',          // Solid red
+      borderUpColor: '#00FF41',      // Green border
+      borderDownColor: '#FF003C',    // Red border
+      wickUpColor: '#00FF41',        // Green wick
+      wickDownColor: '#FF003C',      // Red wick
     })
 
     const volumeSeries = chart.addHistogramSeries({
