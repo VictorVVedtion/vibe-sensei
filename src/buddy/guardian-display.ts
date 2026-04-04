@@ -13,8 +13,11 @@
 import { useSyncExternalStore } from 'react'
 import { getCompanion } from './companion.js'
 import { getMasterArchetype } from './persona.js'
-import { getIdleQuote } from './idle-quotes.js'
+import { getIdleQuote, type IdleContext } from './idle-quotes.js'
 import { inferEmotionFromReaction } from '../services/companion/expression.js'
+import { getLatestRegime } from '../services/market/regime.js'
+import { getLastActivityTime } from '../utils/activityManager.js'
+import { getRegimePollerStatus } from '../services/companion/regime-poller.js'
 import type { Emotion } from './sprite-atlas.js'
 import type { Master } from './types.js'
 
@@ -52,6 +55,65 @@ let snapshot: GuardianDisplaySnapshot = buildSnapshot()
 
 // ── Internal helpers ─────────────────────────────────────────────────
 
+/**
+ * Map a regime type to an emotion color for the guardian's face.
+ *   compressing/volatile → red (worried)
+ *   expanding → yellow (stern/alert)
+ *   trending/ranging/default → undefined (use rarity color)
+ */
+function regimeToColor(regime?: string): string | undefined {
+  switch (regime) {
+    case 'compressing':
+    case 'volatile':
+      return 'red'
+    case 'expanding':
+      return 'yellow'
+    case 'trending_up':
+    case 'trending_down':
+    case 'ranging':
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Build the idle context from current time, regime, and user activity.
+ */
+function buildIdleContext(): IdleContext {
+  const hour = new Date().getHours()
+  const dayOfWeek = new Date().getDay()
+
+  // Resolve regime: try the poller's tracked symbol first, then BTC/USDT fallback
+  let regimeType: string | undefined
+  try {
+    const pollerStatus = getRegimePollerStatus()
+    const symbol = pollerStatus.symbol || 'BTC/USDT'
+    const regimeData = getLatestRegime(symbol)
+    regimeType = regimeData?.regime
+  } catch {
+    // Regime unavailable — leave undefined
+  }
+
+  // User idle detection
+  let isIdle10min = false
+  try {
+    const lastActivity = getLastActivityTime()
+    if (lastActivity > 0) {
+      isIdle10min = Date.now() - lastActivity > 600_000
+    }
+  } catch {
+    // Activity manager unavailable
+  }
+
+  return {
+    regime: regimeType,
+    isLateNight: hour >= 0 && hour < 5,
+    isMorning: hour >= 5 && hour < 10,
+    isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+    isIdle10min,
+  }
+}
+
 function buildSnapshot(): GuardianDisplaySnapshot {
   const companion = getCompanion()
   const archetype = companion
@@ -60,14 +122,31 @@ function buildSnapshot(): GuardianDisplaySnapshot {
 
   const hasReaction = reaction !== undefined
   const bubbleAge = hasReaction ? tick - reactionTick : 0
+
+  // Build context for idle quote selection
+  const context = hasReaction ? undefined : buildIdleContext()
+
   const displayText = hasReaction
     ? reaction!
-    : getIdleQuote(archetype, tick)
+    : getIdleQuote(archetype, tick, context)
 
-  const fading = hasReaction && bubbleAge >= BUBBLE_SHOW - FADE_WINDOW
+  // Three-tier brightness:
+  //   Active reaction: fading controlled by bubbleAge (starts bright, fades)
+  //   Care/lateNight/volatile regime: fading=false (medium brightness)
+  //   Normal idle: fading=true (dim)
+  let fading: boolean
+  if (hasReaction) {
+    fading = bubbleAge >= BUBBLE_SHOW - FADE_WINDOW
+  } else if (context?.isIdle10min || context?.isLateNight || context?.regime === 'compressing' || context?.regime === 'expanding') {
+    fading = false // medium brightness for attention-worthy states
+  } else {
+    fading = true // normal idle dim
+  }
 
   const emotion: Emotion = inferEmotionFromReaction(reaction)
-  const emotionColor: string | undefined = undefined // Sprint 76 — regime colors
+  const emotionColor: string | undefined = hasReaction
+    ? undefined  // reactions use default rarity color
+    : regimeToColor(context?.regime)
 
   return { displayText, fading, emotionColor, emotion }
 }

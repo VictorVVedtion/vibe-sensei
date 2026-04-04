@@ -140,6 +140,14 @@ export class ActivityManager {
   }
 
   /**
+   * Get the timestamp (ms since epoch) of the last recorded user activity.
+   * Returns 0 if no activity has been recorded yet.
+   */
+  getLastActivityTime(): number {
+    return this.lastUserActivityTime
+  }
+
+  /**
    * Gets current activity states (mainly for testing/debugging)
    */
   getActivityStates(): {
@@ -162,3 +170,10 @@ export class ActivityManager {
 
 // Export singleton instance
 export const activityManager = ActivityManager.getInstance()
+
+/**
+ * Get the timestamp (ms since epoch) of the last recorded user activity.
+ */
+export function getLastActivityTime(): number {
+  return ActivityManager.getInstance().getLastActivityTime()
+}

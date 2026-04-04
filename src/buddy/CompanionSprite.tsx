@@ -208,8 +208,8 @@ export function CompanionSprite(): React.ReactNode {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick intentionally captured at reaction-change, not tracked
   }, [reaction, setAppState]);
-  // Guardian display singleton — shared text, fading, emotion
-  const { displayText, fading, emotion: singletonEmotion } = useGuardianDisplay();
+  // Guardian display singleton — shared text, fading, emotion, emotionColor
+  const { displayText, fading, emotionColor, emotion: singletonEmotion } = useGuardianDisplay();
 
   // Sync AppState.companionReaction into the guardian-display singleton
   useEffect(() => { pushReaction(reaction); }, [reaction]);
@@ -229,7 +229,7 @@ export function CompanionSprite(): React.ReactNode {
   const minimalistFaceRow = (
     <Box>
       {petting && <Text color="autoAccept">{figures.heart} </Text>}
-      <Text bold color={color}>
+      <Text bold color={emotionColor || color}>
         {renderFace(companion)}
       </Text>
       <Text dimColor={!focused} color={focused ? color : undefined} inverse={focused}>
