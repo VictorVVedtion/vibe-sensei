@@ -32,7 +32,7 @@ export function startUdfServer(port: number): Promise<void> {
 
     // Serve the web frontend from the web/ directory at the project root.
     // pathResolve walks up from this compiled file to the project root.
-    const projectRoot = pathResolve(import.meta.dirname ?? __dirname, '..', '..', '..');
+    const projectRoot = process.cwd();
     const webDir = pathResolve(projectRoot, 'web');
     app.use(express.static(webDir));
 
@@ -43,6 +43,11 @@ export function startUdfServer(port: number): Promise<void> {
     const datafeedsDir = pathResolve(projectRoot, 'desktop', 'charting_library', 'datafeeds');
     app.use('/charting_library', express.static(chartingLibDir));
     app.use('/datafeeds', express.static(datafeedsDir));
+
+    // Custom 404 handler — must be AFTER all static file serving
+    app.use((_req: any, res: any) => {
+      res.status(404).json({ error: 'Not found' });
+    });
 
     server = app.listen(port, () => {
       console.log(`UDF server listening on http://localhost:${port}`);

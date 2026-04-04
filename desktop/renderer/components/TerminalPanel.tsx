@@ -32,28 +32,27 @@ export function TerminalPanel() {
         "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
       lineHeight: 1.2,
       theme: {
-        background: '#0A1628',
-        foreground: '#E2E4ED',
+        background: '#0D1117',
+        foreground: '#00FF41',
         cursor: '#00FF41',
-        cursorAccent: '#0A1628',
-        selectionBackground: '#253550',
-        selectionForeground: '#ffffff',
-        black: '#0A1628',
+        cursorAccent: '#0D1117',
+        selectionBackground: '#004D1A',
+        black: '#0D1117',
         red: '#FF003C',
-        green: '#00FF41',
-        yellow: '#FFBB33',
-        blue: '#6B4CF0',
-        magenta: '#ff79c6',
-        cyan: '#00FF41',
-        white: '#E2E4ED',
-        brightBlack: '#7B8AA0',
+        green: '#20C20E',
+        yellow: '#FFEA00',
+        blue: '#005F8F',
+        magenta: '#8F008F',
+        cyan: '#008F8F',
+        white: '#008F11',
+        brightBlack: '#002B0E',
         brightRed: '#FF003C',
         brightGreen: '#00FF41',
-        brightYellow: '#FFBB33',
-        brightBlue: '#6B4CF0',
-        brightMagenta: '#ff92df',
-        brightCyan: '#00FF41',
-        brightWhite: '#ffffff',
+        brightYellow: '#FFEA00',
+        brightBlue: '#00B3FF',
+        brightMagenta: '#D900FF',
+        brightCyan: '#00FFFF',
+        brightWhite: '#B2FFC8',
       },
     })
 
@@ -140,7 +139,6 @@ export function TerminalPanel() {
           height: '100%',
           padding: 4,
           opacity: overlay.kind !== 'none' ? 0.3 : 1,
-
         }}
       />
       {overlay.kind !== 'none' && (
@@ -165,7 +163,7 @@ function TerminalOverlay({
             <div style={{ color: '#FF003C', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
-            <div style={{ color: '#7B8AA0', fontSize: 12 }}>
+            <div style={{ color: '#008F11', fontSize: 12 }}>
               Attempting to reconnect...
             </div>
           </>
@@ -173,10 +171,10 @@ function TerminalOverlay({
 
         {overlay.kind === 'reconnecting' && (
           <>
-            <div style={{ color: '#FFBB33', fontSize: 14, fontWeight: 600 }}>
+            <div style={{ color: '#FFEA00', fontSize: 14, fontWeight: 600 }}>
               Reconnecting...
             </div>
-            <div style={{ color: '#7B8AA0', fontSize: 12 }}>
+            <div style={{ color: '#008F11', fontSize: 12 }}>
               Attempt {overlay.attempt} of 5
             </div>
             <Spinner />
@@ -188,7 +186,7 @@ function TerminalOverlay({
             <div style={{ color: '#FF003C', fontSize: 14, fontWeight: 600 }}>
               Terminal disconnected (exit code {overlay.exitCode})
             </div>
-            <div style={{ color: '#7B8AA0', fontSize: 12 }}>
+            <div style={{ color: '#008F11', fontSize: 12 }}>
               Auto-restart exhausted after 5 attempts
             </div>
             <button onClick={onReconnect} style={reconnectButtonStyle}>
@@ -207,7 +205,7 @@ function Spinner() {
       style={{
         width: 20,
         height: 20,
-        border: '2px solid #253550',
+        border: '2px solid #002B0E',
         borderTopColor: '#00FF41',
         borderRadius: '50%',
         animation: 'pty-spinner 0.8s linear infinite',
@@ -228,8 +226,8 @@ const overlayContainerStyle: React.CSSProperties = {
 }
 
 const overlayCardStyle: React.CSSProperties = {
-  background: 'rgba(10, 22, 40, 0.85)',
-  border: '1px solid #253550',
+  background: 'rgba(13, 17, 23, 0.85)',
+  border: '1px solid #002B0E',
   borderRadius: 0,
   padding: '24px 32px',
   display: 'flex',
@@ -241,7 +239,7 @@ const overlayCardStyle: React.CSSProperties = {
 
 const reconnectButtonStyle: React.CSSProperties = {
   background: '#00FF41',
-  color: '#0A1628',
+  color: '#0D1117',
   border: 'none',
   borderRadius: 0,
   padding: '8px 20px',

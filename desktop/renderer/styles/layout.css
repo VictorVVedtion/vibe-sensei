@@ -10,8 +10,8 @@
   width: 100%;
   height: 100vh;
   overflow: hidden;
-  background: #0A1628;
-  color: #E2E4ED;
+  background: #0D1117;
+  color: #00FF41;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
 }
 
@@ -33,23 +33,24 @@
 }
 
 .panel.focused {
-  outline: 1px solid #00FF41;
+  box-shadow: inset 0 0 0 2px rgba(0, 255, 65, 0.6);
 }
 
 .panel:focus {
-  outline: 1px solid #00FF41;
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(0, 255, 65, 0.6);
 }
 
 .panel-terminal {
-  background: #0A1628;
+  background: #0D1117;
 }
 
 .panel-chart {
-  background: #0A1628;
+  background: #0D1117;
 }
 
 .panel-sidebar {
-  background: #0F1924;
+  background: #0A0F0A;
   display: flex;
   flex-direction: column;
 }
@@ -65,19 +66,19 @@
 }
 
 .panel-sidebar ::-webkit-scrollbar-thumb {
-  background: #253550;
+  background: #002B0E;
   border-radius: 0;
 }
 
 .panel-sidebar ::-webkit-scrollbar-thumb:hover {
-  background: #354565;
+  background: #004D1A;
 }
 
 /* ── Dividers ── */
 
 .divider {
   position: relative;
-  background: #253550;
+  background: #002B0E;
   z-index: 10;
   flex-shrink: 0;
 }
@@ -97,7 +98,7 @@
   bottom: 0;
   left: 1px;
   width: 2px;
-  background: #253550;
+  background: #002B0E;
 }
 
 .divider-horizontal:hover::after,
@@ -115,7 +116,7 @@
   right: 0;
   top: 1px;
   height: 2px;
-  background: #253550;
+  background: #002B0E;
 }
 
 .divider-vertical:hover::after,
@@ -129,8 +130,8 @@
   display: flex;
   align-items: center;
   height: 38px;
-  background: #0F1924;
-  border-bottom: 1px solid #253550;
+  background: #0A0F0A;
+  border-bottom: 1px solid #002B0E;
   -webkit-app-region: drag;
   user-select: none;
   flex-shrink: 0;
@@ -177,19 +178,19 @@
   height: 38px;
   background: transparent;
   border: none;
-  color: #7B8AA0;
+  color: #008F11;
   cursor: pointer;
   font-size: 10px;
 }
 
 .window-control-btn:hover {
-  background: #182233;
-  color: #E2E4ED;
+  background: #0D150D;
+  color: #00FF41;
 }
 
 .window-control-btn.close:hover {
-  background: #c42b1c;
-  color: #ffffff;
+  background: #FF003C;
+  color: #0D1117;
 }
 
 .window-control-btn svg {
@@ -204,11 +205,11 @@
   display: flex;
   align-items: center;
   height: 24px;
-  background: #0F1924;
-  border-top: 1px solid #253550;
+  background: #0A0F0A;
+  border-top: 1px solid #002B0E;
   padding: 0 12px;
   font-size: 11px;
-  color: #7B8AA0;
+  color: #008F11;
   gap: 16px;
   flex-shrink: 0;
   user-select: none;
@@ -228,11 +229,11 @@
 }
 
 .status-bar .connection-dot.connected {
-  background: #00FF41;
+  background: #20C20E;
 }
 
 .status-bar .connection-dot.reconnecting {
-  background: #FFBB33;
+  background: #FFEA00;
   animation: pulse-dot 1.5s infinite;
 }
 
@@ -246,8 +247,8 @@
 }
 
 .status-bar .mode-badge {
-  background: #182233;
-  border: 1px solid #253550;
+  background: #0D150D;
+  border: 1px solid #002B0E;
   border-radius: 0;
   padding: 1px 6px;
   font-size: 10px;
@@ -257,16 +258,16 @@
 
 .status-bar .shortcuts {
   margin-left: auto;
-  color: #253550;
+  color: #008F11;
   font-size: 10px;
 }
 
 .status-bar .shortcut-key {
-  color: #7B8AA0;
+  color: #008F11;
 }
 
 .status-bar .pair-info {
-  color: #7B8AA0;
+  color: #008F11;
 }
 
 .status-bar .last-price-val {
@@ -274,7 +275,7 @@
 }
 
 .status-bar .last-price-val.up {
-  color: #00FF41;
+  color: #20C20E;
 }
 
 .status-bar .last-price-val.down {

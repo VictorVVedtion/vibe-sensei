@@ -34,20 +34,20 @@ import { PaperExchange } from './paper-trading.js';
 
 /**
  * Create a read-only CCXT client for public market data.
- * Uses Binance public API (no API key required) for getTicker and getCandles.
+ * Uses OKX public API (no API key required) for getTicker and getCandles.
  * Connection is deferred — PaperExchange connects lazily on first use.
  */
 function createMarketDataSource(): ExchangeInterface {
   return new CcxtClient({
     mode: 'live',
-    exchange: 'binance',
+    exchange: 'okx',
   });
 }
 
 /**
  * Create an exchange instance based on configuration.
  * Defaults to paper trading mode when no config is provided.
- * Paper mode receives a Binance market data source for real prices.
+ * Paper mode receives a OKX market data source for real prices.
  */
 export function createExchange(config?: ExchangeConfig): ExchangeInterface {
   const resolvedConfig: ExchangeConfig = config ?? { mode: 'paper' };

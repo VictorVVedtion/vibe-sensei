@@ -1,8 +1,8 @@
 # Project Plan: Vibe Sensei — Trading Terminal
 
 ## Plan Meta
-- Total Phases: 12
-- Total Sprints: 62
+- Total Phases: 13
+- Total Sprints: 63
 - Created: 2026-04-01T17:45:00Z
 - Last Updated: 2026-04-03T09:00:00Z
 - Current Phase: 11
@@ -517,3 +517,82 @@ Phase 10 complete. CEO Review + Eng Review approved. Karpathy LLM Knowledge Base
 - Priority: P1
 - Timeout: 240
 - Description: Create src/services/knowledge/morning-brief.ts and milestones.ts. Morning Brief: first startup of day (check last-brief-date), Guardian generates 5-line personalized briefing from wiki. Content: current regime + historical win rate, behavioral pattern reminder, discipline streak count, advice accuracy highlight. Guardian personality voice via persona.ts. Milestones: thresholds at 10/50/100/250 events, 7/14/30 day discipline streaks, first pattern discovery, first wiki compile. Track achieved milestones in state. Guardian celebrates in character. Visual via companionReaction.
+
+## Phase 12: Knowledge Base Hardening (Autoplan Review Fixes)
+
+### Gate
+Phase 11 complete. Autoplan re-review identified 4 critical bugs in shipped knowledge base code. CEO + Eng dual voices (Claude + Codex) both confirmed findings.
+
+### Sprint 65: Knowledge Base Security + Data Integrity Fixes
+- Agent: opus
+- Dependencies: Sprint 62
+- Status: MERGED
+- Priority: P0
+- Timeout: 240
+- Description: Fix 4 critical issues found by autoplan review in src/services/knowledge/. (1) Path traversal via LLM output: in compiler.ts writeArticle(), validate that join(WIKI_DIR, path) starts with WIKI_DIR before writing. Reject paths containing '..' or absolute paths. (2) Incremental compile data loss: in compiler.ts compile(), the template mode compileWithTemplate() regenerates canonical files (patterns/overview.md, self/profile.md, INDEX.md) from only new events, erasing historical data. Fix: always pass ALL events to compileWithTemplate(), not just newEvents. For Gemini mode compileWithLLM(), pass existing wiki content as context so the LLM can merge rather than overwrite. (3) API key in URL: in compiler.ts, auditor.ts, and morning-brief.ts, move the Gemini API key from URL query parameter (?key=) to x-goog-api-key HTTP header. Extract shared callGemini() helper to a new file src/services/knowledge/gemini-client.ts to eliminate the 3x DRY violation. (4) File sort order after rotation: in event-store.ts listEventFiles(), the lexicographic sort puts YYYY-MM-02.jsonl before YYYY-MM.jsonl because '-' < '.'. Fix: sort base files before their rotated suffixes within each month prefix.
+
+### Sprint 66: API + CLI Resilience Fixes (Rampage Findings)
+- Agent: opus
+- Dependencies: none
+- Status: MERGED
+- Priority: P1
+- Timeout: 120
+- Description: Fix 6 issues from rampage chaos test. (1) Screenshot MIME spoofing: validate PNG magic bytes on POST /api/screenshot. (2) NaN timestamp fallthrough: check Number.isNaN() on /history from/to params. (3) Express fingerprint: app.disable('x-powered-by'). (4) Custom 404 handler: JSON instead of Express HTML. (5) Search limit=0 behavior: fix Number(0)||10 falsy bug. (6) Wrong method 404→405.
+
+## Phase 13: Full-Stack Hardening (CSO + E2E + Code Health Audit Fixes)
+
+### Gate
+Phase 12 complete. 4 parallel audits (CSO Security, Trading E2E, Guardian E2E, Code Health) identified 5 HIGH, 16 MEDIUM, 23 LOW findings. Phase 13 addresses all HIGH and actionable MEDIUM issues.
+
+### Sprint 67: Reliability + Security Hardening
+- Agent: opus
+- Dependencies: Sprint 66
+- Status: MERGED
+- Priority: P0
+- Timeout: 180
+- Description: Fix 7 issues from CSO/Trading E2E/Code Health audits. (1) Exchange singleton stale-promise bug — reset connectionPromise on failure. (2) PositionTool/BalanceTool/ChartTool add try/catch around exchange calls. (3) TTS API key from URL to x-goog-api-key header. (4) UDF server bind 127.0.0.1. (5) UDF 500 error message sanitization. (6) diary.json file permissions 0o600. (7) StrategyTool isReadOnly → false.
+
+### Sprint 68: Guardian System Bug Fixes
+- Agent: opus
+- Dependencies: none
+- Status: MERGED
+- Priority: P0
+- Timeout: 180
+- Description: Fix 7 issues from Guardian E2E audit. (1) persona.ts buildDiaryContext accesses non-existent fields → [object Object] garbled output. (2) debate.ts market orders never trigger debates (price=undefined→value=0). (3) Ghost convenience function loses cooldown state. (4) Diary enhanced summary cache uses only length as hash. (5) persona.ts silent catch blocks → add logging. (6) Guardian observer hardcoded companion values. (7) types.ts master count update + duplicate quote fix.
+
+### Sprint 69: Real Market Prices + Symbol Validation
+- Agent: opus
+- Dependencies: none
+- Status: MERGED
+- Priority: P0
+- Timeout: 240
+- Description: Make PaperExchange use real market prices from OKX (CCXT public API). Inject market data source into PaperExchange, delegate getTicker/getCandles to real exchange with graceful fallback. Add symbol validation to reject unknown pairs (InvalidSymbolError). Lazy connection on first use.
+
+### Sprint 70: Desktop Renderer Fix
+- Agent: opus
+- Dependencies: none
+- Status: MERGED
+- Priority: P0
+- Timeout: 240
+- Description: Fix Desktop Electron blank screen. Root causes: (1) Vite base path missing './' → assets didn't load via file://. (2) PTY manager projectRoot off by one directory level. (3) isDev detection wrong for compiled code. (4) PTY spawn error handling missing try-catch.
+
+### Sprint 71: Desktop Design Overhaul (Gemini 3.1 Pro Review)
+- Agent: opus
+- Dependencies: Sprint 70
+- Status: MERGED
+- Priority: P1
+- Timeout: 240
+- Description: Implement Gemini 3.1 Pro design review improvements. (1) Kill all border-radius and box-shadow globally. (2) Enforce abyssal palette — cyan-green #00FFA3 up, magenta #C850C0 down. (3) Discretize risk gauge to ASCII blocks. (4) Compact guardian card. (5) Remove CSS transitions. (6) Tighten spacing. (7) Darker status bar. (8) Tabular numbers. (9) Step animations.
+
+## Phase 14: E2E Bug Fixes (CLI Deep Test Findings)
+
+### Gate
+Phase 13 complete. 68 fine-grained CLI tests found 3 bugs and 3 weak areas. Phase 14 fixes all actionable bugs.
+
+### Sprint 72: CancelOrder Tool + Chart/Research Symbol Validation + Price Fallback
+- Agent: opus
+- Dependencies: Sprint 69
+- Status: MERGED
+- Priority: P1
+- Timeout: 180
+- Description: Fix 3 bugs from E2E deep testing. (1) Create CancelOrderTool: wrap exchange.cancelOrder() as a new tool, register in tools.ts. (2) Add symbol validation to ShowChart and AutoResearch tools — reject unknown symbols instead of showing fake $50K data. (3) Improve price fallback: when market data source fails to connect, block market orders or use per-symbol cached prices instead of universal $50K DEFAULT_PRICE.

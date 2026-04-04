@@ -1035,7 +1035,7 @@ async function run(): Promise<CommanderCommand> {
     }
     */
 
-    /* web端暂停开发
+    // Desktop UDF — 已恢复
     // Desktop mode: auto-start UDF server for the Electron chart panel
     if (process.env.VIBE_SENSEI_DESKTOP === '1' && !(options as { web?: boolean }).web) {
       try {
@@ -1046,7 +1046,7 @@ async function run(): Promise<CommanderCommand> {
         console.error('[!] UDF server failed to start:', (err as Error).message ?? err);
       }
     }
-    */
+    // --- end desktop UDF
     // Ignore "code" as a prompt - treat it the same as no prompt
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});

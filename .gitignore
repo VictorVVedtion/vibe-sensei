@@ -23,3 +23,4 @@ dist/
 desktop/release/
 desktop/dist/
 desktop/resources/bun-cli/
+.gstack/
