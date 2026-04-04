@@ -24,9 +24,11 @@ const DEFAULT_SYMBOL = 'BTC/USDT'
 // ── Module State ───────────────────────────────────────────────────────────
 
 let timer: ReturnType<typeof setInterval> | null = null
+let polling = false // prevent concurrent poll executions
 let lastPoll: Date | null = null
 let currentSymbol: string = DEFAULT_SYMBOL
 let currentRegime: string | null = null
+let diaryInstance: InstanceType<typeof GuardianDiary> | null = null
 
 // ── Primary Symbol Resolution ──────────────────────────────────────────────
 
@@ -46,10 +48,10 @@ async function resolvePrimarySymbol(): Promise<string> {
     // Exchange not connected — fall through
   }
 
-  // 2. Check diary for most recent trade symbol
+  // 2. Check diary for most recent trade symbol (reuse cached instance)
   try {
-    const diary = new GuardianDiary()
-    const recent = diary.getRecentEntries(1)
+    if (!diaryInstance) diaryInstance = new GuardianDiary()
+    const recent = diaryInstance.getRecentEntries(1)
     if (recent.length > 0 && recent[0]!.tradeSymbol) {
       return recent[0]!.tradeSymbol
     }
@@ -64,6 +66,8 @@ async function resolvePrimarySymbol(): Promise<string> {
 // ── Poll Logic ─────────────────────────────────────────────────────────────
 
 async function poll(): Promise<void> {
+  if (polling) return // prevent concurrent polls
+  polling = true
   try {
     const symbol = await resolvePrimarySymbol()
     currentSymbol = symbol
@@ -94,6 +98,8 @@ async function poll(): Promise<void> {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[RegimePoller] poll error: ${msg}`)
+  } finally {
+    polling = false
   }
 }
 
