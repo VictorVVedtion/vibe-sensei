@@ -1,262 +1,250 @@
 # Vibe Sensei
 
-**An AI trading terminal guided by 52 master guardians -- and one ancient octopus from the deep.**
+**AI trading terminal. 56 master guardians. One ancient octopus from the deep.**
 
-Vibe Sensei is a terminal-native trading copilot where historical trading legends, philosophers, and scientists watch your trades from the shadows. Each user is deterministically assigned a master guardian who warns you in character, debates other masters before big moves, and evolves alongside your habits. At the center sits Vane -- a deep-sea sensei octopus wearing a hachimaki (鉢巻) headband, ancient and knowing, who watches from the abyss and speaks only when the current shifts.
+Vibe Sensei is a terminal-native trading copilot where historical trading legends, philosophers, and scientists watch your trades from the shadows. Each user is deterministically assigned a master guardian who warns you in character, debates other masters before big trades, and evolves alongside your habits.
 
-Paper trading sandbox included. 100k USDT starting balance. No real money at risk unless you choose it.
+Paper trading sandbox included. 100K USDT starting balance. Real-time market data from Hyperliquid. No real money at risk unless you choose it.
 
 ## Quick Start
 
 ```bash
-bun install               # Install dependencies
-bun run dev               # Interactive terminal REPL
-bun run dev -- --web      # REPL + TradingView chart UI on :3456
-bun run desktop:dev       # Electron desktop app (dev mode)
-bun run desktop:build mac # Build macOS installer
-bun run build             # Production single-file bundle
+# Install
+bun install
+cd desktop && npm install && npx electron-rebuild -f -w node-pty && cd ..
+
+# CLI (Terminal REPL)
+bun run dev
+
+# Desktop (Electron + TradingView)
+cd desktop
+npm run build:main && npx vite build
+VIBE_SENSEI_DESKTOP=1 VIBE_FORCE_PROD=1 npx electron dist/main/index.js
+
+# Production bundle
+bun run build
 ```
 
-**Requirements:** [Bun](https://bun.sh/) >= 1.3.11, valid API key (Anthropic, Bedrock, or Vertex).
+**Requirements:** [Bun](https://bun.sh/) >= 1.3, valid API key (Anthropic, Bedrock, or Vertex), Node.js >= 18 (for Desktop).
+
+## Two Surfaces
+
+### CLI (Terminal)
+
+The primary interface. A conversational AI REPL where you trade, analyze, and learn with your guardian master.
+
+```
+bun run dev
+```
+
+Features:
+- Natural language trading ("buy 0.1 BTC", "show me ETH chart")
+- Interactive candlestick chart with mouse crosshair, zoom, and pan
+- Guardian personality alerts after every trade
+- Pre-trade gate with 13 risk checks
+- AutoResearch (Karpathy-style iterative analysis)
+- Ghost warnings from crypto's fallen
+
+### Desktop (Electron)
+
+A 3-panel professional trading terminal with TradingView Charting Library.
+
+```
+cd desktop
+npm run build:main && npx vite build
+VIBE_SENSEI_DESKTOP=1 VIBE_FORCE_PROD=1 npx electron dist/main/index.js
+```
+
+Layout:
+- **Terminal** (35%) -- full REPL with guardian interactions
+- **Chart** (65%) -- TradingView Charting Library with indicators, drawing tools, multi-timeframe
+- **Sidebar** -- guardian card, risk gauge, positions, balance, alerts
+- **Status Bar** -- connection, price ticker, paper mode badge
 
 ## Features
 
-- **52 master guardians** -- deterministic assignment per user via seeded PRNG
-- **Desktop app (Electron)** -- 3-panel layout: terminal, chart, and guardian sidebar
-- **Real-time IPC bridge** -- guardian data flows from REPL to sidebar in real time
-- **PTY crash recovery** -- child process crashes are caught and restarted gracefully
-- **28MB optimized bundle** -- production build, down from 37MB
-- **Paper trading sandbox** -- 100k USDT starting balance, CCXT-powered exchange
-- **Real-time risk engine** -- position size and drawdown checks after every trade
-- **Guardian personality system** -- 9 archetypes, 5 stat dimensions, in-character alerts
-- **Cross-guardian consultation** -- ask any of the 52 masters for a second opinion
-- **Adversarial debates** -- two masters argue for and against before big trades
-- **Ghost warnings** -- cautionary apparitions from crypto's fallen (SBF, Do Kwon, 3AC, Newton)
-- **TradingView charts** -- real-time candlestick charts via `--web` flag and UDF server
-- **Trade cards** -- shareable text cards for Twitter/X with box-drawing art
-- **Evolution diary** -- your guardian learns your trading habits over time
-
-## The 52 Masters
-
-Each master is a real historical figure with a known trading philosophy. Your guardian is assigned deterministically from your user ID -- same person, same master, every session.
-
-<details>
-<summary><strong>Legendary (8)</strong> -- ★★★★★</summary>
-
-| Master | Philosophy |
-|--------|-----------|
-| Jesse Livermore | The market is never wrong, opinions are. |
-| George Soros | It's not whether you're right or wrong, but how much you make when right. |
-| Warren Buffett | Rule #1: Never lose money. Rule #2: Never forget Rule #1. |
-| Benjamin Graham | The essence of investment management is the management of risks. |
-| Jim Simons | We don't override the models. The model is the system. |
-| Sun Tzu | Know yourself and know your enemy, a hundred battles without danger. |
-| Satoshi Nakamoto | If you don't believe me or don't get it, I don't have time to convince you. |
-| John von Neumann | If people do not believe that math is simple, it's because they don't realize how complicated life is. |
-
-</details>
-
-<details>
-<summary><strong>Epic (18)</strong> -- ★★★★</summary>
-
-| Master | Archetype |
-|--------|-----------|
-| Paul Tudor Jones | Macro Trader |
-| Stanley Druckenmiller | Macro Trader |
-| Michael Burry | Value Investor |
-| Charlie Munger | Value Investor |
-| Ray Dalio | Quant |
-| Ed Thorp | Quant |
-| Munehisa Homma | Trend Follower |
-| Miyamoto Musashi | Strategist |
-| Nassim Taleb | Philosopher |
-| Elon Musk | First Principles |
-| Peter Thiel | First Principles |
-| Garry Tan | First Principles |
-| Andrej Karpathy | Scientist |
-| Li Ka-shing | Value Investor |
-| Vitalik Buterin | Crypto Native |
-| Alan Turing | Scientist |
-| Benoit Mandelbrot | Scientist |
-| Claude Shannon | Scientist |
-
-</details>
-
-<details>
-<summary><strong>Rare (18)</strong> -- ★★★</summary>
-
-| Master | Archetype |
-|--------|-----------|
-| John Paulson | Macro Trader |
-| Sir John Templeton | Value Investor |
-| Richard Dennis | Trend Follower |
-| Fan Li | Strategist |
-| Lv Buwei | Strategist |
-| Seneca | Philosopher |
-| Laozi | Philosopher |
-| Jeff Bezos | First Principles |
-| Steve Jobs | First Principles |
-| Richard Feynman | Scientist |
-| Hu Xueyan | Strategist |
-| Zeng Guofan | Strategist |
-| Bai Gui | Value Investor |
-| CZ Zhao | Crypto Native |
-| He Yi | Crypto Native |
-| Isaac Newton | Scientist |
-| Albert Einstein | Scientist |
-| Carl F. Gauss | Scientist |
-
-</details>
-
-<details>
-<summary><strong>Uncommon (11)</strong> -- ★★</summary>
-
-| Master | Archetype |
-|--------|-----------|
-| Nicolas Darvas | Trend Follower |
-| Linda Raschke | Trend Follower |
-| Machiavelli | Strategist |
-| Arthur Hayes | Crypto Native |
-| Victor Sperandeo | Macro Trader |
-| Larry Williams | Trend Follower |
-| Zong Qinghou | Value Investor |
-| Shen Wansan | Macro Trader |
-| Zhang Jian | First Principles |
-| Andre Cronje | Crypto Native |
-| Xu Mingxing | Crypto Native |
-
-</details>
-
-<details>
-<summary><strong>Common (1)</strong> -- ★</summary>
-
-| Master | Archetype |
-|--------|-----------|
-| William O'Neil | Trend Follower |
-
-</details>
-
-## Guardian System
-
-Your guardian is assigned via `mulberry32(hash(userId))` -- fully deterministic, no randomness per session.
-
-**5 Stats** drive alert tone and personality:
-
-| Stat | Effect |
-|------|--------|
-| PRECISION | Cites specific numbers, levels, and indicators |
-| PATIENCE | Prefers waiting for the perfect setup |
-| AGGRESSION | Favors bold, concentrated positions |
-| WISDOM | Analyzes calmly and thoroughly before speaking |
-| SASS | Direct and sharp, does not sugarcoat |
-
-**9 Archetypes** define trading philosophy:
-
-`value_investor` `trend_follower` `macro_trader` `quant` `strategist` `philosopher` `first_principles` `crypto_native` `scientist`
-
-Stats are rolled per user based on rarity tier. Higher rarity masters get higher stat floors.
-
-## Trading Tools
+### Trading Tools (8)
 
 | Tool | Description |
 |------|-------------|
-| `PlaceOrder` | Market, limit, and stop-loss orders |
-| `GetPositions` | View all open positions with PnL |
-| `GetBalance` | Check portfolio balance across assets |
+| PlaceOrder | Market, limit, and stop-loss orders |
+| CancelOrder | Cancel open orders by ID |
+| GetPositions | View open positions with unrealized PnL |
+| GetBalance | Portfolio balance across assets |
+| ShowChart | Terminal candlestick chart (interactive) |
+| AutoResearch | Multi-iteration technical analysis |
+| PreTradeGate | 13-check risk gate before trading |
+| RunStrategy | Execute Python trading scripts |
 
-All orders execute in **paper trading mode** by default (safe sandbox with simulated fills). The exchange layer is powered by CCXT.
+### Market Data
 
-## Risk Engine
+Real-time prices from **Hyperliquid** direct REST API (no CCXT middleman):
+- Candlestick OHLCV data via `candleSnapshot`
+- Live prices via `allMids`
+- No API key required (public endpoints)
+- Graceful fallback to per-symbol defaults if offline
 
-The `RiskGuardian` class auto-evaluates after every trade tool call:
+### 56 Master Guardians
 
-| Check | Trigger | Severity |
-|-------|---------|----------|
-| Position Size | Single position > 30% of portfolio | WARNING |
-| Drawdown | Unrealized loss > 10% | WARNING |
-| Drawdown | Unrealized loss > 20% | CRITICAL |
+Each master is a real historical figure with a known trading philosophy. Your guardian is assigned deterministically from your user ID via `mulberry32(hash(userId))`.
 
-Alerts are delivered in your guardian's voice. A high-SASS Nassim Taleb will be blunt; a high-WISDOM Benjamin Graham will be measured. Cooldown policy: max 1 alert per check per 30 seconds.
+<details>
+<summary><strong>Legendary (8)</strong></summary>
 
-**Ghost Warnings** -- when you repeat patterns that destroyed real traders, cautionary ghosts appear:
+Jesse Livermore, George Soros, Warren Buffett, Benjamin Graham, Jim Simons, Sun Tzu, Satoshi Nakamoto, John von Neumann
+</details>
+
+<details>
+<summary><strong>Epic (18)</strong></summary>
+
+Paul Tudor Jones, Stanley Druckenmiller, Michael Burry, Charlie Munger, Ray Dalio, Ed Thorp, Munehisa Homma, Miyamoto Musashi, Nassim Taleb, Elon Musk, Peter Thiel, Garry Tan, Andrej Karpathy, Li Ka-shing, Vitalik Buterin, Alan Turing, Benoit Mandelbrot, Claude Shannon
+</details>
+
+<details>
+<summary><strong>Rare (18) + Uncommon (11) + Common (1)</strong></summary>
+
+30 more masters across value investors, trend followers, macro traders, quants, strategists, philosophers, crypto natives, and scientists.
+</details>
+
+**9 Archetypes:** value_investor, trend_follower, macro_trader, quant, strategist, philosopher, first_principles, crypto_native, scientist
+
+**5 Stats:** PRECISION, PATIENCE, AGGRESSION, WISDOM, SASS -- rolled per user based on rarity tier.
+
+### Risk Engine
+
+**Pre-Trade Gate (13 checks):**
+
+| Check | Type |
+|-------|------|
+| Circuit Breaker: Daily Loss | Hard block at >5% equity loss |
+| Circuit Breaker: Frequency | >20 trades in 60 minutes |
+| Circuit Breaker: Escalating | 3+ losses, each larger |
+| Portfolio Heat | Position risk aggregation |
+| Single Position Risk | >10% of equity |
+| Concentration | >50% in one asset |
+| Regime Alignment | Market regime vs order direction |
+| Volume Confirmation | Liquidity check |
+| Stop-Loss Defined | Warns if no stop-loss |
+| Risk-Reward Ratio | Minimum 1.5:1 |
+| Revenge Trade | Trading too soon after a loss |
+| Daily Loss Limit | >5% daily drawdown |
+| ATR Stop-Loss Advisor | Suggests ATR-based stop price |
+
+**8 Ghost Warnings** -- cautionary apparitions triggered by dangerous patterns:
 
 | Ghost | Trigger |
 |-------|---------|
 | Sam Bankman-Fried | Missing risk controls |
 | Do Kwon | Ignoring alerts (arrogance) |
-| Su Zhu / 3AC | Excessive leverage |
-| Isaac Newton | FOMO buying at the top |
+| Su Zhu / 3AC | Leverage >3x |
+| Isaac Newton | FOMO buying after >20% pump |
+| LTCM | Correlation collapse (3+ positions) |
+| Lehman Brothers | Cascade liquidation risk |
+| Enron | Concentrated loser (>60% portfolio) |
+| SVB | Duration mismatch (underwater hold) |
 
-Only 1 ghost per session to prevent alert fatigue.
+### Knowledge Base
+
+Karpathy-inspired learning system at `~/.vibe-sensei/`:
+- **Event Store** -- JSONL event persistence (trades, alerts, ghosts, regime changes)
+- **Wiki Compiler** -- LLM-compiled trading knowledge articles (Obsidian format)
+- **Query Router** -- injects relevant wiki context into guardian alerts
+- **Morning Brief** -- daily personalized briefing from your guardian
+- **Self-Audit** -- periodic wiki health check and pattern discovery
 
 ## Architecture
 
-### Terminal (CLI)
-
 ```
 src/
-  buddy/           # Guardian system (52 masters, risk engine, personas)
-    types.ts       # Master roster, rarities, quotes, stats
-    guardian.ts    # RiskGuardian class
-    persona.ts     # Archetype system, tone modifiers
-    companion.ts   # Deterministic assignment via mulberry32
-    debate.ts      # Adversarial guardian debates
-    consultation.ts # Cross-guardian second opinions
-    ghost-warnings.ts # Cautionary apparitions
-    diary.ts       # Evolution diary (habit tracking)
-    trade-card.ts  # Shareable trade cards
-    checks/        # Risk check implementations
-  tools/           # Trading tools (OrderTool, PositionTool, BalanceTool)
+  entrypoints/cli.tsx    -- CLI entry point
+  screens/REPL.tsx       -- Interactive REPL (React + Ink)
+  buddy/                 -- Guardian system
+    types.ts             -- 56 masters, rarities, quotes, stats
+    guardian.ts           -- RiskGuardian class
+    persona.ts            -- 9 archetypes, tone modifiers
+    companion.ts          -- Deterministic assignment
+    debate.ts             -- Adversarial debates
+    ghost-warnings.ts     -- 8 ghost triggers + cooldown
+    diary.ts              -- Evolution diary
+  tools/                  -- 8 trading tools
   services/
-    exchange/      # CCXT exchange abstraction (paper + live)
-    chart/         # TradingView UDF server + web frontend
-  screens/         # Terminal REPL (React + Ink)
-  components/      # Terminal UI components
-```
+    exchange/
+      paper-trading.ts    -- Paper exchange with real market data
+      hyperliquid-client.ts -- Direct Hyperliquid REST API
+      singleton.ts        -- Exchange singleton with retry
+    chart/
+      udf-server.ts       -- TradingView UDF protocol server
+      index.ts            -- Express + static file serving
+    knowledge/            -- Event store, compiler, query router
+    trading/              -- Guardian observer, regime, circuit breaker
+  components/
+    CandlestickChart/     -- Interactive terminal chart (mouse support)
+    LogoV2/               -- Welcome banner + branding
 
-### Desktop App (Electron)
-
+desktop/
+  main/
+    index.ts              -- Electron window + IPC
+    pty-manager.ts        -- PTY child process management
+    preload.ts            -- Context bridge
+  renderer/
+    components/
+      Layout.tsx           -- 3-panel resizable layout
+      ChartPanel.tsx       -- TradingView Charting Library widget
+      TerminalPanel.tsx    -- xterm.js terminal
+      GuardianSidebar.tsx  -- Sidebar container
+      guardian/            -- MasterCard, RiskGauge, Positions, Balance, Alerts
+    styles/
+      theme.css            -- Matrix green color system
+      layout.css           -- Panel layout + status bar
+  charting_library/        -- TradingView Charting Library (cloned)
 ```
-Electron Main → PTY Manager → Bun REPL (child process)
-             → IPC Router  → Renderer (Terminal + Chart + Guardian Sidebar)
-             → Desktop Bridge (JSONL file protocol)
-```
-
-The desktop app wraps the terminal REPL in a 3-panel Electron shell. The PTY manager spawns the Bun process and handles crash recovery -- if the child process dies, it restarts automatically without losing the conversation. Guardian state flows from the REPL through a JSONL file bridge into the sidebar, where your master's personality, alerts, and trade evaluations render in real time.
 
 ### Stack
 
-- **Runtime:** Bun
-- **UI:** React + Ink (terminal rendering)
-- **Desktop:** Electron (3-panel layout with IPC bridge)
-- **Charts:** TradingView Lightweight Charts + UDF data server
-- **Exchange:** CCXT (paper mode default, live mode supported)
-- **Build:** `bun run build` produces a 28MB optimized single-file bundle
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Bun |
+| CLI UI | React + Ink (terminal rendering) |
+| Desktop | Electron + xterm.js + TradingView Charting Library |
+| Market Data | Hyperliquid REST API (direct, no CCXT) |
+| Exchange | CCXT (paper mode default, live mode supported) |
+| Charts (Desktop) | TradingView Charting Library (full version) |
+| Charts (CLI) | Unicode candlestick with mouse interaction |
+| Knowledge | JSONL + LLM wiki compiler |
+| Build | Bun bundler (~28MB single-file) |
 
-## Design System -- Abyss
+## Design System
 
-Vibe Sensei's visual identity draws from the deep ocean. The palette is built around the idea that wisdom lives in darkness -- and the creatures who thrive there carry their own light.
+Matrix green on dark black. Nuclear submarine sonar room meets The Matrix.
 
-| Element | Value | Notes |
-|---------|-------|-------|
-| Background | `#0D1117` | Dark green-black, the color of a CRT terminal |
-| Accent | `#00FF41` | Matrix phosphor green, the glow of the terminal |
-| Aesthetic | Japanese-inspired | Clean lines, deliberate spacing, quiet authority |
-| Mascot | Vane | Deep-sea sensei octopus with hachimaki (鉢巻) headband |
+| Token | Hex | Usage |
+|-------|-----|-------|
+| Primary | `#00FF41` | Matrix phosphor green |
+| Background | `#0D1117` | Dark green-black |
+| Up/Profit | `#26a69a` | TradingView green (chart) |
+| Down/Loss | `#ef5350` | TradingView red (chart) |
+| Dim | `#008F11` | Secondary text |
+| Border | `#002B0E` | Panel dividers |
 
-Vane is not a monster. Not a mascot in the playful sense. Vane is an ancient, many-armed intelligence who has watched markets rise and fall from the deepest trench -- dignified, patient, and knowing. The hachimaki headband is the signature element: a mark of focus and resolve, borrowed from Japanese tradition, worn by one who has chosen their purpose.
+The octopus logo is the product brand identity. Guardians are the user's personal AI mentors -- separate concepts, never mixed.
 
-The Abyss palette carries through the desktop app, the terminal UI, charts, and all guardian-facing surfaces. Dark backgrounds let the bioluminescent accents do the talking -- data glows, alerts pulse, and the sensei watches from the deep.
-
-## Commands
+## Development
 
 ```bash
-bun install               # Install dependencies
-bun run dev               # Interactive REPL
-bun run dev -- --web      # REPL + chart server on :3456
-bun run desktop:dev       # Electron desktop app (dev mode)
-bun run desktop:build mac # Build macOS installer
-bun run build             # Production bundle to dist/cli.js
+# CLI development
+bun run dev
+
+# Desktop development (3 steps)
+cd desktop
+npm run build:main        # Compile Electron main process
+npx vite build            # Build renderer
+VIBE_SENSEI_DESKTOP=1 VIBE_FORCE_PROD=1 npx electron dist/main/index.js
+
+# Production build (CLI only)
+bun run build             # Output: dist/cli.js (~28MB)
+
+# After changing desktop native modules
+cd desktop && npx electron-rebuild -f -w node-pty
 ```
 
 ## License
