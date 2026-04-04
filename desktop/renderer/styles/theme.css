@@ -62,7 +62,7 @@
 
 .symbol-select:focus {
   border-color: #00D4FF;
-  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.25);
+  outline: 1px solid #00FF41;
 }
 
 /* ── Timeframe Buttons ── */
