@@ -466,6 +466,10 @@ function renderQuestion() {
 }
 
 function selectOption(opt, btnEl) {
+  // Prevent double-tap during flash delay
+  const optionsEl = document.getElementById('options');
+  optionsEl.querySelectorAll('.option-btn').forEach(b => { b.onclick = null; });
+
   if (navigator.vibrate) navigator.vibrate(15);
   btnEl.classList.add('selected');
 
