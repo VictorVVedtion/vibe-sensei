@@ -34,7 +34,8 @@ jobs:
       - name: Deploy to Vercel
         id: deploy
         run: |
-          URL=$(vercel deploy --prod --token=$VERCEL_TOKEN 2>&1)
+          OUTPUT=$(vercel deploy --prod --token=$VERCEL_TOKEN 2>&1)
+          URL=$(echo "$OUTPUT" | grep -oP 'https://[^\s]+\.vercel\.app' | tail -1)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "Deployed to: $URL"
         working-directory: jcti
