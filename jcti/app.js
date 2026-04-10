@@ -374,15 +374,19 @@ function renderStats(data) {
   // Type ranking
   const types = data.type_distribution || [];
   const maxCount = types.length ? types[0].count : 1;
+  document.getElementById('type-count').textContent = types.length + ' 种';
   const rankEl = document.getElementById('type-ranking');
   rankEl.innerHTML = types.map((t, i) => {
     const pct = data.total ? Math.round(t.count / data.total * 100) : 0;
     const barW = Math.round(t.count / maxCount * 100);
+    const posClass = i === 0 ? 'top-1' : i === 1 ? 'top-2' : i === 2 ? 'top-3' : 'rest';
+    const barClass = i === 0 ? 'bar-1' : i === 1 ? 'bar-2' : i === 2 ? 'bar-3' : 'bar-rest';
     return `<div class="rank-row">
-      <span class="rank-pos">${i + 1}</span>
+      <span class="rank-pos ${posClass}">${i + 1}</span>
       <span class="rank-code">${t.jcti_type}</span>
       <span class="rank-name">${t.type_name}</span>
-      <div class="rank-bar-wrap"><div class="rank-bar" style="width:0%"  data-w="${barW}"></div></div>
+      <div class="rank-bar-wrap"><div class="rank-bar ${barClass}" style="width:0%" data-w="${barW}"></div></div>
+      <span class="rank-count">${t.count}</span>
       <span class="rank-pct">${pct}%</span>
     </div>`;
   }).join('');
