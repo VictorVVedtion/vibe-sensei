@@ -1047,12 +1047,6 @@ body::after {
   border-radius: 20px;
   letter-spacing: 1px;
 }
-.codex-badge {
-  font-size: 10px;
-  color: var(--color-green);
-  margin-left: 4px;
-}
-
 /* Filters */
 .codex-filters {
   display: flex;
@@ -1252,28 +1246,3 @@ body::after {
   margin-top: 6px;
 }
 
-/* Locked card */
-.codex-card.locked {
-  opacity: 0.45;
-  cursor: default;
-}
-.codex-card.locked:hover {
-  transform: none;
-  background: var(--bg-card);
-  box-shadow: none;
-}
-.codex-card.locked .codex-sprite {
-  filter: brightness(0) invert(0.2);
-}
-.codex-card.locked .codex-code {
-  color: var(--color-text-muted);
-}
-.codex-card.locked .codex-name { color: var(--color-text-muted); }
-.codex-card.locked .codex-name-en,
-.codex-card.locked .codex-master,
-.codex-card.locked .codex-stars { visibility: hidden; }
-.codex-locked-label {
-  font-size: 20px;
-  display: block;
-  margin: 4px 0;
-}

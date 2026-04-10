@@ -32,11 +32,11 @@ const JCTI_TYPES = [
   { code: 'LUCK', name: '玄学操盘手', nameEn: 'The Mystic', desc: '你的交易逻辑超出了人类认知。也许你应该去买彩票', master: 'Satoshi Nakamoto', masterKey: 'satoshi_nakamoto', rarity: '传奇', rarityClass: 'legendary', archetype: '链上原住民', quote: "If you don't believe me or don't get it, I don't have time to convince you.", motto: '你的交易逻辑连 AI 都分析不出来。建议去买彩票。', vector: [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1] },
   { code: 'BEAR', name: '做空永动机', nameEn: 'The Perma-Bear', desc: '永远看空，偶尔对一次就吹一辈子。简历只写那一次', master: 'Michael Burry', masterKey: 'michael_burry', rarity: '史诗', rarityClass: 'epic', archetype: '逆向投资者', quote: 'The people who caught it looked at the data.', motto: '你做空的股票涨了 300%，但你只记得那次赚 20% 的。', vector: [0,0,0, 1,2,0, 2,2,2, 0,1,0, 2,2,0] },
   { code: 'TWIT', name: '推特操盘手', nameEn: 'The Tweet Trader', desc: '马斯克发推你就买，删推你就卖。你的券商是 Twitter', master: 'Elon Musk', masterKey: 'elon_musk', rarity: '史诗', rarityClass: 'epic', archetype: '第一性原理', quote: 'Boil things down to the most fundamental truths and reason up from there.', motto: '你的交易信号就是马斯克的发推频率。', vector: [2,2,2, 2,0,2, 0,2,0, 2,2,1, 0,0,2] },
-  { code: 'LUNA', name: '稳定币信仰', nameEn: 'The Stablecoin Believer', desc: '"算法稳定币是未来"——你说这话的时候 UST 还在脱锚', master: 'Do Kwon', masterKey: 'do_kwon', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: "95% are going to die. The art is knowing whether you are in the 5%.", motto: '你信的"稳定"币，稳定地归零了。', vector: [1,2,2, 2,1,1, 0,2,0, 2,2,2, 0,0,2] },
+  { code: 'LUNA', name: '稳定币信仰', nameEn: 'The Stablecoin Believer', desc: '"算法稳定币是未来"——你说这话的时候 UST 还在脱锚', master: 'Do Kwon', masterKey: 'do_kwon', rarity: '罕见', rarityClass: 'uncommon', archetype: '链上原住民', quote: "95% are going to die. The art is knowing whether you are in the 5%.", motto: '你信的"稳定"币，稳定地归零了。', vector: [1,2,2, 2,1,1, 0,2,0, 2,2,2, 0,0,2] },
   { code: 'MAXI', name: '比特币原教旨', nameEn: 'The Bitcoin Maximalist', desc: '卖房卖车卖公司，all in BTC。跌了是买入机会，涨了是信仰验证', master: 'Michael Saylor', masterKey: 'michael_saylor', rarity: '稀有', rarityClass: 'rare', archetype: '价值投资者', quote: 'There is no second best — concentrate, then convict.', motto: '你眼里只有 BTC，其他都是 shitcoin。包括法币。', vector: [0,0,2, 0,0,0, 1,0,2, 2,2,2, 2,2,2] },
   { code: 'DEFI', name: 'DeFi 科学家', nameEn: 'The DeFi Scientist', desc: '看白皮书比 K 线多，APY 三位数但本金已经归零', master: 'Vitalik Buterin', masterKey: 'vitalik_buterin', rarity: '史诗', rarityClass: 'epic', archetype: '链上原住民', quote: "Crypto isn't about price, it's about changing coordination.", motto: '你的收益率是 2000% APY，你的本金是 0。', vector: [1,1,1, 1,0,1, 2,0,2, 2,1,1, 0,2,0] },
-  { code: 'SWAP', name: '短线闪电侠', nameEn: 'The Scalper', desc: '一天交易 47 次，手续费比收益高。交易所的 VIP 客户', master: 'Larry Williams', masterKey: 'larry_williams', rarity: '普通', rarityClass: 'uncommon', archetype: '趋势追踪者', quote: 'Successful trading is about managing risk, not predicting the future.', motto: '你给交易所贡献的手续费可以买一辆车了。', vector: [2,2,2, 2,0,2, 1,1,0, 1,0,0, 0,0,1] },
-  { code: 'TRAP', name: '阴谋论大师', nameEn: 'The Conspiracy Theorist', desc: '"这是庄家洗盘！""这也是庄家洗盘！"涨跌都是庄家的错', master: 'Machiavelli', masterKey: 'machiavelli', rarity: '普通', rarityClass: 'uncommon', archetype: '哲学家', quote: 'Never was anything great achieved without danger.', motto: '在你眼里，全世界都是庄家，只有你是韭菜。等等……', vector: [1,1,2, 1,1,1, 0,2,0, 1,1,1, 2,2,2] },
+  { code: 'SWAP', name: '短线闪电侠', nameEn: 'The Scalper', desc: '一天交易 47 次，手续费比收益高。交易所的 VIP 客户', master: 'Larry Williams', masterKey: 'larry_williams', rarity: '罕见', rarityClass: 'uncommon', archetype: '趋势追踪者', quote: 'Successful trading is about managing risk, not predicting the future.', motto: '你给交易所贡献的手续费可以买一辆车了。', vector: [2,2,2, 2,0,2, 1,1,0, 1,0,0, 0,0,1] },
+  { code: 'TRAP', name: '阴谋论大师', nameEn: 'The Conspiracy Theorist', desc: '"这是庄家洗盘！""这也是庄家洗盘！"涨跌都是庄家的错', master: 'Machiavelli', masterKey: 'machiavelli', rarity: '罕见', rarityClass: 'uncommon', archetype: '哲学家', quote: 'Never was anything great achieved without danger.', motto: '在你眼里，全世界都是庄家，只有你是韭菜。等等……', vector: [1,1,2, 1,1,1, 0,2,0, 1,1,1, 2,2,2] },
   { code: 'FED', name: '美联储解读员', nameEn: 'The Fed Watcher', desc: '鲍威尔打个喷嚏你都能解读出加息信号。议息会议是你的超级碗', master: 'Jerome Powell', masterKey: 'powell', rarity: '稀有', rarityClass: 'rare', archetype: '宏观交易者', quote: 'Higher for longer is the lesson of every premature pivot.', motto: '你对美联储的研究比对自己账户的研究深 10 倍。', vector: [0,0,1, 0,1,0, 2,2,2, 0,0,0, 2,2,0] },
   { code: 'DIAM', name: '逆向投资者', nameEn: 'The Contrarian', desc: '别人都看好你就看空，别人恐惧你就贪婪。偶尔封神但通常亏麻', master: 'Peter Thiel', masterKey: 'peter_thiel', rarity: '史诗', rarityClass: 'epic', archetype: '第一性原理', quote: 'Competition is for losers. Find the secret.', motto: '你的逆向思维偶尔封神，大部分时间在逆向亏钱。', vector: [0,0,1, 1,1,0, 2,2,2, 1,1,0, 2,2,0] },
   { code: 'CALC', name: '概率计算器', nameEn: 'The Probability Calculator', desc: '算了三天凯利公式，最后本金不够买一手。理论满分实战零分', master: 'Ed Thorp', masterKey: 'ed_thorp', rarity: '史诗', rarityClass: 'epic', archetype: '量化大师', quote: 'You have to be willing to bet when the odds are in your favor.', motto: '你的 Excel 模型有 47 个 sheet，你的账户只有 47 块。', vector: [0,0,0, 0,0,0, 2,2,2, 0,0,0, 0,2,0] },
@@ -556,7 +556,7 @@ function showResult(precalculatedResult) {
   document.getElementById('guardian-name').textContent = t.master;
 
   const rarityEl = document.getElementById('guardian-rarity');
-  rarityEl.textContent = (t.rarity === '传奇' ? '★★★★★' : t.rarity === '史诗' ? '★★★★' : t.rarity === '稀有' ? '★★★' : t.rarity === '普通' ? '★★' : '★') + ' ' + t.rarity + '级';
+  rarityEl.textContent = (t.rarity === '传奇' ? '★★★★★' : t.rarity === '史诗' ? '★★★★' : t.rarity === '稀有' ? '★★★' : t.rarity === '罕见' ? '★★' : '★') + ' ' + t.rarity + '级';
   rarityEl.className = 'guardian-rarity ' + t.rarityClass;
 
   document.getElementById('guardian-archetype').textContent = t.archetype;
@@ -755,7 +755,6 @@ function filterCodex(rarity, btn) {
 }
 
 function toggleCodexCard(card) {
-  if (card.classList.contains('locked')) return;
   const wasExpanded = card.classList.contains('expanded');
   // Collapse all others
   document.querySelectorAll('.codex-card.expanded').forEach(c => c.classList.remove('expanded'));
