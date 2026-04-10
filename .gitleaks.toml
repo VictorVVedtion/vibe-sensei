@@ -1,0 +1,31 @@
+title = "Vibe Sensei Gitleaks Rules"
+
+[[rules]]
+id = "alpaca-key-id"
+description = "Alpaca API Key ID"
+regex = '''(?i)ALPACA_KEY_ID\s*[:=]\s*['"]?[A-Z0-9]{20,}['"]?'''
+tags = ["key", "alpaca"]
+
+[[rules]]
+id = "alpaca-secret-key"
+description = "Alpaca Secret Key"
+regex = '''(?i)ALPACA_SECRET_KEY\s*[:=]\s*['"]?[A-Za-z0-9/+=]{30,}['"]?'''
+tags = ["key", "alpaca"]
+
+[[rules]]
+id = "oanda-token"
+description = "OANDA API Token"
+regex = '''(?i)OANDA_TOKEN\s*[:=]\s*['"]?[a-f0-9]{32,}-[a-f0-9]{32,}['"]?'''
+tags = ["key", "oanda"]
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API Key (sk-ant-api pattern)"
+regex = '''sk-ant-api[0-9A-Za-z_-]{20,}'''
+tags = ["key", "anthropic"]
+
+[allowlist]
+paths = [
+  '''\.gitleaks\.toml$''',
+  '''src/services/security/secretScanner\.ts$''',
+]

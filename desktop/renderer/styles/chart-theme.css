@@ -1,0 +1,194 @@
+/* Chart panel wrapper overrides — Sovereign Architect */
+
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--surface-container-lowest);
+  overflow: hidden;
+  border-bottom: 1px solid rgba(var(--primary-rgb), 0.2);
+}
+
+.chart-container {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  position: relative;
+  background: var(--surface-container-lowest);
+  border: 1px solid rgba(var(--primary-rgb), 0.1);
+  overflow: hidden;
+}
+
+/* ── Chart Header ── */
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+}
+
+.chart-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.chart-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.chart-symbol-label {
+  font-family: var(--font-headline);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.chart-id-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-body);
+}
+
+.regime-badge {
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 1px solid rgba(var(--primary-rgb), 0.3);
+  padding: 1px 8px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--primary);
+}
+
+.regime-badge.up {
+  color: var(--primary);
+}
+
+/* ── Timeframe Tabs ── */
+
+.timeframe-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.timeframe-tab {
+  padding: 2px 8px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(var(--primary-rgb), 0.4);
+  background: transparent;
+  color: var(--primary);
+  transition: background 100ms steps(4);
+}
+
+.timeframe-tab.active {
+  background: var(--primary);
+  color: #000000;
+  border-color: var(--primary);
+}
+
+.timeframe-tab.inactive:hover {
+  background: rgba(var(--primary-rgb), 0.1);
+}
+
+/* ── Price Row ── */
+
+.chart-price-row {
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+.chart-price-main {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-fixed);
+  display: block;
+}
+
+.chart-price-stats {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.2em;
+}
+
+.chart-analyze-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-family: var(--font-headline);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.chart-analyze-btn:hover {
+  opacity: 1;
+  background: rgba(156, 255, 147, 0.08);
+}
+
+/* ── Position Overlay ── */
+
+.position-overlay {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: rgba(25, 25, 25, 0.9);
+  border: 1px solid var(--primary);
+  padding: var(--space-2);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  z-index: 5;
+}
+
+.pnl-positive {
+  color: var(--primary-fixed);
+}
+
+/* ── Error / Loading ── */
+
+.chart-error {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: var(--space-4) var(--space-6);
+  border: 1px solid var(--error);
+  background: rgba(0, 0, 0, 0.95);
+  color: var(--error);
+  font-family: var(--font-headline);
+  font-size: 13px;
+  text-align: center;
+  max-width: 80%;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.chart-error h3 {
+  color: var(--error);
+  margin: 0 0 var(--space-2) 0;
+  font-size: 14px;
+}
+
+.chart-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--primary);
+  font-family: var(--font-body);
+  font-size: 12px;
+}

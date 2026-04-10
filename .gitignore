@@ -1,0 +1,45 @@
+node_modules
+**/.DS_Store
+dist
+coverage
+.env
+*.log
+.idea
+.vscode
+*.suo
+node_modules/
+dist/
+*.bun
+
+# internal dev tooling (not for public repo)
+.selfmodel/
+.claude/
+.context/
+.venv/
+**/.gstack/
+**/.skillpack/
+
+# TradingView charting library (proprietary, requires commercial license)
+desktop/charting_library/
+
+# desktop build outputs
+desktop/release/
+desktop/dist/
+desktop/resources/bun-cli/
+
+# desktop e2e artifacts
+desktop/test-results/
+desktop/e2e-screenshot-full.png
+
+# /cso + /qa generated artifacts (screen recordings, JSON reports)
+test-report/
+
+# Rust
+target/
+
+# dev-only preview scripts (not for public repo)
+scripts/dev/preview-*.mjs
+
+# sprite working scratch (local-only backups, mac filename duplicates)
+assets/sprites/_backup_*/
+**/*_副本.md
