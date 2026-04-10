@@ -990,4 +990,290 @@ body::after {
   .option-btn.selected { animation: none; }
   .loading-cursor { animation: none; }
   .loading-dots span { animation: none; opacity: 1; }
+  .home-hint { animation: none; opacity: 0.7; }
+}
+
+/* ─── New: Motto, Easter egg, Home hint ─── */
+
+.result-motto {
+  margin: 12px 0 4px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--color-green);
+  background: var(--color-green-dim);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.85rem;
+  color: var(--color-green);
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.result-motto:empty { display: none; }
+
+.result-easter {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-dim);
+  font-style: italic;
+  text-align: center;
+}
+.result-easter:empty { display: none; }
+
+.home-hint {
+  margin: 8px 0 4px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  animation: hintPulse 3s ease-in-out infinite;
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ─── Codex (全图鉴) ─── */
+.codex-screen {
+  padding: 0 12px calc(24px + var(--safe-bottom));
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.codex-progress {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  color: var(--color-green);
+  background: var(--color-green-dim);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+.codex-badge {
+  font-size: 10px;
+  color: var(--color-green);
+  margin-left: 4px;
+}
+
+/* Filters */
+.codex-filters {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.codex-filters::-webkit-scrollbar { display: none; }
+.codex-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  color: var(--color-text-dim);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+}
+.codex-filter:hover { border-color: var(--color-text-dim); }
+.codex-filter.active {
+  background: var(--color-green-dim);
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+.codex-filter .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.legendary { background: var(--color-gold); }
+.dot.epic { background: #C77DFF; }
+.dot.rare { background: #4CC9F0; }
+.dot.uncommon { background: var(--color-green); }
+.dot.common { background: var(--color-text-dim); }
+
+/* Grid */
+.codex-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding-bottom: 16px;
+}
+@media (min-width: 520px) {
+  .codex-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 700px) {
+  .codex-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Card */
+.codex-card {
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.codex-card:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+.codex-card:active {
+  transform: scale(0.97);
+  transition: transform 0.08s;
+}
+
+/* Rarity glow border */
+.codex-card.legendary { border-color: rgba(255, 215, 0, 0.4); }
+.codex-card.legendary:hover { box-shadow: 0 0 20px rgba(255, 215, 0, 0.2); }
+.codex-card.epic { border-color: rgba(199, 125, 255, 0.4); }
+.codex-card.epic:hover { box-shadow: 0 0 20px rgba(199, 125, 255, 0.2); }
+.codex-card.rare { border-color: rgba(76, 201, 240, 0.4); }
+.codex-card.rare:hover { box-shadow: 0 0 20px rgba(76, 201, 240, 0.2); }
+.codex-card.uncommon { border-color: rgba(32, 194, 14, 0.3); }
+.codex-card.uncommon:hover { box-shadow: 0 0 20px rgba(32, 194, 14, 0.15); }
+
+/* Card sprite */
+.codex-sprite {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  object-fit: cover;
+  margin: 0 auto 8px;
+  display: block;
+  background: var(--bg-primary);
+}
+.codex-card.legendary .codex-sprite { border-color: var(--color-gold); box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+.codex-card.epic .codex-sprite { border-color: #C77DFF; box-shadow: 0 0 10px rgba(199, 125, 255, 0.3); }
+.codex-card.rare .codex-sprite { border-color: #4CC9F0; box-shadow: 0 0 10px rgba(76, 201, 240, 0.3); }
+.codex-card.uncommon .codex-sprite { border-color: var(--color-green); }
+
+.codex-code {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 1px;
+}
+.codex-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 2px 0;
+}
+.codex-name-en {
+  font-size: 10px;
+  color: var(--color-text-dim);
+}
+.codex-master {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+.codex-stars {
+  font-size: 10px;
+  margin-top: 2px;
+}
+.codex-stars.legendary { color: var(--color-gold); }
+.codex-stars.epic { color: #C77DFF; }
+.codex-stars.rare { color: #4CC9F0; }
+.codex-stars.uncommon { color: var(--color-green); }
+.codex-stars.common { color: var(--color-text-dim); }
+
+/* Expanded detail */
+.codex-detail {
+  display: none;
+  text-align: left;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.codex-card.expanded .codex-detail { display: block; }
+.codex-card.expanded {
+  grid-column: 1 / -1;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  grid-template-rows: auto auto;
+  gap: 0 14px;
+  padding: 16px;
+}
+.codex-card.expanded .codex-sprite {
+  grid-row: 1;
+  width: 64px;
+  height: 64px;
+  margin: 0;
+}
+.codex-card.expanded .codex-card-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.codex-card.expanded .codex-detail {
+  grid-column: 1 / -1;
+}
+.codex-detail-desc {
+  color: var(--color-text);
+  margin-bottom: 6px;
+}
+.codex-detail-motto {
+  color: var(--color-green);
+  font-size: 11px;
+  padding: 6px 8px;
+  background: var(--color-green-dim);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+.codex-detail-quote {
+  color: var(--color-text-dim);
+  font-style: italic;
+  font-size: 11px;
+}
+.codex-detail-archetype {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  background: var(--bg-option);
+  border-radius: 10px;
+  color: var(--color-text-dim);
+  margin-top: 6px;
+}
+
+/* Locked card */
+.codex-card.locked {
+  opacity: 0.45;
+  cursor: default;
+}
+.codex-card.locked:hover {
+  transform: none;
+  background: var(--bg-card);
+  box-shadow: none;
+}
+.codex-card.locked .codex-sprite {
+  filter: brightness(0) invert(0.2);
+}
+.codex-card.locked .codex-code {
+  color: var(--color-text-muted);
+}
+.codex-card.locked .codex-name { color: var(--color-text-muted); }
+.codex-card.locked .codex-name-en,
+.codex-card.locked .codex-master,
+.codex-card.locked .codex-stars { visibility: hidden; }
+.codex-locked-label {
+  font-size: 20px;
+  display: block;
+  margin: 4px 0;
 }
