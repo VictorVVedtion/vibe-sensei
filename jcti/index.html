@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JCTI 韭菜交易人格指标</title>
-  <meta name="description" content="MBTI 测你是谁，SBTI 测你多傻，JCTI 测你亏了多少。31 道灵魂拷问，测出你是哪种韭菜。">
+  <meta name="description" content="MBTI 测你是谁，SBTI 测你多傻，JCTI 测你亏了多少。32 道灵魂拷问，测出你是哪种韭菜。">
   <meta property="og:title" content="JCTI 韭菜交易人格指标">
-  <meta property="og:description" content="31 道灵魂拷问，测出你是哪种韭菜。零科学，全韭菜，测完别哭。">
+  <meta property="og:description" content="32 道灵魂拷问，测出你是哪种韭菜。零科学，全韭菜，测完别哭。">
   <meta property="og:image" content="og.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
@@ -50,11 +50,13 @@
       <em>JCTI 测你亏了多少</em>
     </div>
     <div class="home-desc">
-      31 道灵魂拷问，测出你是哪种韭菜。<br>
+      32 道灵魂拷问，测出你是哪种韭菜。<br>
       零科学，全韭菜，测完别哭。
     </div>
+    <div class="home-hint">🔒 据说有极少数人能触发隐藏结局...</div>
     <button class="btn-cta" onclick="startQuiz()">开始测试 &rarr;</button>
     <button class="btn-stats" onclick="showStats()">韭菜大数据</button>
+    <button class="btn-stats" onclick="showCodex()">全图鉴</button>
     <div class="home-footer">
       <a class="github-link" href="https://github.com/VictorVVedtion/vibe-sensei" target="_blank" rel="noopener">
         <svg class="github-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -67,7 +69,7 @@
   <!-- Quiz Screen -->
   <div id="screen-quiz" class="screen quiz">
     <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-    <div class="progress-label" id="progress-label">1 / 31</div>
+    <div class="progress-label" id="progress-label">1 / 32</div>
     <div class="question-area" id="question-area">
       <div class="question-dim" id="question-dim"></div>
       <div class="question-text" id="question-text"></div>
@@ -92,6 +94,7 @@
       <div class="result-name-cn" id="result-name-cn"></div>
       <div class="result-name-en" id="result-name-en"></div>
       <div class="result-desc" id="result-desc"></div>
+      <div class="result-motto" id="result-motto"></div>
       <div class="divider"> 你的守护大师 </div>
       <div class="guardian" id="guardian">
         <img class="guardian-sprite" id="guardian-sprite" alt="guardian">
@@ -105,6 +108,7 @@
       <div class="divider"> 交易 DNA </div>
       <div class="stats" id="stats"></div>
       <div class="result-similarity" id="result-similarity"></div>
+      <div class="result-easter" id="result-easter"></div>
       <div class="poster-qr-footer">
         <img class="qr-code" src="sprites/qr-jcti.png" alt="扫码测试" width="40" height="40">
         <div class="footer-text">
@@ -163,6 +167,25 @@
       </div>
     </div>
     <div class="result-footer">Vibe Sensei &middot; "零科学，全韭菜，测完别哭"</div>
+  </div>
+
+  <!-- Codex Screen -->
+  <div id="screen-codex" class="screen codex-screen">
+    <div class="stats-header">
+      <button class="stats-back" onclick="showScreen('home')">&larr; 返回</button>
+      <div class="stats-title">全图鉴</div>
+      <div class="codex-progress" id="codex-progress">0/32</div>
+    </div>
+    <div class="codex-filters" id="codex-filters">
+      <button class="codex-filter active" data-rarity="all" onclick="filterCodex('all',this)">全部</button>
+      <button class="codex-filter" data-rarity="legendary" onclick="filterCodex('legendary',this)"><span class="dot legendary"></span>传奇</button>
+      <button class="codex-filter" data-rarity="epic" onclick="filterCodex('epic',this)"><span class="dot epic"></span>史诗</button>
+      <button class="codex-filter" data-rarity="rare" onclick="filterCodex('rare',this)"><span class="dot rare"></span>稀有</button>
+      <button class="codex-filter" data-rarity="uncommon" onclick="filterCodex('uncommon',this)"><span class="dot uncommon"></span>罕见</button>
+      <button class="codex-filter" data-rarity="common" onclick="filterCodex('common',this)"><span class="dot common"></span>普通</button>
+    </div>
+    <div class="codex-grid" id="codex-grid"></div>
+    <div class="result-footer">Vibe Sensei &middot; "集齐 32 种韭菜，召唤终极投资圣体"</div>
   </div>
 
   <!-- Poster Modal -->
