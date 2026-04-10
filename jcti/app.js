@@ -468,9 +468,18 @@ function renderQuestion() {
 function selectOption(opt, btnEl) {
   // Prevent double-tap during flash delay
   const optionsEl = document.getElementById('options');
-  optionsEl.querySelectorAll('.option-btn').forEach(b => { b.onclick = null; });
+  optionsEl.querySelectorAll('.option-btn').forEach(b => { 
+    b.disabled = true;
+    b.onclick = null; 
+  });
 
   if (navigator.vibrate) navigator.vibrate(15);
+  
+  // iOS vibration compensation
+  const area = document.getElementById('question-area');
+  area.classList.add('pulse');
+  setTimeout(() => area.classList.remove('pulse'), 100);
+
   btnEl.classList.add('selected');
 
   const q = QUESTIONS[currentQuestion];
@@ -484,8 +493,8 @@ function selectOption(opt, btnEl) {
   }
 }
 
-function showResult() {
-  const result = matchType(answers);
+function showResult(precalculatedResult) {
+  const result = precalculatedResult || matchType(answers);
   const t = result.type;
   const dimScores = computeDimensionScores(result.userVec);
 
@@ -526,6 +535,7 @@ function showResult() {
   // Animate bars after render
   setTimeout(() => {
     statsEl.querySelectorAll('.stat-fill').forEach((bar, i) => {
+      bar.style.transitionDelay = `${i * 0.15}s`;
       bar.style.width = dimScores[i] + '%';
     });
   }, 100);
@@ -539,6 +549,13 @@ function showResult() {
 
 function showLoading() {
   showScreen('loading');
+  
+  // Preload master sprite
+  const result = matchType(answers);
+  const preloadImg = new Image();
+  preloadImg.src = 'sprites/' + result.type.masterKey + '-idle.png';
+  window._tempResult = result;
+
   const textEl = document.getElementById('loading-text');
   let index = 0;
   textEl.textContent = LOADING_TEXTS[0];
@@ -555,7 +572,7 @@ function showLoading() {
   setTimeout(() => {
     clearInterval(loadingInterval);
     loadingInterval = null;
-    showResult();
+    showResult(window._tempResult);
   }, 2500);
 }
 
@@ -575,20 +592,57 @@ function generatePoster() {
   btn.disabled = true;
 
   html2canvas(card, {
-    scale: 2,
+    scale: window.devicePixelRatio > 2 ? window.devicePixelRatio : 2,
     useCORS: true,
     backgroundColor: '#0A0F1A',
     logging: false,
   }).then(function(canvas) {
-    const img = document.getElementById('poster-modal-img');
-    img.src = canvas.toDataURL('image/png');
-    document.getElementById('poster-modal').classList.add('active');
-    btn.textContent = originalText;
-    btn.disabled = false;
+    canvas.toBlob(function(blob) {
+      window._posterBlob = blob;
+      const img = document.getElementById('poster-modal-img');
+      if (window._posterURL) URL.revokeObjectURL(window._posterURL);
+      window._posterURL = URL.createObjectURL(blob);
+      img.src = window._posterURL;
+
+      // Hide share button if Web Share with files not supported
+      var shareBtn = document.getElementById('poster-share-btn');
+      try {
+        var canShare = navigator.canShare && navigator.canShare({ files: [new File([''], 't.png', { type: 'image/png' })] });
+        shareBtn.style.display = canShare ? '' : 'none';
+      } catch (e) {
+        shareBtn.style.display = 'none';
+      }
+
+      document.getElementById('poster-modal').classList.add('active');
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 'image/png');
   }).catch(function() {
     btn.textContent = originalText;
     btn.disabled = false;
   });
+}
+
+function savePoster() {
+  if (!window._posterBlob) return;
+  var url = URL.createObjectURL(window._posterBlob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'JCTI-确诊单.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function sharePoster() {
+  if (!window._posterBlob || !navigator.share) return;
+  var file = new File([window._posterBlob], 'JCTI-确诊单.png', { type: 'image/png' });
+  navigator.share({
+    title: 'JCTI 韭菜交易确诊单',
+    text: '我的交易人格确诊了！来测测你是哪种韭菜 jcti.fun',
+    files: [file],
+  }).catch(function() {});
 }
 
 function closePosterModal() {

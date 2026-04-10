@@ -77,6 +77,8 @@ body::after {
   position: sticky;
   top: 0;
   z-index: 10;
+  contain: paint layout;
+  will-change: transform;
 }
 .ticker-inner {
   display: inline-block;
@@ -221,6 +223,10 @@ body::after {
 .question-area {
   margin-top: 24px;
   animation: fadeIn 0.3s ease;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.question-area.pulse {
+  transform: scale(0.985);
 }
 .question-dim {
   font-family: var(--font-heading);
@@ -560,6 +566,20 @@ body::after {
   color: var(--color-green);
 }
 
+.poster-qr-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: left;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+  margin-top: 12px;
+  width: 100%;
+}
+
 /* Result Buttons */
 .result-actions {
   display: flex;
@@ -792,14 +812,14 @@ body::after {
 .poster-modal.active { display: flex; }
 .poster-modal-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 8px;
+  right: 8px;
   background: none;
   border: none;
   color: var(--color-text-dim);
   font-size: 32px;
   cursor: pointer;
-  padding: 8px;
+  padding: 16px;
   line-height: 1;
   z-index: 101;
   -webkit-appearance: none;
@@ -816,10 +836,16 @@ body::after {
 }
 .poster-modal-img {
   max-width: 100%;
-  max-height: calc(100vh - 120px);
-  max-height: calc(100dvh - 120px);
+  max-height: calc(100vh - 200px);
+  max-height: calc(100dvh - 200px);
   border-radius: 12px;
   object-fit: contain;
+}
+.poster-modal-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
 }
 .poster-modal-hint {
   font-family: var(--font-heading);
