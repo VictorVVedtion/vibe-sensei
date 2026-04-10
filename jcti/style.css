@@ -151,6 +151,18 @@ body {
   color: var(--color-text-muted);
 }
 
+/* ─── GitHub Link ─── */
+.github-link {
+  color: var(--color-text-dim);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+.github-link:hover { color: var(--color-green); }
+.github-icon { width: 14px; height: 14px; }
+
 /* ─── Quiz Screen ─── */
 .quiz {
   padding: 0 20px calc(24px + var(--safe-bottom));
