@@ -566,6 +566,13 @@ body::after {
   color: var(--color-green);
 }
 
+.qr-code {
+  background: #fff;
+  padding: 2px;
+  border-radius: 4px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
 .poster-qr-footer {
   display: flex;
   align-items: center;
