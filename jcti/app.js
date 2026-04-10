@@ -8,28 +8,28 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const JCTI_TYPES = [
-  { code: 'HODL', name: '钻石手', desc: '账户跌 90% 还在发朋友圈说"价值投资需要时间"', master: 'Warren Buffett', masterKey: 'warren_buffett', rarity: '传奇', rarityClass: 'legendary', archetype: '价值投资者', quote: 'Rule #1: Never lose money. Rule #2: Never forget Rule #1.', vector: [0,0,1, 0,0,0, 1,0,1, 0,0,0, 0,0,0] },
-  { code: 'FOMO', name: '追高圣体', desc: '精准买在每一个历史最高点，连庄家都佩服你的择时能力', master: 'Jesse Livermore', masterKey: 'jesse_livermore', rarity: '传奇', rarityClass: 'legendary', archetype: '趋势追踪者', quote: 'The market is never wrong, opinions are.', vector: [2,2,2, 2,2,2, 0,2,0, 2,2,1, 1,0,2] },
-  { code: 'YOLO', name: '梭哈战神', desc: '人生只有两个状态：兰博基尼和兰州拉面', master: 'George Soros', masterKey: 'george_soros', rarity: '传奇', rarityClass: 'legendary', archetype: '宏观交易者', quote: "It's not whether you're right or wrong, but how much you make when right.", vector: [2,2,1, 2,1,2, 1,2,0, 2,2,2, 2,2,2] },
-  { code: 'REKT', name: '爆仓艺术家', desc: '100 倍杠杆是一种生活美学，爆仓是行为艺术', master: '凉兮 Liangxi', masterKey: 'liangxi', rarity: '稀有', rarityClass: 'rare', archetype: '趋势追踪者', quote: '爆仓线就是我的加仓信号。', vector: [2,2,2, 2,2,2, 0,2,0, 2,2,2, 1,2,1] },
-  { code: 'SELL', name: '卖飞教主', desc: '刚卖就涨停。你确定券商没在监控你的账户？', master: 'Nicolas Darvas', masterKey: 'nicolas_darvas', rarity: '罕见', rarityClass: 'uncommon', archetype: '趋势追踪者', quote: "I was never afraid of buying high. I was afraid of not cutting losses.", vector: [1,0,1, 1,0,1, 1,0,1, 1,0,0, 1,0,1] },
-  { code: 'GURU', name: '马后炮', desc: '事后分析起来比巴菲特都准，事前下单比菜鸟都烂', master: 'Charlie Munger', masterKey: 'charlie_munger', rarity: '史诗', rarityClass: 'epic', archetype: '价值投资者', quote: "All I want to know is where I'm going to die, so I'll never go there.", vector: [1,1,0, 0,1,0, 2,2,2, 1,0,0, 2,2,0] },
-  { code: 'MOON', name: '暴富幻想家', desc: '还没开户就在研究迈巴赫选配了', master: 'Cathie Wood', masterKey: 'cathie_wood', rarity: '稀有', rarityClass: 'rare', archetype: '第一性原理', quote: 'Innovation compounds nonlinearly — bet on the curve, not the level.', vector: [1,2,2, 1,1,0, 0,1,0, 2,2,1, 2,1,2] },
-  { code: 'LEEK', name: '韭皇大帝', desc: '被割了八茬还在说"这次不一样"。韭菜界的活化石', master: 'Isaac Newton', masterKey: 'isaac_newton', rarity: '稀有', rarityClass: 'rare', archetype: '科学家', quote: 'I can calculate the motion of heavenly bodies, but not the madness of people.', vector: [1,1,2, 1,2,1, 0,2,0, 2,1,1, 1,0,2] },
-  { code: 'COPE', name: '精神胜利法', desc: '"亏的不是钱，是交了认知升级的学费"', master: 'Nassim Taleb', masterKey: 'nassim_taleb', rarity: '史诗', rarityClass: 'epic', archetype: '哲学家', quote: 'Wind extinguishes a candle and energizes fire. Be the fire.', vector: [2,1,1, 0,1,0, 1,2,0, 1,0,0, 2,2,0] },
-  { code: 'DEAD', name: '装死大师', desc: '账户亏了就当它不存在。已读不回，股票也不回', master: '老子 Laozi', masterKey: 'laozi', rarity: '稀有', rarityClass: 'rare', archetype: '哲学家', quote: '上善若水。', vector: [0,0,0, 0,0,0, 1,0,0, 0,0,0, 0,0,0] },
-  { code: 'PUMP', name: '喊单狂魔', desc: '朋友圈永远在"抄底"，但从来没人见过收益截图', master: '孙宇晨 Justin Sun', masterKey: 'justin_sun', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: 'Adoption beats elegance — distribution is the moat in crypto.', vector: [2,2,2, 2,1,2, 0,2,0, 2,1,1, 2,2,2] },
-  { code: 'COPY', name: '抄作业天王', desc: '别人买啥跟啥，就是永远晚一个涨停板', master: "William O'Neil", masterKey: 'william_oneil', rarity: '普通', rarityClass: 'common', archetype: '趋势追踪者', quote: 'Letting losses run is the most serious mistake.', vector: [1,1,1, 1,1,1, 0,1,0, 1,0,0, 0,0,2] },
-  { code: 'NEWS', name: '消息面猎手', desc: '你炒新闻，新闻炒你。最后大家一起被套', master: 'Victor Sperandeo', masterKey: 'victor_sperandeo', rarity: '普通', rarityClass: 'uncommon', archetype: '宏观交易者', quote: 'A speculator who dies rich has died before his time.', vector: [1,1,2, 2,1,2, 2,1,1, 1,0,0, 1,0,1] },
-  { code: 'WAIT', name: '永恒等待者', desc: '"等回本就走"——三年前说的。现在还在等', master: 'Benjamin Graham', masterKey: 'benjamin_graham', rarity: '传奇', rarityClass: 'legendary', archetype: '价值投资者', quote: 'The essence of investment management is the management of risks.', vector: [0,0,0, 0,0,0, 1,0,1, 0,0,0, 0,1,0] },
-  { code: 'RICH', name: '纸上富贵', desc: '浮盈截图发了 30 条朋友圈，浮亏时朋友圈仅自己可见', master: 'Stanley Druckenmiller', masterKey: 'stanley_druckenmiller', rarity: '史诗', rarityClass: 'epic', archetype: '宏观交易者', quote: 'It takes courage to be a pig.', vector: [1,2,2, 1,1,1, 1,1,0, 2,1,0, 2,2,1] },
-  { code: 'ALGO', name: '量化幻想家', desc: '写了 200 行 Python 回测年化 300%，实盘第一天亏 15%', master: 'Jim Simons', masterKey: 'jim_simons', rarity: '传奇', rarityClass: 'legendary', archetype: '量化大师', quote: "We don't override the models. The model is the system.", vector: [0,0,0, 0,0,0, 2,0,2, 1,0,0, 0,2,0] },
-  { code: 'SAFE', name: '余额宝战士', desc: '研究了 500 篇研报，最后还是买了货币基金', master: 'Ray Dalio', masterKey: 'ray_dalio', rarity: '史诗', rarityClass: 'epic', archetype: '量化大师', quote: 'He who lives by the crystal ball will eat shattered glass.', vector: [0,0,0, 0,0,0, 2,0,2, 0,0,0, 0,1,0] },
-  { code: 'RAGE', name: '报复性交易', desc: '亏了就加仓，加了就再亏，亏了再加。完美闭环', master: 'Paul Tudor Jones', masterKey: 'paul_tudor_jones', rarity: '史诗', rarityClass: 'epic', archetype: '宏观交易者', quote: 'Every day I assume every position I have is wrong.', vector: [2,2,2, 2,2,2, 0,2,0, 2,1,1, 0,0,1] },
-  { code: 'WISE', name: '冷静哥', desc: '别人恐惧你贪婪？不，别人恐惧你也恐惧，但你假装不恐惧', master: 'Seneca', masterKey: 'seneca', rarity: '稀有', rarityClass: 'rare', archetype: '哲学家', quote: 'The whole future lies in uncertainty: live immediately.', vector: [0,1,0, 0,0,0, 2,0,2, 0,0,0, 0,2,0] },
-  { code: 'DEBT', name: '借钱炒股侠', desc: '花呗借呗都变成了保证金，但觉得自己风控很好', master: 'Sam Bankman-Fried', masterKey: 'sbf', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: 'When the books and the trades live in the same hands, the books eventually lose.', vector: [2,2,2, 2,2,2, 0,2,0, 2,2,2, 0,0,1] },
-  { code: 'WINE', name: '醉酒操盘手', desc: '喝多了打开交易软件，第二天醒来看持仓：？？？', master: 'Arthur Hayes', masterKey: 'arthur_hayes', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: 'The only winning move against central banks is to buy hard assets.', vector: [2,2,2, 2,0,1, 0,1,0, 2,2,1, 1,1,1] },
-  { code: 'LUCK', name: '玄学操盘手', desc: '你的交易逻辑超出了人类认知。也许你应该去买彩票', master: 'Satoshi Nakamoto', masterKey: 'satoshi_nakamoto', rarity: '传奇', rarityClass: 'legendary', archetype: '链上原住民', quote: "If you don't believe me or don't get it, I don't have time to convince you.", vector: [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1] },
+  { code: 'HODL', name: '钻石手', nameEn: 'Diamond Hands', desc: '账户跌 90% 还在发朋友圈说"价值投资需要时间"', master: 'Warren Buffett', masterKey: 'warren_buffett', rarity: '传奇', rarityClass: 'legendary', archetype: '价值投资者', quote: 'Rule #1: Never lose money. Rule #2: Never forget Rule #1.', vector: [0,0,1, 0,0,0, 1,0,1, 0,0,0, 0,0,0] },
+  { code: 'FOMO', name: '追高圣体', nameEn: 'The Chaser', desc: '精准买在每一个历史最高点，连庄家都佩服你的择时能力', master: 'Jesse Livermore', masterKey: 'jesse_livermore', rarity: '传奇', rarityClass: 'legendary', archetype: '趋势追踪者', quote: 'The market is never wrong, opinions are.', vector: [2,2,2, 2,2,2, 0,2,0, 2,2,1, 1,0,2] },
+  { code: 'YOLO', name: '梭哈战神', nameEn: 'The All-Inner', desc: '人生只有两个状态：兰博基尼和兰州拉面', master: 'George Soros', masterKey: 'george_soros', rarity: '传奇', rarityClass: 'legendary', archetype: '宏观交易者', quote: "It's not whether you're right or wrong, but how much you make when right.", vector: [2,2,1, 2,1,2, 1,2,0, 2,2,2, 2,2,2] },
+  { code: 'REKT', name: '爆仓艺术家', nameEn: 'The Liquidated', desc: '100 倍杠杆是一种生活美学，爆仓是行为艺术', master: '凉兮 Liangxi', masterKey: 'liangxi', rarity: '稀有', rarityClass: 'rare', archetype: '趋势追踪者', quote: '爆仓线就是我的加仓信号。', vector: [2,2,2, 2,2,2, 0,2,0, 2,2,2, 1,2,1] },
+  { code: 'SELL', name: '卖飞教主', nameEn: 'The Paperhander', desc: '刚卖就涨停。你确定券商没在监控你的账户？', master: 'Nicolas Darvas', masterKey: 'nicolas_darvas', rarity: '罕见', rarityClass: 'uncommon', archetype: '趋势追踪者', quote: "I was never afraid of buying high. I was afraid of not cutting losses.", vector: [1,0,1, 1,0,1, 1,0,1, 1,0,0, 1,0,1] },
+  { code: 'GURU', name: '马后炮', nameEn: 'The Hindsighter', desc: '事后分析起来比巴菲特都准，事前下单比菜鸟都烂', master: 'Charlie Munger', masterKey: 'charlie_munger', rarity: '史诗', rarityClass: 'epic', archetype: '价值投资者', quote: "All I want to know is where I'm going to die, so I'll never go there.", vector: [1,1,0, 0,1,0, 2,2,2, 1,0,0, 2,2,0] },
+  { code: 'MOON', name: '暴富幻想家', nameEn: 'The Dreamer', desc: '还没开户就在研究迈巴赫选配了', master: 'Cathie Wood', masterKey: 'cathie_wood', rarity: '稀有', rarityClass: 'rare', archetype: '第一性原理', quote: 'Innovation compounds nonlinearly — bet on the curve, not the level.', vector: [1,2,2, 1,1,0, 0,1,0, 2,2,1, 2,1,2] },
+  { code: 'LEEK', name: '韭皇大帝', nameEn: 'The Perma-Leek', desc: '被割了八茬还在说"这次不一样"。韭菜界的活化石', master: 'Isaac Newton', masterKey: 'isaac_newton', rarity: '稀有', rarityClass: 'rare', archetype: '科学家', quote: 'I can calculate the motion of heavenly bodies, but not the madness of people.', vector: [1,1,2, 1,2,1, 0,2,0, 2,1,1, 1,0,2] },
+  { code: 'COPE', name: '精神胜利法', nameEn: 'The Copium Master', desc: '"亏的不是钱，是交了认知升级的学费"', master: 'Nassim Taleb', masterKey: 'nassim_taleb', rarity: '史诗', rarityClass: 'epic', archetype: '哲学家', quote: 'Wind extinguishes a candle and energizes fire. Be the fire.', vector: [2,1,1, 0,1,0, 1,2,0, 1,0,0, 2,2,0] },
+  { code: 'DEAD', name: '装死大师', nameEn: 'The Possum', desc: '账户亏了就当它不存在。已读不回，股票也不回', master: '老子 Laozi', masterKey: 'laozi', rarity: '稀有', rarityClass: 'rare', archetype: '哲学家', quote: '上善若水。', vector: [0,0,0, 0,0,0, 1,0,0, 0,0,0, 0,0,0] },
+  { code: 'PUMP', name: '喊单狂魔', nameEn: 'The Shiller', desc: '朋友圈永远在"抄底"，但从来没人见过收益截图', master: '孙宇晨 Justin Sun', masterKey: 'justin_sun', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: 'Adoption beats elegance — distribution is the moat in crypto.', vector: [2,2,2, 2,1,2, 0,2,0, 2,1,1, 2,2,2] },
+  { code: 'COPY', name: '抄作业天王', nameEn: 'The Copycat', desc: '别人买啥跟啥，就是永远晚一个涨停板', master: "William O'Neil", masterKey: 'william_oneil', rarity: '普通', rarityClass: 'common', archetype: '趋势追踪者', quote: 'Letting losses run is the most serious mistake.', vector: [1,1,1, 1,1,1, 0,1,0, 1,0,0, 0,0,2] },
+  { code: 'NEWS', name: '消息面猎手', nameEn: 'The News Junkie', desc: '你炒新闻，新闻炒你。最后大家一起被套', master: 'Victor Sperandeo', masterKey: 'victor_sperandeo', rarity: '普通', rarityClass: 'uncommon', archetype: '宏观交易者', quote: 'A speculator who dies rich has died before his time.', vector: [1,1,2, 2,1,2, 2,1,1, 1,0,0, 1,0,1] },
+  { code: 'WAIT', name: '永恒等待者', nameEn: 'The Eternal Waiter', desc: '"等回本就走"——三年前说的。现在还在等', master: 'Benjamin Graham', masterKey: 'benjamin_graham', rarity: '传奇', rarityClass: 'legendary', archetype: '价值投资者', quote: 'The essence of investment management is the management of risks.', vector: [0,0,0, 0,0,0, 1,0,1, 0,0,0, 0,1,0] },
+  { code: 'RICH', name: '纸上富贵', nameEn: 'The Paper Rich', desc: '浮盈截图发了 30 条朋友圈，浮亏时朋友圈仅自己可见', master: 'Stanley Druckenmiller', masterKey: 'stanley_druckenmiller', rarity: '史诗', rarityClass: 'epic', archetype: '宏观交易者', quote: 'It takes courage to be a pig.', vector: [1,2,2, 1,1,1, 1,1,0, 2,1,0, 2,2,1] },
+  { code: 'ALGO', name: '量化幻想家', nameEn: 'The Quant Wannabe', desc: '写了 200 行 Python 回测年化 300%，实盘第一天亏 15%', master: 'Jim Simons', masterKey: 'jim_simons', rarity: '传奇', rarityClass: 'legendary', archetype: '量化大师', quote: "We don't override the models. The model is the system.", vector: [0,0,0, 0,0,0, 2,0,2, 1,0,0, 0,2,0] },
+  { code: 'SAFE', name: '余额宝战士', nameEn: 'The Ultra-Safe', desc: '研究了 500 篇研报，最后还是买了货币基金', master: 'Ray Dalio', masterKey: 'ray_dalio', rarity: '史诗', rarityClass: 'epic', archetype: '量化大师', quote: 'He who lives by the crystal ball will eat shattered glass.', vector: [0,0,0, 0,0,0, 2,0,2, 0,0,0, 0,1,0] },
+  { code: 'RAGE', name: '报复性交易', nameEn: 'The Revenge Trader', desc: '亏了就加仓，加了就再亏，亏了再加。完美闭环', master: 'Paul Tudor Jones', masterKey: 'paul_tudor_jones', rarity: '史诗', rarityClass: 'epic', archetype: '宏观交易者', quote: 'Every day I assume every position I have is wrong.', vector: [2,2,2, 2,2,2, 0,2,0, 2,1,1, 0,0,1] },
+  { code: 'WISE', name: '冷静哥', nameEn: 'The Zen Trader', desc: '别人恐惧你贪婪？不，别人恐惧你也恐惧，但你假装不恐惧', master: 'Seneca', masterKey: 'seneca', rarity: '稀有', rarityClass: 'rare', archetype: '哲学家', quote: 'The whole future lies in uncertainty: live immediately.', vector: [0,1,0, 0,0,0, 2,0,2, 0,0,0, 0,2,0] },
+  { code: 'DEBT', name: '借钱炒股侠', nameEn: 'The Leveraged Life', desc: '花呗借呗都变成了保证金，但觉得自己风控很好', master: 'Sam Bankman-Fried', masterKey: 'sbf', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: 'When the books and the trades live in the same hands, the books eventually lose.', vector: [2,2,2, 2,2,2, 0,2,0, 2,2,2, 0,0,1] },
+  { code: 'WINE', name: '醉酒操盘手', nameEn: 'The Drunk Trader', desc: '喝多了打开交易软件，第二天醒来看持仓：？？？', master: 'Arthur Hayes', masterKey: 'arthur_hayes', rarity: '普通', rarityClass: 'uncommon', archetype: '链上原住民', quote: 'The only winning move against central banks is to buy hard assets.', vector: [2,2,2, 2,0,1, 0,1,0, 2,2,1, 1,1,1] },
+  { code: 'LUCK', name: '玄学操盘手', nameEn: 'The Mystic', desc: '你的交易逻辑超出了人类认知。也许你应该去买彩票', master: 'Satoshi Nakamoto', masterKey: 'satoshi_nakamoto', rarity: '传奇', rarityClass: 'legendary', archetype: '链上原住民', quote: "If you don't believe me or don't get it, I don't have time to convince you.", vector: [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1] },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
@@ -288,9 +288,12 @@ function matchType(answers) {
     if (sim > bestSim) { bestSim = sim; bestType = t; }
   }
 
+  // Clamp similarity to [0, 100]
+  const simPct = Math.max(0, Math.round(bestSim * 100));
+
   // LUCK fallback
   if (bestSim < 0.6) {
-    return { type: JCTI_TYPES.find(t => t.code === 'LUCK'), similarity: Math.round(bestSim * 100), matchedDims: 0 };
+    return { type: JCTI_TYPES.find(t => t.code === 'LUCK'), similarity: simPct, matchedDims: 0 };
   }
 
   // Count matched dimensions
@@ -298,7 +301,7 @@ function matchType(answers) {
     return count + (Math.abs(val - bestType.vector[i]) <= 0.5 ? 1 : 0);
   }, 0);
 
-  return { type: bestType, similarity: Math.round(bestSim * 100), matchedDims: matched };
+  return { type: bestType, similarity: simPct, matchedDims: matched };
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -368,7 +371,8 @@ function showResult() {
   const dimScores = computeDimensionScores(computeUserVector(answers));
 
   document.getElementById('result-code').textContent = '[ ' + t.code + ' ]';
-  document.getElementById('result-name').textContent = t.name;
+  document.getElementById('result-name-cn').textContent = t.name;
+  document.getElementById('result-name-en').textContent = t.nameEn;
   document.getElementById('result-desc').textContent = '"' + t.desc + '"';
 
   // Guardian
@@ -383,19 +387,20 @@ function showResult() {
   document.getElementById('guardian-archetype').textContent = t.archetype;
   document.getElementById('guardian-quote').textContent = '"' + t.quote + '"';
 
-  // Stats bars
+  // Stats bars (batch DOM write to avoid reflow per iteration)
   const statsEl = document.getElementById('stats');
-  statsEl.innerHTML = '';
+  let statsHtml = '';
   STAT_LABELS.forEach((label, i) => {
     const pct = dimScores[i];
     const colorClass = pct >= 70 ? '' : pct >= 40 ? 'mid' : 'low';
-    statsEl.innerHTML += `
+    statsHtml += `
       <div class="stat-row">
         <span class="stat-label">${label}</span>
         <div class="stat-bar"><div class="stat-fill ${colorClass}" style="width: 0%"></div></div>
         <span class="stat-value">${pct}%</span>
       </div>`;
   });
+  statsEl.innerHTML = statsHtml;
 
   // Animate bars after render
   setTimeout(() => {
