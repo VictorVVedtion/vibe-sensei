@@ -1,0 +1,43 @@
+name: Deploy JCTI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "jcti/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Pull Vercel project settings
+        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+        working-directory: jcti
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prod --token=$VERCEL_TOKEN 2>&1)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed to: $URL"
+        working-directory: jcti
+
+      - name: Deployment summary
+        run: echo "### Deployed to ${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
