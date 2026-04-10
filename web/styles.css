@@ -1,0 +1,205 @@
+/* Vibe Sensei — Dark trading terminal theme */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0D1117;
+  color: #00FF41;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Controls bar */
+.controls {
+  background: #0A0F0A;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #002B0E;
+  flex-shrink: 0;
+}
+
+.controls .logo {
+  font-size: 14px;
+  font-weight: 700;
+  color: #00FF41;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.controls .separator {
+  width: 1px;
+  height: 24px;
+  background: #002B0E;
+  flex-shrink: 0;
+}
+
+/* Symbol selector dropdown */
+.symbol-select {
+  background: #0D150D;
+  color: #00FF41;
+  border: 1px solid #002B0E;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.symbol-select:hover {
+  border-color: #00FF41;
+}
+
+.symbol-select:focus {
+  border-color: #00FF41;
+  box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.25);
+}
+
+/* Timeframe button group */
+.tf-group {
+  display: flex;
+  gap: 4px;
+}
+
+.tf-btn {
+  background: #0D150D;
+  color: #00FF41;
+  border: 1px solid #002B0E;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tf-btn:hover {
+  background: #002B0E;
+  border-color: #00FF41;
+}
+
+.tf-btn.active {
+  background: #00FF41;
+  border-color: #00FF41;
+  color: #0D1117;
+}
+
+/* Loading indicator */
+.loading-indicator {
+  color: #00FF41;
+  font-size: 12px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.loading-indicator.visible {
+  opacity: 1;
+}
+
+/* Chart container */
+.chart-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #0D1117;
+}
+
+.chart-container .error-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(13, 17, 23, 0.95);
+  border: 1px solid #FF003C;
+  border-radius: 8px;
+  padding: 24px 32px;
+  text-align: center;
+  max-width: 400px;
+  z-index: 10;
+}
+
+.chart-container .error-overlay h3 {
+  color: #FF003C;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.chart-container .error-overlay p {
+  color: #008F11;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Info panel */
+.info-panel {
+  background: #0A0F0A;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid #002B0E;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.info-panel .brand {
+  color: #008F11;
+}
+
+.info-panel .brand strong {
+  color: #00FF41;
+}
+
+.info-panel .price-info {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.info-panel .symbol-label {
+  color: #008F11;
+}
+
+.info-panel .last-price {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.info-panel .last-price.up {
+  color: #20C20E;
+}
+
+.info-panel .last-price.down {
+  color: #FF003C;
+}
+
+.info-panel .last-price.neutral {
+  color: #00FF41;
+}
+
+.info-panel .ohlc-bar {
+  display: flex;
+  gap: 10px;
+  color: #008F11;
+  font-size: 11px;
+}
+
+.info-panel .ohlc-bar span {
+  white-space: nowrap;
+}
+
+.info-panel .ohlc-bar .label {
+  color: #002B0E;
+}

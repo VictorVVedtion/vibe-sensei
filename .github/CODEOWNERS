@@ -1,0 +1,13 @@
+# Trading infrastructure — exchange layer and order execution
+src/services/exchange/   @VictorVVedtion
+src/tools/OrderTool/     @VictorVVedtion
+src/tools/CancelOrderTool/ @VictorVVedtion
+src/tools/PositionTool/  @VictorVVedtion
+src/tools/BalanceTool/   @VictorVVedtion
+
+# Dependency manifests
+package.json             @VictorVVedtion
+bun.lock                 @VictorVVedtion
+
+# CI/CD pipeline
+.github/                 @VictorVVedtion

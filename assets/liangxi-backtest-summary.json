@@ -1,0 +1,16 @@
+{
+  "strategy": "liangxi_rolling_position",
+  "params": {
+    "initial_capital": 1000.0,
+    "leverage": 100,
+    "trade_interval": "5m",
+    "take_profit_pct": 0.5,
+    "direction": "adaptive (short in crashes, long in rallies)"
+  },
+  "guardian_additions": {
+    "stop_loss_pct": 0.3,
+    "max_drawdown_pct": 50.0,
+    "max_position_pct": 80.0
+  },
+  "narrative": "We replicated Liangxi's legendary 1000->10M rolling position strategy and backtested it on the 519 crash and Feb 2025 crash. Then we added the risk management he never used \u2014 stop losses, position limits, and a circuit breaker. The guardian-enhanced version captures most of the upside while surviving the inevitable blowups."
+}

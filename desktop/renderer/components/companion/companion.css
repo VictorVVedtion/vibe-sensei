@@ -1,0 +1,104 @@
+/* Companion Sprite — Keyframe Animations */
+/* All animations use transform/opacity only for GPU compositing */
+
+/* ── Breathing — gentle idle bob ── */
+@keyframes companion-breathe {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-1.5px) scale(1.008);
+  }
+}
+
+/* ── Blink — quick eye close via scaleY ── */
+@keyframes companion-blink {
+  0%, 85%, 100% {
+    transform: scaleY(1);
+  }
+  90% {
+    transform: scaleY(0.1);
+  }
+  95% {
+    transform: scaleY(1);
+  }
+}
+
+/* ── Head tilt — subtle rotation ── */
+@keyframes companion-tilt {
+  0%, 90%, 100% {
+    transform: rotate(0deg);
+  }
+  93% {
+    transform: rotate(2deg);
+  }
+  97% {
+    transform: rotate(0deg);
+  }
+}
+
+/* ── Ghost flicker — for ghost masters ── */
+@keyframes companion-flicker {
+  0%, 90%, 100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 0.3;
+  }
+  94% {
+    opacity: 0.8;
+  }
+  96% {
+    opacity: 0.4;
+  }
+}
+
+/* ── ATH celebration particles — gold dots rising ── */
+@keyframes companion-particles {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-40px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* ── Speech bubble entrance/exit ── */
+@keyframes bubble-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bubble-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+}
+
+/* ── Tooltip fade ── */
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

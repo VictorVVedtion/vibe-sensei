@@ -1,0 +1,162 @@
+/* Vibe Sensei Desktop — Live Feed Strip */
+
+/* ── Feed Panel ── */
+
+.live-feed-strip {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  border-left: 1px solid rgba(156, 255, 147, 0.3);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Scrolling Entries Container ── */
+
+.live-feed-entries {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  min-height: 0;
+}
+
+.live-feed-scroll-inner {
+  animation: feed-scroll 20s linear infinite;
+}
+
+@keyframes feed-scroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+/* Pause scrolling on hover for readability */
+.live-feed-entries:hover .live-feed-scroll-inner {
+  animation-play-state: paused;
+}
+
+/* ── Single Feed Entry ── */
+
+.live-feed-entry {
+  padding: var(--space-2);
+  border-bottom: 1px solid rgba(156, 255, 147, 0.1);
+}
+
+.feed-entry-action {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.feed-entry-timestamp {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-entry-label {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.feed-entry-label.buy {
+  color: var(--color-accent);
+}
+
+.feed-entry-label.sell {
+  color: var(--color-loss);
+}
+
+.feed-entry-pair {
+  color: var(--text-primary);
+}
+
+.feed-entry-source {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 9px;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.feed-entry-regime {
+  font-size: 8px;
+  line-height: 1.4;
+  margin-top: 2px;
+  color: var(--color-accent);
+}
+
+/* ── Bottom Controls ── */
+
+.live-feed-controls {
+  margin-top: auto;
+  border-top: 1px solid rgba(156, 255, 147, 0.3);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: #000000;
+  flex-shrink: 0;
+}
+
+.feed-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px var(--space-2);
+  border: 1px solid rgba(156, 255, 147, 0.3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.feed-btn:hover {
+  background: rgba(156, 255, 147, 0.08);
+  border-color: var(--color-accent);
+}
+
+.feed-btn-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.feed-btn-forced-exit {
+  width: 100%;
+  background: var(--color-loss);
+  color: #ffffff;
+  border-color: var(--color-loss);
+  transition: background 150ms steps(3), border-color var(--transition-fast);
+}
+
+.feed-btn-forced-exit:hover {
+  background: #d42f3d;
+  border-color: #d42f3d;
+}
+
+.feed-btn-sys-stat {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
+}
+
+.feed-btn-sys-stat:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text-primary);
+}
+
+/* ── Reduced Motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .live-feed-scroll-inner {
+    animation: none;
+  }
+}

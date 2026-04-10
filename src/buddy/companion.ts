@@ -1,0 +1,262 @@
+import { getGlobalConfig } from '../utils/config.js'
+import {
+  type Companion,
+  type CompanionBones,
+  EYES,
+  EMBLEMS,
+  MASTERS,
+  MASTER_RARITY,
+  MASTER_NAMES,
+  MASTER_QUOTES,
+  RARITIES,
+  RARITY_WEIGHTS,
+  type Rarity,
+  type Master,
+  STAT_NAMES,
+  type StatName,
+} from './types.js'
+import { isDesktopMode, emitToDesktop } from '../services/desktop/bridge.js'
+import { getMasterArchetype } from './persona.js'
+
+// Mulberry32 — tiny seeded PRNG, good enough for picking masters
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return function () {
+    a |= 0
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function hashString(s: string): number {
+  if (typeof Bun !== 'undefined') {
+    return Number(BigInt(Bun.hash(s)) & 0xffffffffn)
+  }
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function pick<T>(rng: () => number, arr: readonly T[]): T {
+  return arr[Math.floor(rng() * arr.length)]!
+}
+
+// Roll a master weighted by rarity tier.
+// First roll rarity, then pick randomly from masters of that rarity.
+function rollMaster(rng: () => number): { master: Master; rarity: Rarity } {
+  const total = Object.values(RARITY_WEIGHTS).reduce((a, b) => a + b, 0)
+  let roll = rng() * total
+  let targetRarity: Rarity = 'common'
+  for (const rarity of RARITIES) {
+    roll -= RARITY_WEIGHTS[rarity]
+    if (roll < 0) { targetRarity = rarity; break }
+  }
+
+  // Filter masters of this rarity
+  const candidates = MASTERS.filter(m => MASTER_RARITY[m] === targetRarity)
+  if (candidates.length === 0) {
+    // Fallback: pick any master
+    return { master: pick(rng, MASTERS), rarity: targetRarity }
+  }
+  return { master: pick(rng, candidates), rarity: targetRarity }
+}
+
+const RARITY_FLOOR: Record<Rarity, number> = {
+  common: 5,
+  uncommon: 15,
+  rare: 25,
+  epic: 35,
+  legendary: 50,
+}
+
+// One peak stat, one dump stat, rest scattered. Rarity bumps the floor.
+function rollStats(
+  rng: () => number,
+  rarity: Rarity,
+): Record<StatName, number> {
+  const floor = RARITY_FLOOR[rarity]
+  const peak = pick(rng, STAT_NAMES)
+  let dump = pick(rng, STAT_NAMES)
+  while (dump === peak) dump = pick(rng, STAT_NAMES)
+
+  const stats = {} as Record<StatName, number>
+  for (const name of STAT_NAMES) {
+    if (name === peak) {
+      stats[name] = Math.min(100, floor + 50 + Math.floor(rng() * 30))
+    } else if (name === dump) {
+      stats[name] = Math.max(1, floor - 10 + Math.floor(rng() * 15))
+    } else {
+      stats[name] = floor + Math.floor(rng() * 40)
+    }
+  }
+  return stats
+}
+
+const SALT = 'sensei-2026-401'
+
+export type Roll = {
+  bones: CompanionBones
+  inspirationSeed: number
+}
+
+function rollFrom(rng: () => number): Roll {
+  const { master, rarity } = rollMaster(rng)
+  const bones: CompanionBones = {
+    rarity,
+    species: master,
+    eye: pick(rng, EYES),
+    hat: rarity === 'common' ? 'none' : pick(rng, EMBLEMS),
+    shiny: rng() < 0.01,
+    stats: rollStats(rng, rarity),
+  }
+  return { bones, inspirationSeed: Math.floor(rng() * 1e9) }
+}
+
+// Track whether we've already emitted master_info to desktop bridge
+let desktopMasterEmitted = false
+
+// Called from hot paths with the same userId → cache the deterministic result.
+let rollCache: { key: string; value: Roll } | undefined
+export function roll(userId: string): Roll {
+  const key = userId + SALT
+  if (rollCache?.key === key) return rollCache.value
+  const value = rollFrom(mulberry32(hashString(key)))
+  rollCache = { key, value }
+  return value
+}
+
+export function rollWithSeed(seed: string): Roll {
+  return rollFrom(mulberry32(hashString(seed)))
+}
+
+export function companionUserId(): string {
+  const config = getGlobalConfig()
+  return config.oauthAccount?.accountUuid ?? config.userID ?? 'anon'
+}
+
+// Get the user's assigned master guardian.
+// For masters (unlike original animal companions), we auto-initialize
+// because the master's identity is deterministic and known — no AI generation needed.
+export function getCompanion(): Companion | undefined {
+  // Demo mode: always Warren Buffett (Legendary) for a consistent showcase
+  if (process.env.IS_DEMO === '1') {
+    const demoMaster = 'warren_buffett' as Master
+    const demoBones: CompanionBones = {
+      rarity: 'legendary' as Rarity,
+      species: demoMaster,
+      eye: 'wise' as any,
+      hat: 'monocle' as any,
+      shiny: false,
+      stats: { precision: 92, patience: 98, aggression: 15, wisdom: 95, sass: 60 } as Record<StatName, number>,
+    }
+    return {
+      ...demoBones,
+      name: MASTER_NAMES[demoMaster],
+      personality: MASTER_QUOTES[demoMaster],
+      hatchedAt: Date.now(),
+    }
+  }
+
+  const config = getGlobalConfig()
+  const userId = companionUserId()
+  const { bones } = roll(userId)
+
+  // If companion already stored, merge with fresh bones.
+  // Always use canonical master name/quote from types.ts — config may have
+  // stale companion names from before the master system was introduced.
+  if (config.companion) {
+    const canonicalName = MASTER_NAMES[bones.species as Master] ?? bones.species
+    const canonicalQuote = MASTER_QUOTES[bones.species as Master] ?? ''
+    const result = {
+      ...config.companion,
+      ...bones,
+      name: canonicalName,
+      personality: canonicalQuote,
+    }
+    emitMasterInfoToDesktop(result, false)
+    return result
+  }
+
+  // Auto-initialize: master identity is known from types.ts
+  const masterName = MASTER_NAMES[bones.species as Master] ?? bones.species
+  const masterQuote = MASTER_QUOTES[bones.species as Master] ?? ''
+  const autoSoul = {
+    name: masterName,
+    personality: masterQuote,
+    hatchedAt: Date.now(),
+  }
+
+  // Persist so CompanionSprite and other consumers find it
+  try {
+    const { saveGlobalConfig } = require('../utils/config.js') as { saveGlobalConfig: (patch: Record<string, unknown>) => void }
+    saveGlobalConfig({ companion: autoSoul })
+  } catch {
+    // Config save failed — still return the companion for this session
+  }
+
+  const result = { ...autoSoul, ...bones }
+  // First hatch — flag the desktop bridge so it can play the celebration
+  // sprite via existing companion_emotion plumbing.
+  emitMasterInfoToDesktop(result, true)
+  return result
+}
+
+/**
+ * Emit master_info to the desktop bridge (once per session).
+ * Silently swallows all errors — must NEVER crash the trading engine.
+ *
+ * When `isFirstHatch` is true, also emits a `celebrate` companion_emotion
+ * so the existing CompanionSprite crossfades into the celebration variant
+ * for ~8 seconds (auto-reset by useCompanionState). This is the desktop
+ * equivalent of the CLI SummoningCeremony — same trigger, different surface.
+ */
+function emitMasterInfoToDesktop(companion: Companion, isFirstHatch: boolean): void {
+  try {
+    if (desktopMasterEmitted) return
+    if (!isDesktopMode()) return
+
+    const master = companion.species as Master
+    emitToDesktop('master_info', {
+      id: companion.species,
+      name: companion.name,
+      rarity: companion.rarity,
+      archetype: getMasterArchetype(master),
+      quote: companion.personality,
+      stats: companion.stats,
+    })
+    desktopMasterEmitted = true
+
+    if (isFirstHatch) {
+      emitToDesktop('companion_emotion', {
+        emotion: 'celebrate',
+        intensity: 1,
+        trigger: 'first_hatch',
+        timestamp: Date.now(),
+      })
+    }
+  } catch {
+    // Bridge emission must never propagate
+  }
+}
+
+// Get display name for current master
+export function getMasterName(master: Master): string {
+  return MASTER_NAMES[master] ?? master
+}
+
+// Get iconic quote for current master
+export function getMasterQuote(master: Master): string {
+  return MASTER_QUOTES[master] ?? ''
+}
+
+// Get the system prompt prefix for the guardian persona
+export function getGuardianPrompt(master: Master): string {
+  const name = MASTER_NAMES[master]
+  const quote = MASTER_QUOTES[master]
+  return `You are ${name}, acting as a trading risk guardian. Stay in character. Your iconic philosophy: "${quote}". Respond to trading decisions with your known trading style and risk philosophy. Be concise, opinionated, and true to your historical personality.`
+}

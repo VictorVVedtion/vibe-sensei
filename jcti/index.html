@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JCTI 韭菜交易人格指标</title>
+  <meta name="description" content="MBTI 测你是谁，SBTI 测你多傻，JCTI 测你亏了多少。31 道灵魂拷问，测出你是哪种韭菜。">
+  <meta property="og:title" content="JCTI 韭菜交易人格指标">
+  <meta property="og:description" content="31 道灵魂拷问，测出你是哪种韭菜。零科学，全韭菜，测完别哭。">
+  <meta property="og:image" content="og.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ticker -->
+  <div class="ticker">
+    <div class="ticker-inner">
+      <span class="ticker-item ticker-up">韭菜指数 +99.9%</span>
+      <span class="ticker-item ticker-down">理性指数 -87.3%</span>
+      <span class="ticker-item ticker-up">FOMO币 +300%</span>
+      <span class="ticker-item ticker-down">止损纪律 -100%</span>
+      <span class="ticker-item ticker-up">被套牢指数 MAX</span>
+      <span class="ticker-item ticker-up">追高信仰 +999%</span>
+      <span class="ticker-item ticker-down">本金余额 -99.9%</span>
+      <span class="ticker-item ticker-up">自我安慰指数 +200%</span>
+      <!-- duplicate for seamless scroll -->
+      <span class="ticker-item ticker-up">韭菜指数 +99.9%</span>
+      <span class="ticker-item ticker-down">理性指数 -87.3%</span>
+      <span class="ticker-item ticker-up">FOMO币 +300%</span>
+      <span class="ticker-item ticker-down">止损纪律 -100%</span>
+      <span class="ticker-item ticker-up">被套牢指数 MAX</span>
+      <span class="ticker-item ticker-up">追高信仰 +999%</span>
+      <span class="ticker-item ticker-down">本金余额 -99.9%</span>
+      <span class="ticker-item ticker-up">自我安慰指数 +200%</span>
+    </div>
+  </div>
+
+  <!-- Home Screen -->
+  <div id="screen-home" class="screen home active">
+    <div class="home-title">JCTI</div>
+    <div class="home-subtitle">韭菜交易人格指标</div>
+    <div class="home-slogan">
+      MBTI 测你是谁<br>
+      SBTI 测你多傻<br>
+      <em>JCTI 测你亏了多少</em>
+    </div>
+    <div class="home-desc">
+      31 道灵魂拷问，测出你是哪种韭菜。<br>
+      零科学，全韭菜，测完别哭。
+    </div>
+    <button class="btn-cta" onclick="startQuiz()">开始测试 &rarr;</button>
+    <div class="home-footer">Powered by Vibe Sensei</div>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div id="screen-quiz" class="screen quiz">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-label" id="progress-label">1 / 31</div>
+    <div class="question-area" id="question-area">
+      <div class="question-dim" id="question-dim"></div>
+      <div class="question-text" id="question-text"></div>
+      <div class="options" id="options"></div>
+    </div>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="screen-result" class="screen result">
+    <div class="result-header">JCTI 韭菜交易人格指标</div>
+    <div class="result-code" id="result-code"></div>
+    <div class="result-name-cn" id="result-name-cn"></div>
+    <div class="result-name-en" id="result-name-en"></div>
+    <div class="result-desc" id="result-desc"></div>
+    <div class="divider"> 你的守护大师 </div>
+    <div class="guardian" id="guardian">
+      <img class="guardian-sprite" id="guardian-sprite" alt="guardian">
+      <div class="guardian-info">
+        <div class="guardian-name" id="guardian-name"></div>
+        <div class="guardian-rarity" id="guardian-rarity"></div>
+        <div class="guardian-archetype" id="guardian-archetype"></div>
+      </div>
+    </div>
+    <div class="guardian-quote" id="guardian-quote"></div>
+    <div class="divider"> 交易 DNA </div>
+    <div class="stats" id="stats"></div>
+    <div class="result-similarity" id="result-similarity"></div>
+    <div class="result-actions">
+      <button class="btn-outline" onclick="resetQuiz()">再测一次</button>
+    </div>
+    <div class="result-footer">jcti.fun &middot; Vibe Sensei &middot; "零科学，全韭菜，测完别哭"</div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
