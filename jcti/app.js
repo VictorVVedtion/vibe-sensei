@@ -305,6 +305,36 @@ function matchType(answers) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════════
+
+const SUPABASE_URL = 'https://kqireoahumqqswwotcxj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxaXJlb2FodW1xcXN3d290Y3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MDE5MzIsImV4cCI6MjA5MTM3NzkzMn0.Z4udh1aEzemEA5POeD7iDV22hgYdyFreWbrxeAhoWys';
+
+function submitResult(result, dimScores) {
+  const t = result.type;
+  fetch(SUPABASE_URL + '/rest/v1/jcti_results', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      jcti_type: t.code,
+      type_name: t.name,
+      similarity: result.similarity,
+      matched_dims: result.matchedDims,
+      dimension_scores: Object.fromEntries(STAT_LABELS.map((l, i) => [l, dimScores[i]])),
+      user_vector: result.userVec,
+      answers: answers.map(a => ({ dim: a.dim, value: a.value })),
+      user_agent: navigator.userAgent,
+      referrer: document.referrer || null,
+    }),
+  }).catch(() => {}); // silent — never break UX
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // UI STATE MACHINE
 // ═══════════════════════════════════════════════════════════════════
 
@@ -412,6 +442,7 @@ function showResult() {
   document.getElementById('result-similarity').textContent =
     '相似度 ' + result.similarity + '% · 命中 ' + result.matchedDims + '/15 维度';
 
+  submitResult(result, dimScores);
   showScreen('result');
 }
 

@@ -43,3 +43,7 @@ scripts/dev/preview-*.mjs
 # sprite working scratch (local-only backups, mac filename duplicates)
 assets/sprites/_backup_*/
 **/*_副本.md
+
+
+.env.local
+.env
