@@ -75,27 +75,39 @@
     </div>
   </div>
 
+  <!-- Loading Screen -->
+  <div id="screen-loading" class="screen loading">
+    <div class="loading-terminal">
+      <div class="loading-cursor">&gt;_</div>
+      <div class="loading-text" id="loading-text"></div>
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
   <!-- Result Screen -->
   <div id="screen-result" class="screen result">
-    <div class="result-header">JCTI 韭菜交易人格指标</div>
-    <div class="result-code" id="result-code"></div>
-    <div class="result-name-cn" id="result-name-cn"></div>
-    <div class="result-name-en" id="result-name-en"></div>
-    <div class="result-desc" id="result-desc"></div>
-    <div class="divider"> 你的守护大师 </div>
-    <div class="guardian" id="guardian">
-      <img class="guardian-sprite" id="guardian-sprite" alt="guardian">
-      <div class="guardian-info">
-        <div class="guardian-name" id="guardian-name"></div>
-        <div class="guardian-rarity" id="guardian-rarity"></div>
-        <div class="guardian-archetype" id="guardian-archetype"></div>
+    <div class="poster-card" id="poster-card">
+      <div class="result-header">JCTI 韭菜交易人格指标</div>
+      <div class="result-code" id="result-code"></div>
+      <div class="result-name-cn" id="result-name-cn"></div>
+      <div class="result-name-en" id="result-name-en"></div>
+      <div class="result-desc" id="result-desc"></div>
+      <div class="divider"> 你的守护大师 </div>
+      <div class="guardian" id="guardian">
+        <img class="guardian-sprite" id="guardian-sprite" alt="guardian">
+        <div class="guardian-info">
+          <div class="guardian-name" id="guardian-name"></div>
+          <div class="guardian-rarity" id="guardian-rarity"></div>
+          <div class="guardian-archetype" id="guardian-archetype"></div>
+        </div>
       </div>
+      <div class="guardian-quote" id="guardian-quote"></div>
+      <div class="divider"> 交易 DNA </div>
+      <div class="stats" id="stats"></div>
+      <div class="result-similarity" id="result-similarity"></div>
     </div>
-    <div class="guardian-quote" id="guardian-quote"></div>
-    <div class="divider"> 交易 DNA </div>
-    <div class="stats" id="stats"></div>
-    <div class="result-similarity" id="result-similarity"></div>
     <div class="result-actions">
+      <button class="btn-primary" onclick="generatePoster()">保存确诊单</button>
       <button class="btn-outline" onclick="resetQuiz()">再测一次</button>
     </div>
     <div class="result-footer">
@@ -140,6 +152,16 @@
     <div class="result-footer">jcti.fun &middot; Vibe Sensei &middot; "零科学，全韭菜，测完别哭"</div>
   </div>
 
+  <!-- Poster Modal -->
+  <div class="poster-modal" id="poster-modal">
+    <button class="poster-modal-close" onclick="closePosterModal()">&times;</button>
+    <div class="poster-modal-body">
+      <img class="poster-modal-img" id="poster-modal-img" alt="确诊单">
+      <div class="poster-modal-hint">长按保存图片</div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
   <script src="app.js"></script>
 </body>
 </html>

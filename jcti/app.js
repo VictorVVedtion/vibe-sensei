@@ -233,6 +233,17 @@ const DIM_TO_STAT = {
 const STAT_LABELS = ['耐心', '魄力', '精准', '野心', '智慧'];
 const VALUE_MAP = { L: 0, M: 1, H: 2 };
 
+const LOADING_TEXTS = [
+  '正在连接币安提取亏损数据...',
+  '正在计算你的韭菜指数...',
+  '正在匹配守护大师...',
+  '分析你的交易DNA...',
+  '正在翻阅你的爆仓记录...',
+  '正在评估你的钻石手硬度...',
+  '正在计算你的FOMO系数...',
+  '同步韭菜数据库中...',
+];
+
 // ═══════════════════════════════════════════════════════════════════
 // SCORING ENGINE
 // ═══════════════════════════════════════════════════════════════════
@@ -409,6 +420,7 @@ function renderStats(data) {
 
 let currentQuestion = 0;
 let answers = [];
+let loadingInterval = null;
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -440,8 +452,9 @@ function renderQuestion() {
   q.options.forEach((opt, i) => {
     const btn = document.createElement('button');
     btn.className = 'option-btn';
+    btn.style.animationDelay = (i * 0.06) + 's';
     btn.innerHTML = '<span class="letter">' + letters[i] + '.</span> ' + opt.text;
-    btn.onclick = () => selectOption(opt);
+    btn.onclick = () => selectOption(opt, btn);
     optionsEl.appendChild(btn);
   });
 
@@ -452,15 +465,18 @@ function renderQuestion() {
   area.style.animation = 'fadeIn 0.3s ease';
 }
 
-function selectOption(opt) {
+function selectOption(opt, btnEl) {
+  if (navigator.vibrate) navigator.vibrate(15);
+  btnEl.classList.add('selected');
+
   const q = QUESTIONS[currentQuestion];
   answers.push({ dim: q.dim, value: opt.value, triggersWine: opt.triggersWine || false });
 
   currentQuestion++;
   if (currentQuestion < QUESTIONS.length) {
-    renderQuestion();
+    setTimeout(() => renderQuestion(), 120);
   } else {
-    showResult();
+    setTimeout(() => showLoading(), 120);
   }
 }
 
@@ -475,8 +491,10 @@ function showResult() {
   document.getElementById('result-desc').textContent = '"' + t.desc + '"';
 
   // Guardian
-  document.getElementById('guardian-sprite').src = 'sprites/' + t.masterKey + '-idle.png';
-  document.getElementById('guardian-sprite').alt = t.master;
+  const spriteEl = document.getElementById('guardian-sprite');
+  spriteEl.src = 'sprites/' + t.masterKey + '-idle.png';
+  spriteEl.alt = t.master;
+  spriteEl.className = 'guardian-sprite ' + t.rarityClass;
   document.getElementById('guardian-name').textContent = t.master;
 
   const rarityEl = document.getElementById('guardian-rarity');
@@ -515,6 +533,60 @@ function showResult() {
   showScreen('result');
 }
 
+function showLoading() {
+  showScreen('loading');
+  const textEl = document.getElementById('loading-text');
+  let index = 0;
+  textEl.textContent = LOADING_TEXTS[0];
+
+  loadingInterval = setInterval(() => {
+    index = (index + 1) % LOADING_TEXTS.length;
+    textEl.style.opacity = '0';
+    setTimeout(() => {
+      textEl.textContent = LOADING_TEXTS[index];
+      textEl.style.opacity = '1';
+    }, 150);
+  }, 600);
+
+  setTimeout(() => {
+    clearInterval(loadingInterval);
+    loadingInterval = null;
+    showResult();
+  }, 2500);
+}
+
 function resetQuiz() {
+  if (loadingInterval) {
+    clearInterval(loadingInterval);
+    loadingInterval = null;
+  }
   showScreen('home');
+}
+
+function generatePoster() {
+  const card = document.getElementById('poster-card');
+  const btn = document.querySelector('.result-actions .btn-primary');
+  const originalText = btn.textContent;
+  btn.textContent = '生成中...';
+  btn.disabled = true;
+
+  html2canvas(card, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: '#0A0F1A',
+    logging: false,
+  }).then(function(canvas) {
+    const img = document.getElementById('poster-modal-img');
+    img.src = canvas.toDataURL('image/png');
+    document.getElementById('poster-modal').classList.add('active');
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }).catch(function() {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  });
+}
+
+function closePosterModal() {
+  document.getElementById('poster-modal').classList.remove('active');
 }
