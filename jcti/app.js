@@ -644,7 +644,7 @@ function sharePoster() {
   var file = new File([window._posterBlob], 'JCTI-确诊单.png', { type: 'image/png' });
   navigator.share({
     title: 'JCTI 韭菜交易确诊单',
-    text: '我的交易人格确诊了！来测测你是哪种韭菜 jcti.fun',
+    text: '我的交易人格确诊了！来测测你是哪种韭菜 jcti.rivercore.ai',
     files: [file],
   }).catch(function() {});
 }
