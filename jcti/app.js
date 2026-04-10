@@ -328,10 +328,79 @@ function submitResult(result, dimScores) {
       dimension_scores: Object.fromEntries(STAT_LABELS.map((l, i) => [l, dimScores[i]])),
       user_vector: result.userVec,
       answers: answers.map(a => ({ dim: a.dim, value: a.value })),
-      user_agent: navigator.userAgent,
-      referrer: document.referrer || null,
     }),
   }).catch(() => {}); // silent — never break UX
+}
+
+function showStats() {
+  showScreen('stats');
+  document.getElementById('stats-loading').style.display = '';
+  document.getElementById('stats-content').style.display = 'none';
+
+  fetch(SUPABASE_URL + '/rest/v1/rpc/jcti_stats', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+    },
+  })
+    .then(r => r.json())
+    .then(renderStats)
+    .catch(() => {
+      document.getElementById('stats-loading').textContent = '加载失败，请稍后重试';
+    });
+}
+
+function renderStats(data) {
+  document.getElementById('stats-loading').style.display = 'none';
+  document.getElementById('stats-content').style.display = '';
+
+  // KPIs
+  document.getElementById('kpi-total').textContent = (data.total || 0).toLocaleString();
+  document.getElementById('kpi-24h').textContent = '+' + (data.recent_count_24h || 0);
+
+  // Type ranking
+  const types = data.type_distribution || [];
+  const maxCount = types.length ? types[0].count : 1;
+  const rankEl = document.getElementById('type-ranking');
+  rankEl.innerHTML = types.map((t, i) => {
+    const pct = data.total ? Math.round(t.count / data.total * 100) : 0;
+    const barW = Math.round(t.count / maxCount * 100);
+    return `<div class="rank-row">
+      <span class="rank-pos">${i + 1}</span>
+      <span class="rank-code">${t.jcti_type}</span>
+      <span class="rank-name">${t.type_name}</span>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:0%"  data-w="${barW}"></div></div>
+      <span class="rank-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  // Animate bars
+  setTimeout(() => {
+    rankEl.querySelectorAll('.rank-bar').forEach(bar => {
+      bar.style.width = bar.dataset.w + '%';
+    });
+  }, 50);
+
+  // Average DNA
+  const avgEl = document.getElementById('avg-dna');
+  const scores = data.avg_scores || {};
+  avgEl.innerHTML = STAT_LABELS.map(label => {
+    const val = scores[label] || 0;
+    const colorClass = val >= 70 ? '' : val >= 40 ? 'mid' : 'low';
+    return `<div class="stat-row">
+      <span class="stat-label">${label}</span>
+      <div class="stat-bar"><div class="stat-fill ${colorClass}" style="width:0%" data-w="${val}"></div></div>
+      <span class="stat-value">${val}%</span>
+    </div>`;
+  }).join('');
+
+  setTimeout(() => {
+    avgEl.querySelectorAll('.stat-fill').forEach(bar => {
+      bar.style.width = bar.dataset.w + '%';
+    });
+  }, 50);
 }
 
 // ═══════════════════════════════════════════════════════════════════

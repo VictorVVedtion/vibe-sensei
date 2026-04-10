@@ -478,6 +478,170 @@ body {
   padding-bottom: 8px;
 }
 
+/* ─── Stats Dashboard ─── */
+.stats-screen {
+  padding: 0 16px calc(20px + var(--safe-bottom));
+  max-width: 540px;
+  margin: 0 auto;
+  width: 100%;
+  gap: 0;
+}
+.stats-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  width: 100%;
+}
+.stats-back {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+}
+.stats-back:hover {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+.stats-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-green);
+  letter-spacing: 2px;
+}
+.stats-loading {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  color: var(--color-text-dim);
+  text-align: center;
+  padding: 60px 0;
+}
+.stats-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 16px;
+}
+.btn-stats {
+  background: transparent;
+  color: var(--color-text-dim);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 1px;
+  -webkit-appearance: none;
+  touch-action: manipulation;
+}
+.btn-stats:hover {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+/* KPI Cards */
+.kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+.kpi-label {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  color: var(--color-text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.kpi-value {
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+.kpi-green { color: var(--color-green); }
+
+/* Dashboard Sections */
+.dash-section {
+  width: 100%;
+}
+.dash-section-title {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  color: var(--color-text-dim);
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Type Ranking Rows */
+.rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.rank-pos {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  min-width: 20px;
+  text-align: right;
+}
+.rank-code {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-green);
+  min-width: 44px;
+}
+.rank-name {
+  font-size: 13px;
+  color: var(--color-text);
+  min-width: 72px;
+}
+.rank-bar-wrap {
+  flex: 1;
+  height: 18px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.rank-bar {
+  height: 100%;
+  background: var(--color-green);
+  border-radius: var(--radius-sm);
+  transition: width 0.6s ease;
+  min-width: 2px;
+}
+.rank-pct {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  color: var(--color-text-dim);
+  min-width: 36px;
+  text-align: right;
+}
+
 /* ─── Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
