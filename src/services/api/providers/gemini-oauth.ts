@@ -200,7 +200,15 @@ export async function startGeminiOAuthFlow(
     if (!process.env.VIBE_GEMINI_DEBUG) return
     try {
       const fs = require('fs')
-      fs.appendFileSync('/tmp/vibe-gemini-oauth.log', `[${new Date().toISOString()}] ${msg}\n`)
+      // Debug logs for OAuth flows contain sensitive state (PKCE lengths,
+      // progress messages, error bodies). Keep them inside TOKEN_DIR —
+      // which is 0o700 — not in world-readable /tmp.
+      try { fs.mkdirSync(TOKEN_DIR, { recursive: true, mode: 0o700 }) } catch { /* ignore */ }
+      fs.appendFileSync(
+        join(TOKEN_DIR, 'gemini-oauth-debug.log'),
+        `[${new Date().toISOString()}] ${msg}\n`,
+        { mode: 0o600 },
+      )
     } catch { /* ignore */ }
   }
 
@@ -267,8 +275,7 @@ export async function startGeminiOAuthFlow(
   })
 
   if (!tokenResponse.ok) {
-    const text = await tokenResponse.text().catch(() => '')
-    throw new Error(`Token exchange failed: ${text}`)
+    throw new Error(await formatHttpError('Token exchange failed', tokenResponse))
   }
 
   const data = await tokenResponse.json() as {
@@ -348,8 +355,7 @@ async function discoverGeminiProject(
     if (isVpcScAffected(errorPayload)) {
       data = { currentTier: { id: TIER_STANDARD } }
     } else {
-      const errorText = await loadResponse.text()
-      throw new Error(`loadCodeAssist failed: ${loadResponse.status} ${errorText}`)
+      throw new Error(await formatHttpError('loadCodeAssist failed', loadResponse))
     }
   } else {
     data = await loadResponse.json() as LoadData
@@ -396,8 +402,7 @@ async function discoverGeminiProject(
   })
 
   if (!onboardResponse.ok) {
-    const errorText = await onboardResponse.text()
-    throw new Error(`onboardUser failed: ${onboardResponse.status} ${errorText}`)
+    throw new Error(await formatHttpError('onboardUser failed', onboardResponse))
   }
 
   let lroData = await onboardResponse.json() as {
@@ -531,7 +536,9 @@ async function ensureFreshGemini(creds: GeminiCredentials): Promise<GeminiCreden
 // ---------------------------------------------------------------------------
 
 async function storeCredentials(creds: GeminiCredentials): Promise<void> {
-  await mkdir(TOKEN_DIR, { recursive: true })
+  // 0o700 on the directory so other local users can't enumerate filenames
+  // or confirm credentials exist; the file itself is already 0o600 below.
+  await mkdir(TOKEN_DIR, { recursive: true, mode: 0o700 })
   await writeFile(TOKEN_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 })
 }
 
@@ -691,4 +698,38 @@ function waitForGeminiCallback(
 function base64urlEncode(bytes: Buffer | Uint8Array): string {
   return Buffer.from(bytes).toString('base64')
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+/**
+ * Build a bounded error message from a failed HTTP Response. Google's
+ * token and Cloud Code Assist error responses can echo parts of the
+ * submitted request (including the `code`) back in the body, and the
+ * full body is later rendered in the REPL UI and written to the debug
+ * log. Parse structured `error.message` / `error_description` when
+ * possible; otherwise surface the status code plus a short, whitespace-
+ * collapsed snippet of at most 120 chars.
+ */
+async function formatHttpError(label: string, response: Response): Promise<string> {
+  try {
+    const text = await response.text()
+    try {
+      const parsed = JSON.parse(text) as {
+        error?: string | { message?: string; code?: string | number }
+        error_description?: string
+      }
+      const structured =
+        (typeof parsed?.error === 'object' && parsed.error?.message) ||
+        parsed?.error_description ||
+        (typeof parsed?.error === 'string' ? parsed.error : undefined)
+      if (typeof structured === 'string' && structured.length) {
+        return `${label}: ${response.status} ${structured.slice(0, 200)}`
+      }
+    } catch { /* not JSON, fall through */ }
+    const snippet = text.replace(/\s+/g, ' ').slice(0, 120)
+    return snippet
+      ? `${label}: ${response.status} (${snippet})`
+      : `${label}: ${response.status}`
+  } catch {
+    return `${label}: ${response.status}`
+  }
 }

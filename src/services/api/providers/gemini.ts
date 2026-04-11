@@ -32,12 +32,23 @@ import {
   messageStopEvent,
 } from './stream-event-helpers.js'
 
-// Debug logging (enable with VIBE_GEMINI_DEBUG=1)
+// Debug logging (enable with VIBE_GEMINI_DEBUG=1).
+// Logs are written to ~/.vibe-sensei/gemini-debug.log (0o600) rather than
+// /tmp, because they can include request/response fragments that are
+// sensitive when OAuth tokens flow through this file.
 function debugLog(msg: string): void {
   if (!process.env.VIBE_GEMINI_DEBUG) return
   try {
     const fs = require('fs')
-    fs.appendFileSync('/tmp/vibe-gemini-debug.log', `[${new Date().toISOString()}] ${msg}\n`)
+    const os = require('os')
+    const path = require('path')
+    const dir = path.join(os.homedir(), '.vibe-sensei')
+    try { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }) } catch { /* ignore */ }
+    fs.appendFileSync(
+      path.join(dir, 'gemini-debug.log'),
+      `[${new Date().toISOString()}] ${msg}\n`,
+      { mode: 0o600 },
+    )
   } catch { /* ignore */ }
 }
 
@@ -486,6 +497,44 @@ function toolSchemaToJsonSchema(schema: any): any {
 }
 
 /**
+ * Deep-merge an `allOf` member list into a single schema. Combines
+ * `properties` maps via Object.assign (later members override earlier
+ * keys, matching JSON Schema allOf validation order), unions `required`
+ * arrays, and takes the first-seen definition for scalar keys so parent
+ * constraints aren't silently clobbered by children.
+ */
+function mergeAllOf(members: any[]): any {
+  const merged: Record<string, any> = {}
+  const mergedProps: Record<string, any> = {}
+  const mergedRequired = new Set<string>()
+  for (const m of members) {
+    if (!m || typeof m !== 'object') continue
+    for (const [k, v] of Object.entries(m)) {
+      if (k === 'properties' && v && typeof v === 'object') {
+        Object.assign(mergedProps, v as Record<string, any>)
+      } else if (k === 'required' && Array.isArray(v)) {
+        for (const r of v) if (typeof r === 'string') mergedRequired.add(r)
+      } else if (k === 'allOf' && Array.isArray(v)) {
+        // Nested allOf: flatten one level at a time
+        const inner = mergeAllOf(v)
+        if (inner.properties) Object.assign(mergedProps, inner.properties)
+        if (Array.isArray(inner.required)) for (const r of inner.required) mergedRequired.add(r)
+        for (const [ik, iv] of Object.entries(inner)) {
+          if (ik !== 'properties' && ik !== 'required' && !(ik in merged)) {
+            merged[ik] = iv
+          }
+        }
+      } else if (!(k in merged)) {
+        merged[k] = v
+      }
+    }
+  }
+  if (Object.keys(mergedProps).length) merged.properties = mergedProps
+  if (mergedRequired.size) merged.required = Array.from(mergedRequired)
+  return merged
+}
+
+/**
  * Convert a JSON Schema to a Gemini-compatible schema:
  *   1. Inline all `$ref` references against `$defs` / `definitions`
  *   2. Strip all `$*` keys and `additionalProperties`
@@ -570,6 +619,24 @@ function inlineAndClean(
   if ('const' in node) {
     const { const: constVal, ...rest } = node
     return inlineAndClean({ ...rest, enum: [constVal] }, defs, visiting)
+  }
+
+  // `oneOf` → `anyOf`. Gemini only accepts `anyOf`; silently dropping
+  // `oneOf` would collapse discriminated unions to `{}`. `anyOf` is
+  // semantically looser but accepts every input valid under `oneOf`,
+  // so this is the safest remap.
+  if (Array.isArray(node.oneOf)) {
+    const { oneOf, ...rest } = node
+    return inlineAndClean({ ...rest, anyOf: oneOf }, defs, visiting)
+  }
+
+  // `allOf` → deep-merge members into the parent. Gemini doesn't accept
+  // `allOf`, and dropping it would lose constraints. Merging preserves
+  // the "all must hold" semantics by unioning `properties` and `required`
+  // and taking the first definition of any scalar key.
+  if (Array.isArray(node.allOf)) {
+    const { allOf, ...rest } = node
+    return inlineAndClean(mergeAllOf([rest, ...allOf]), defs, visiting)
   }
 
   const cleaned: Record<string, any> = {}

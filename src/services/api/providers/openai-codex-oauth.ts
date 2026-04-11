@@ -99,46 +99,6 @@ function extractExpiryFromJwt(token: string): number | null {
 // Public: PKCE login flow
 // ---------------------------------------------------------------------------
 
-export async function loginOpenAICodex(
-  openUrl: (url: string) => Promise<void>,
-  onProgress?: (msg: string) => void,
-): Promise<CodexCredentials> {
-  const { verifier, challenge } = generatePKCE()
-  const state = createState()
-
-  const url = new URL(AUTHORIZE_URL)
-  url.searchParams.set('response_type', 'code')
-  url.searchParams.set('client_id', CLIENT_ID)
-  url.searchParams.set('redirect_uri', REDIRECT_URI)
-  url.searchParams.set('scope', SCOPE)
-  url.searchParams.set('code_challenge', challenge)
-  url.searchParams.set('code_challenge_method', 'S256')
-  url.searchParams.set('state', state)
-  url.searchParams.set('id_token_add_organizations', 'true')
-  url.searchParams.set('codex_cli_simplified_flow', 'true')
-  url.searchParams.set('originator', ORIGINATOR)
-
-  onProgress?.('Starting local callback server on localhost:1455...')
-  const { code } = await waitForCodexCallback(state)
-    .catch(async () => {
-      // Start browser-less server first, opener second
-      throw new Error('Callback server failed')
-    })
-
-  // Note: we race startServer with openUrl; inline it below.
-  // Actually restructure to open browser AFTER server is listening.
-  onProgress?.('Exchanging authorization code for tokens...')
-  const tokens = await exchangeCodexCodeForToken(code, verifier)
-  const accountId = extractCodexAccountId(tokens.access)
-  if (!accountId) {
-    throw new Error('No chatgpt_account_id in token')
-  }
-
-  const creds: CodexCredentials = { ...tokens, accountId }
-  await storeCodexCredentials(creds)
-  return creds
-}
-
 // Server-side helper that runs full sequence: listen → open browser → wait for code
 export async function runOpenAICodexLoginFlow(
   openUrl: (url: string) => Promise<void>,
@@ -340,7 +300,9 @@ export async function refreshCodexToken(
 // ---------------------------------------------------------------------------
 
 async function storeCodexCredentials(creds: CodexCredentials): Promise<void> {
-  await mkdir(TOKEN_DIR, { recursive: true })
+  // 0o700 on the directory so other local users can't enumerate filenames
+  // or confirm credentials exist; the file itself is already 0o600 below.
+  await mkdir(TOKEN_DIR, { recursive: true, mode: 0o700 })
   await writeFile(TOKEN_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 })
 }
 

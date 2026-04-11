@@ -3,7 +3,7 @@
  * Minimal implementation without React Compiler pre-compilation.
  */
 import * as React from 'react';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { LocalJSXCommandContext } from '../../commands.js';
 import { ConsoleOAuthFlow } from '../../components/ConsoleOAuthFlow.js';
 import { Dialog } from '../../components/design-system/Dialog.js';
@@ -21,12 +21,22 @@ const PROVIDER_DEFAULT_MODEL: Record<Provider, string | null> = {
   gemini: 'gemini/gemini-3.1-pro-preview',  // Latest Gemini 3 model
 };
 
-// Debug log helper (enable with VIBE_LOGIN_DEBUG=1, stderr is eaten by Ink)
+// Debug log helper (enable with VIBE_LOGIN_DEBUG=1, stderr is eaten by Ink).
+// Written to ~/.vibe-sensei/login-debug.log (0o600) — OAuth progress
+// messages and error bodies aren't safe to leave in world-readable /tmp.
 function debugLog(msg: string): void {
   if (!process.env.VIBE_LOGIN_DEBUG) return;
   try {
     const fs = require('fs');
-    fs.appendFileSync('/tmp/vibe-login-debug.log', `[${new Date().toISOString()}] ${msg}\n`);
+    const os = require('os');
+    const path = require('path');
+    const dir = path.join(os.homedir(), '.vibe-sensei');
+    try { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); } catch { /* ignore */ }
+    fs.appendFileSync(
+      path.join(dir, 'login-debug.log'),
+      `[${new Date().toISOString()}] ${msg}\n`,
+      { mode: 0o600 },
+    );
   } catch { /* ignore */ }
 }
 
@@ -134,6 +144,13 @@ function CodexLoginFlow({ onDone }: { onDone: () => void }) {
   const [progressMsg, setProgressMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Capture the latest `onDone` in a ref so the single-fire OAuth effect
+  // below always calls the current prop even if the parent re-renders
+  // (the `handleSuccess` passed from MultiLogin is rebuilt on every render
+  // via useCallback — without the ref we'd hold a stale closure).
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -149,7 +166,7 @@ function CodexLoginFlow({ onDone }: { onDone: () => void }) {
         );
         if (cancelled) return;
         setStatus('success');
-        setTimeout(onDone, 1500);
+        setTimeout(() => onDoneRef.current(), 1500);
       } catch (e) {
         if (cancelled) return;
         setErrorMsg((e as Error).message);
@@ -184,6 +201,11 @@ function GeminiPKCEFlow({ onDone }: { onDone: () => void }) {
   const [progressMsg, setProgressMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // See CodexLoginFlow for rationale — ref keeps the latest onDone
+  // available to a single-fire effect without retriggering the OAuth flow.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => { onDoneRef.current = onDone; }, [onDone]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -196,7 +218,9 @@ function GeminiPKCEFlow({ onDone }: { onDone: () => void }) {
         debugLog('GeminiPKCEFlow: calling startGeminiOAuthFlow');
         await startGeminiOAuthFlow(
           async (url: string) => {
-            debugLog(`GeminiPKCEFlow: openUrl callback invoked with url=${url.substring(0, 120)}...`);
+            // Don't log the full URL — the `state` query param would leak
+            // into the debug log. We log the flow step only.
+            debugLog('GeminiPKCEFlow: openUrl callback invoked');
             try {
               const { openBrowser } = await import('../../utils/browser.js');
               await openBrowser(url);
@@ -214,7 +238,7 @@ function GeminiPKCEFlow({ onDone }: { onDone: () => void }) {
         debugLog('GeminiPKCEFlow: startGeminiOAuthFlow resolved (success)');
         if (cancelled) return;
         setStatus('success');
-        setTimeout(onDone, 1500);
+        setTimeout(() => onDoneRef.current(), 1500);
       } catch (e) {
         debugLog(`GeminiPKCEFlow: ERROR ${(e as Error).message}`);
         if (cancelled) return;
