@@ -184,6 +184,33 @@ export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
     )
   }
 
+  // No Anthropic auth but external provider (OpenAI/Gemini/etc) available?
+  // Pick a default from that provider so the user isn't stuck calling Claude
+  // with no credentials.
+  try {
+    const { hasAnyNonAnthropicProviderKey, hasCliOAuthCredentials, resolveProviderApiKey } =
+      require('../../services/api/providers/auth-env.js') as typeof import('../../services/api/providers/auth-env.js')
+    const { existsSync } = require('fs') as typeof import('fs')
+    const { join } = require('path') as typeof import('path')
+    const { homedir } = require('os') as typeof import('os')
+
+    const hasAnthropic = !!process.env.ANTHROPIC_API_KEY
+    if (!hasAnthropic && (hasAnyNonAnthropicProviderKey() || hasCliOAuthCredentials())) {
+      // Prefer env-var-backed providers first (explicit user config)
+      if (resolveProviderApiKey('openai')) return 'openai/gpt-4o'
+      if (resolveProviderApiKey('gemini')) return 'gemini/gemini-3.1-pro-preview'
+      if (resolveProviderApiKey('deepseek')) return 'deepseek/deepseek-chat'
+      if (resolveProviderApiKey('groq')) return 'groq/llama-3.3-70b-versatile'
+      if (resolveProviderApiKey('xai')) return 'xai/grok-2'
+      if (resolveProviderApiKey('mistral')) return 'mistral/mistral-large-latest'
+      // CLI OAuth credentials — use the latest supported models
+      const home = homedir()
+      if (existsSync(join(home, '.vibe-sensei', 'gemini-oauth.json'))) return 'gemini/gemini-3.1-pro-preview'
+      if (existsSync(join(home, '.gemini', 'oauth_creds.json'))) return 'gemini/gemini-3.1-pro-preview'
+      if (existsSync(join(home, '.codex', 'auth.json'))) return 'openai/gpt-5.4'
+    }
+  } catch { /* fall through to Anthropic default */ }
+
   // Max users get Opus as default
   if (isMaxSubscriber()) {
     return getDefaultOpusModel() + (isOpus1mMergeEnabled() ? '[1m]' : '')

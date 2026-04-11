@@ -117,6 +117,17 @@ export function isAnthropicAuthEnabled(): boolean {
     isEnvTruthy(process.env.CLAUDE_CODE_USE_VERTEX) ||
     isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
 
+  if (is3P) return false
+
+  // Non-Anthropic provider keys (OpenAI, Gemini, etc.) or CLI OAuth credentials
+  // (Codex CLI ~/.codex/auth.json, Gemini CLI ~/.gemini/oauth_creds.json)
+  // Early return avoids config-dependent checks below when user clearly
+  // intends to use external providers.
+  try {
+    const { hasAnyNonAnthropicProviderKey, hasCliOAuthCredentials } = require('../services/api/providers/auth-env.js')
+    if (hasAnyNonAnthropicProviderKey() || hasCliOAuthCredentials()) return false
+  } catch { /* module not yet loaded */ }
+
   // Check if user has configured an external API key source
   // This allows externally-provided API keys to work (without requiring proxy configuration)
   const settings = getSettings_DEPRECATED() || {}
@@ -134,14 +145,12 @@ export function isAnthropicAuthEnabled(): boolean {
     apiKeySource === 'ANTHROPIC_API_KEY' || apiKeySource === 'apiKeyHelper'
 
   // Disable Anthropic auth if:
-  // 1. Using 3rd party services (Bedrock/Vertex/Foundry)
-  // 2. User has an external API key (regardless of proxy configuration)
-  // 3. User has an external auth token (regardless of proxy configuration)
+  // 1. User has an external API key (regardless of proxy configuration)
+  // 2. User has an external auth token (regardless of proxy configuration)
   // this may cause issues if users have complex proxy / gateway "client-side creds" auth scenarios,
   // e.g. if they want to set X-Api-Key to a gateway key but use Anthropic OAuth for the Authorization
   // if we get reports of that, we should probably add an env var to force OAuth enablement
   const shouldDisableAuth =
-    is3P ||
     (hasExternalAuthToken && !isManagedOAuthContext()) ||
     (hasExternalApiKey && !isManagedOAuthContext())
 

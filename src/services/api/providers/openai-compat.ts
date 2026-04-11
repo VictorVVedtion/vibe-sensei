@@ -25,6 +25,16 @@ import { getModelsForProvider } from './model-catalog.js'
 import { getProviderCapabilities } from './capabilities.js'
 import { fetchWithRetry, ProviderHttpError, formatErrorForUser, classifyHttpError } from './error-handling.js'
 import { recordProviderUsage } from './cost-tracker.js'
+import {
+  messageStartEvent,
+  textBlockStartEvent,
+  textBlockDeltaEvent,
+  toolUseBlockStartEvent,
+  inputJsonDeltaEvent,
+  blockStopEvent,
+  messageDeltaEvent,
+  messageStopEvent,
+} from './stream-event-helpers.js'
 
 // ---------------------------------------------------------------------------
 // OpenAI-compatible ProviderClient
@@ -48,8 +58,16 @@ export class OpenAICompatProvider implements ProviderClient {
   async *streamQuery(
     params: ProviderQueryParams,
   ): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
-    const apiKey = resolveProviderApiKey(this.id)
+    let apiKey = resolveProviderApiKey(this.id)
     const baseUrl = resolveProviderBaseUrl(this.id)
+
+    // OpenAI: fallback to Codex CLI OAuth if no env var key
+    if (!apiKey && this.id === 'openai') {
+      try {
+        const { resolveCodexAuth } = await import('./openai-codex-oauth.js')
+        apiKey = await resolveCodexAuth()
+      } catch { /* module unavailable */ }
+    }
 
     if (!apiKey && this.id !== 'ollama') {
       yield createErrorMessage(`No API key configured for ${this.displayName}. Set one of: ${getProviderAuthEnvVars(this.id).join(', ')}`)
@@ -82,8 +100,16 @@ export class OpenAICompatProvider implements ProviderClient {
   }
 
   async query(params: ProviderQueryParams): Promise<AssistantMessage> {
-    const apiKey = resolveProviderApiKey(this.id)
+    let apiKey = resolveProviderApiKey(this.id)
     const baseUrl = resolveProviderBaseUrl(this.id)
+
+    // OpenAI: fallback to Codex CLI OAuth if no env var key
+    if (!apiKey && this.id === 'openai') {
+      try {
+        const { resolveCodexAuth } = await import('./openai-codex-oauth.js')
+        apiKey = await resolveCodexAuth()
+      } catch { /* module unavailable */ }
+    }
 
     if (!apiKey && this.id !== 'ollama') {
       throw new Error(`No API key configured for ${this.displayName}`)
@@ -383,12 +409,39 @@ function toolsToOpenAI(
   for (const tool of tools) {
     if (!tool || typeof tool !== 'object') continue
 
-    // Handle both tool schema formats
     const name = tool.name || (tool as any).function?.name || ''
-    const description = tool.description || (tool as any).function?.description || ''
-    const parameters = tool.input_schema || tool.inputSchema || (tool as any).function?.parameters || { type: 'object', properties: {} }
-
     if (!name) continue
+    const description = tool.description || (tool as any).function?.description || ''
+
+    // Convert Zod → JSON Schema when necessary. `tool.inputSchema` in
+    // vibe-sensei is a raw Zod object which leaks internal `def` field.
+    let parameters: any
+    if (tool.inputJSONSchema) {
+      parameters = tool.inputJSONSchema
+    } else if (tool.input_schema) {
+      parameters = tool.input_schema
+    } else if ((tool as any).function?.parameters) {
+      parameters = (tool as any).function.parameters
+    } else if (tool.inputSchema) {
+      // Raw Zod — convert.
+      const isPreConverted =
+        typeof tool.inputSchema === 'object' &&
+        !tool.inputSchema._def &&
+        !tool.inputSchema.def &&
+        (tool.inputSchema.type === 'object' || tool.inputSchema.properties)
+      if (isPreConverted) {
+        parameters = tool.inputSchema
+      } else {
+        try {
+          const { zodToJsonSchema } = require('../../../utils/zodToJsonSchema.js')
+          parameters = zodToJsonSchema(tool.inputSchema)
+        } catch {
+          parameters = { type: 'object', properties: {} }
+        }
+      }
+    } else {
+      parameters = { type: 'object', properties: {} }
+    }
 
     const fn: { name: string; description: string; parameters: unknown; strict?: boolean } = {
       name,
@@ -421,13 +474,30 @@ async function* parseSSEStream(
     return
   }
 
+  const messageId = `msg_${randomUUID()}`
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
-  let toolCalls: Map<number, { id: string; name: string; arguments: string }> = new Map()
+  // toolIdx → accumulator state. `blockIdx` is the Anthropic stream block index.
+  type ToolCallState = {
+    id: string
+    name: string
+    arguments: string
+    blockIdx: number
+    blockStarted: boolean
+  }
+  const toolCalls: Map<number, ToolCallState> = new Map()
   let finishReason: string | null = null
   let totalInputTokens = 0
   let totalOutputTokens = 0
+
+  // Block index state
+  let textBlockStarted = false
+  const textBlockIndex = 0
+  let nextBlockIndex = 1
+
+  // 1. message_start
+  yield messageStartEvent(messageId, model)
 
   try {
     while (true) {
@@ -445,16 +515,11 @@ async function* parseSSEStream(
 
         const jsonStr = trimmed.slice(6)
         let chunk: any
-        try {
-          chunk = JSON.parse(jsonStr)
-        } catch {
-          continue
-        }
+        try { chunk = JSON.parse(jsonStr) } catch { continue }
 
-        // Extract delta
+        // Usage-only chunks
         const choice = chunk.choices?.[0]
         if (!choice) {
-          // Check for usage in final chunk
           if (chunk.usage) {
             totalInputTokens = chunk.usage.prompt_tokens || 0
             totalOutputTokens = chunk.usage.completion_tokens || 0
@@ -463,34 +528,61 @@ async function* parseSSEStream(
         }
 
         const delta = choice.delta
-        if (!delta) continue
+        if (!delta) {
+          if (choice.finish_reason) finishReason = choice.finish_reason
+          continue
+        }
 
         // Text content
         if (delta.content) {
+          if (!textBlockStarted) {
+            textBlockStarted = true
+            yield textBlockStartEvent(textBlockIndex)
+          }
           fullText += delta.content
-          yield {
-            type: 'content_block_delta',
-            delta: { type: 'text_delta', text: delta.content },
-          } as StreamEvent
+          yield textBlockDeltaEvent(textBlockIndex, delta.content)
         }
 
-        // Tool calls (streamed incrementally)
+        // Tool calls — streamed incrementally by provider index
         if (delta.tool_calls) {
           for (const tc of delta.tool_calls) {
             const idx = tc.index ?? 0
-            if (!toolCalls.has(idx)) {
-              toolCalls.set(idx, {
-                id: tc.id || randomUUID(),
+            let state = toolCalls.get(idx)
+            if (!state) {
+              state = {
+                id: tc.id || `toolu_${randomUUID()}`,
                 name: tc.function?.name || '',
                 arguments: '',
-              })
+                blockIdx: -1,
+                blockStarted: false,
+              }
+              toolCalls.set(idx, state)
             }
-            const existing = toolCalls.get(idx)!
             if (tc.function?.name) {
-              existing.name = tc.function.name
+              state.name = tc.function.name
             }
+            if (tc.id && !state.id.startsWith('toolu_')) {
+              state.id = tc.id
+            }
+
+            // Emit content_block_start once we have both id and name
+            if (!state.blockStarted && state.name) {
+              // Close text block if still open — tool blocks follow text
+              if (textBlockStarted && fullText) {
+                // We keep text open until request ends; only close if switching
+                // content type. OpenAI returns text and tool_calls in separate
+                // chunks though, so it's safe to close here.
+              }
+              state.blockIdx = nextBlockIndex++
+              state.blockStarted = true
+              yield toolUseBlockStartEvent(state.blockIdx, state.id, state.name)
+            }
+
             if (tc.function?.arguments) {
-              existing.arguments += tc.function.arguments
+              state.arguments += tc.function.arguments
+              if (state.blockStarted) {
+                yield inputJsonDeltaEvent(state.blockIdx, tc.function.arguments)
+              }
             }
           }
         }
@@ -500,7 +592,7 @@ async function* parseSSEStream(
           finishReason = choice.finish_reason
         }
 
-        // Usage from chunk
+        // Usage
         if (chunk.usage) {
           totalInputTokens = chunk.usage.prompt_tokens || 0
           totalOutputTokens = chunk.usage.completion_tokens || 0
@@ -510,6 +602,26 @@ async function* parseSSEStream(
   } finally {
     reader.releaseLock()
   }
+
+  // Close open blocks
+  if (textBlockStarted) {
+    yield blockStopEvent(textBlockIndex)
+  }
+  for (const [, state] of toolCalls) {
+    if (state.blockStarted) {
+      yield blockStopEvent(state.blockIdx)
+    }
+  }
+
+  // Map finish reason
+  const stopReason = mapFinishReason(finishReason)
+
+  // message_delta + message_stop
+  yield messageDeltaEvent(stopReason, {
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+  })
+  yield messageStopEvent()
 
   // Record usage
   if (totalInputTokens > 0 || totalOutputTokens > 0) {
@@ -539,15 +651,13 @@ async function* parseSSEStream(
     })
   }
 
-  // Map finish reason
-  const stopReason = mapFinishReason(finishReason)
-
   const assistantMessage: AssistantMessage = {
     type: 'assistant',
     uuid: randomUUID() as any,
+    timestamp: new Date().toISOString(),
     message: {
       role: 'assistant',
-      id: randomUUID(),
+      id: messageId,
       content: contentBlocks,
       model,
       stop_reason: stopReason,
@@ -560,7 +670,7 @@ async function* parseSSEStream(
       },
     },
     costUSD: 0,
-  }
+  } as any
 
   yield assistantMessage
 }

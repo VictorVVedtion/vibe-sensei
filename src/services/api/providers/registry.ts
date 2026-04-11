@@ -28,6 +28,7 @@ function ensureInitialized(): void {
   const { AnthropicProvider } = require('./anthropic.js')
   const { OpenAICompatProvider } = require('./openai-compat.js')
   const { OpenAIResponsesProvider } = require('./openai-responses.js')
+  const { OpenAICodexProvider } = require('./openai-codex-provider.js')
   const { GeminiProvider } = require('./gemini.js')
 
   // Anthropic — thin wrapper around existing claude.ts
@@ -44,6 +45,9 @@ function ensureInitialized(): void {
 
   // OpenAI — Responses API (for GPT-5.4 family)
   _providers.set('openai-responses', new OpenAIResponsesProvider())
+
+  // OpenAI — Codex (ChatGPT Plus/Pro OAuth → chatgpt.com/backend-api)
+  _providers.set('openai-codex', new OpenAICodexProvider())
 
   // DeepSeek
   _providers.set(
@@ -102,7 +106,12 @@ export function getProviderById(id: string): ProviderClient | undefined {
 
 /**
  * Get the correct provider for a given provider ID and model ID.
- * For OpenAI, GPT-5.4 models route to the Responses API adapter.
+ *
+ * OpenAI routing priority:
+ *   1. No OPENAI_API_KEY + Codex OAuth → openai-codex (chatgpt.com/backend-api)
+ *      (handles ALL gpt-5.* models including 5.4 via ChatGPT Pro subscription)
+ *   2. OPENAI_API_KEY + gpt-5.4 → openai-responses (Responses API)
+ *   3. OPENAI_API_KEY + other → openai-compat (Chat Completions)
  */
 export function getProviderForModelId(
   providerId: string,
@@ -110,9 +119,29 @@ export function getProviderForModelId(
 ): ProviderClient | undefined {
   ensureInitialized()
 
-  // Special routing: GPT-5.4 → Responses API
-  if (providerId === 'openai' && isResponsesApiModel(modelId)) {
-    return _providers.get('openai-responses')
+  if (providerId === 'openai') {
+    // If user has no OPENAI_API_KEY, check for Codex OAuth and route there.
+    // This MUST come before the responses-api check because gpt-5.4 would
+    // otherwise be sent to openai-responses which needs a real API key.
+    if (!resolveProviderApiKey('openai')) {
+      try {
+        const { existsSync } = require('fs')
+        const { join } = require('path')
+        const { homedir } = require('os')
+        const home = homedir()
+        if (
+          existsSync(join(home, '.vibe-sensei', 'openai-codex-oauth.json')) ||
+          existsSync(join(home, '.codex', 'auth.json'))
+        ) {
+          return _providers.get('openai-codex')
+        }
+      } catch { /* ignore */ }
+    }
+
+    // User has OPENAI_API_KEY — route by model
+    if (isResponsesApiModel(modelId)) {
+      return _providers.get('openai-responses')
+    }
   }
 
   return _providers.get(providerId)
