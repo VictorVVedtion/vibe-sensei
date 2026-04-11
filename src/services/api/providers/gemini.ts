@@ -526,10 +526,20 @@ const GEMINI_SCHEMA_KEYS = new Set([
  * The whitelist only applies to SCHEMA OBJECTS. Maps like `properties` /
  * `$defs` have user-defined keys that must be preserved as-is; we only
  * apply the whitelist when walking into their VALUES.
+ *
+ * `visiting` tracks $ref names currently being resolved on the active
+ * resolution path. Self-referential schemas (tree-shaped inputs like JSON
+ * patch) would otherwise infinite-loop: resolving `#/$defs/Node` inlines a
+ * node that itself contains `#/$defs/Node`, re-entering this function
+ * forever. On cycle detection we return a permissive `{}` placeholder.
  */
-function inlineAndClean(node: any, defs: Record<string, any>): any {
+function inlineAndClean(
+  node: any,
+  defs: Record<string, any>,
+  visiting: ReadonlySet<string> = new Set(),
+): any {
   if (Array.isArray(node)) {
-    return node.map(item => inlineAndClean(item, defs))
+    return node.map(item => inlineAndClean(item, defs, visiting))
   }
   if (!node || typeof node !== 'object') return node
 
@@ -539,10 +549,17 @@ function inlineAndClean(node: any, defs: Record<string, any>): any {
     const match = refPath.match(/^#\/(\$defs|definitions)\/(.+)$/)
     if (match) {
       const defName = match[2]
+      // Cycle guard: if we're already resolving this def on the current
+      // path, stop and return a permissive placeholder instead of recursing.
+      if (visiting.has(defName)) {
+        return {}
+      }
       const target = defs[defName]
       if (target) {
         const { $ref, ...rest } = node
-        return inlineAndClean({ ...target, ...rest }, defs)
+        const nextVisiting = new Set(visiting)
+        nextVisiting.add(defName)
+        return inlineAndClean({ ...target, ...rest }, defs, nextVisiting)
       }
     }
     // Unresolvable $ref — return a permissive placeholder
@@ -552,7 +569,7 @@ function inlineAndClean(node: any, defs: Record<string, any>): any {
   // `const` → single-value `enum` (Gemini doesn't support const)
   if ('const' in node) {
     const { const: constVal, ...rest } = node
-    return inlineAndClean({ ...rest, enum: [constVal] }, defs)
+    return inlineAndClean({ ...rest, enum: [constVal] }, defs, visiting)
   }
 
   const cleaned: Record<string, any> = {}
@@ -566,7 +583,7 @@ function inlineAndClean(node: any, defs: Record<string, any>): any {
     if (key === 'properties' && value && typeof value === 'object') {
       const cleanedProps: Record<string, any> = {}
       for (const [propName, propSchema] of Object.entries(value as Record<string, any>)) {
-        cleanedProps[propName] = inlineAndClean(propSchema, defs)
+        cleanedProps[propName] = inlineAndClean(propSchema, defs, visiting)
       }
       cleaned[key] = cleanedProps
       continue
@@ -584,7 +601,7 @@ function inlineAndClean(node: any, defs: Record<string, any>): any {
       continue
     }
 
-    cleaned[key] = inlineAndClean(value, defs)
+    cleaned[key] = inlineAndClean(value, defs, visiting)
   }
 
   // Gemini requires `type` to be a single string, not array (e.g. ["string","null"])

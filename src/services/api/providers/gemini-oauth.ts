@@ -211,6 +211,11 @@ export async function startGeminiOAuthFlow(
 
   const verifier = base64urlEncode(randomBytes(32))
   const challenge = base64urlEncode(createHash('sha256').update(verifier).digest())
+  // CRITICAL: `state` MUST be independent of `verifier`. Reusing the verifier
+  // as state would leak the PKCE secret via the browser address bar, referrer
+  // headers, and server access logs — anyone observing the redirect URL could
+  // then exchange the authorization code for tokens, defeating PKCE entirely.
+  const state = randomBytes(16).toString('hex')
   oauthLog(`PKCE generated: verifier.len=${verifier.length}, challenge.len=${challenge.length}`)
 
   const authUrl = new URL(AUTH_URL)
@@ -220,13 +225,13 @@ export async function startGeminiOAuthFlow(
   authUrl.searchParams.set('scope', SCOPES.join(' '))
   authUrl.searchParams.set('code_challenge', challenge)
   authUrl.searchParams.set('code_challenge_method', 'S256')
-  authUrl.searchParams.set('state', verifier)
+  authUrl.searchParams.set('state', state)
   authUrl.searchParams.set('access_type', 'offline')
   authUrl.searchParams.set('prompt', 'consent')
 
   onProgress?.('Starting local callback server on localhost:8085...')
   oauthLog('Starting callback server on :8085')
-  const codePromise = waitForGeminiCallback(verifier)
+  const codePromise = waitForGeminiCallback(state)
 
   // Let server bind before opening browser
   await new Promise(r => setTimeout(r, 200))
