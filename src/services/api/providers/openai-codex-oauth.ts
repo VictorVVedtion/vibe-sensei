@@ -1,231 +1,444 @@
 /**
- * OpenAI Codex OAuth — Device Authorization Flow.
+ * OpenAI Codex OAuth — PKCE flow ported from @mariozechner/pi-ai.
  *
- * Uses Auth0 device flow against auth0.openai.com to authenticate
- * users with a ChatGPT subscription. Token storage at
- * ~/.vibe-sensei/openai-codex-oauth.json with 0o600 permissions.
+ * Uses the REAL auth.openai.com endpoints (not auth0.openai.com) with
+ * ChatGPT-specific parameters (id_token_add_organizations, codex_cli_simplified_flow).
  *
- * Client ID: DRivsnm2Mu42T3KOpqdtwB3NYviHYzwD (public)
+ * The resulting token is a ChatGPT Plus/Pro session token that can access
+ * https://chatgpt.com/backend-api/codex/responses — NOT the public API.
  */
 
-import { readFile, writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { homedir } from 'os'
+import { createHash, randomBytes } from 'node:crypto'
+import { createServer } from 'node:http'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const AUTH0_DOMAIN = 'https://auth0.openai.com'
-const CLIENT_ID = 'DRivsnm2Mu42T3KOpqdtwB3NYviHYzwD'
-const AUDIENCE = 'https://api.openai.com/v1'
+const CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
+const AUTHORIZE_URL = 'https://auth.openai.com/oauth/authorize'
+const TOKEN_URL = 'https://auth.openai.com/oauth/token'
+const REDIRECT_URI = 'http://localhost:1455/auth/callback'
 const SCOPE = 'openid profile email offline_access'
+const JWT_CLAIM_PATH = 'https://api.openai.com/auth'
+const ORIGINATOR = 'vibe-sensei'
 
 const TOKEN_DIR = join(homedir(), '.vibe-sensei')
 const TOKEN_FILE = join(TOKEN_DIR, 'openai-codex-oauth.json')
+const CODEX_CLI_AUTH_FILE = join(homedir(), '.codex', 'auth.json')
 
 // ---------------------------------------------------------------------------
-// Token types
+// Types
 // ---------------------------------------------------------------------------
 
-type StoredToken = {
+export type CodexCredentials = {
+  access: string
+  refresh: string
+  expires: number // ms since epoch
+  accountId: string
+}
+
+type StoredTokenLegacy = {
   access_token: string
   refresh_token: string
-  expires_at: number // unix timestamp in ms
+  expires_at: number
   token_type: string
 }
 
 // ---------------------------------------------------------------------------
-// Device Authorization Flow
+// PKCE helpers
 // ---------------------------------------------------------------------------
 
-type DeviceCodeResponse = {
-  device_code: string
-  user_code: string
-  verification_uri: string
-  verification_uri_complete: string
-  expires_in: number
-  interval: number
+function base64urlEncode(bytes: Buffer | Uint8Array): string {
+  return Buffer.from(bytes).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-/**
- * Start the OAuth device authorization flow.
- * Returns user instructions (code + URL) and a promise that
- * resolves when the user completes authorization.
- */
-export async function startCodexOAuthFlow(): Promise<{
-  userCode: string
-  verificationUrl: string
-  waitForAuth: () => Promise<StoredToken>
-}> {
-  const response = await fetch(`${AUTH0_DOMAIN}/oauth/device/code`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      client_id: CLIENT_ID,
-      scope: SCOPE,
-      audience: AUDIENCE,
-    }),
-  })
+function generatePKCE(): { verifier: string; challenge: string } {
+  const verifier = base64urlEncode(randomBytes(32))
+  const challenge = base64urlEncode(createHash('sha256').update(verifier).digest())
+  return { verifier, challenge }
+}
 
-  if (!response.ok) {
-    const body = await response.text()
-    throw new Error(`Device code request failed: ${response.status} ${body}`)
-  }
+function createState(): string {
+  return randomBytes(16).toString('hex')
+}
 
-  const data: DeviceCodeResponse = await response.json()
+// ---------------------------------------------------------------------------
+// JWT helpers
+// ---------------------------------------------------------------------------
 
-  return {
-    userCode: data.user_code,
-    verificationUrl: data.verification_uri_complete || data.verification_uri,
-    waitForAuth: () => pollForToken(data.device_code, data.interval, data.expires_in),
+function decodeJwt(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const payload = Buffer.from(parts[1], 'base64').toString('utf-8')
+    return JSON.parse(payload)
+  } catch {
+    return null
   }
 }
 
-/**
- * Poll Auth0 for the token after user has entered the device code.
- */
-async function pollForToken(
-  deviceCode: string,
-  interval: number,
-  expiresIn: number,
-): Promise<StoredToken> {
-  const pollIntervalMs = Math.max(interval, 5) * 1000
-  const deadline = Date.now() + expiresIn * 1000
+export function extractCodexAccountId(accessToken: string): string | null {
+  const payload = decodeJwt(accessToken)
+  const auth = payload?.[JWT_CLAIM_PATH] as { chatgpt_account_id?: string } | undefined
+  const id = auth?.chatgpt_account_id
+  return typeof id === 'string' && id.length > 0 ? id : null
+}
 
-  while (Date.now() < deadline) {
-    await sleep(pollIntervalMs)
+function extractExpiryFromJwt(token: string): number | null {
+  const payload = decodeJwt(token)
+  const exp = payload?.exp
+  return typeof exp === 'number' ? exp * 1000 : null
+}
 
-    const response = await fetch(`${AUTH0_DOMAIN}/oauth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        device_code: deviceCode,
-        client_id: CLIENT_ID,
-      }),
+// ---------------------------------------------------------------------------
+// Public: PKCE login flow
+// ---------------------------------------------------------------------------
+
+export async function loginOpenAICodex(
+  openUrl: (url: string) => Promise<void>,
+  onProgress?: (msg: string) => void,
+): Promise<CodexCredentials> {
+  const { verifier, challenge } = generatePKCE()
+  const state = createState()
+
+  const url = new URL(AUTHORIZE_URL)
+  url.searchParams.set('response_type', 'code')
+  url.searchParams.set('client_id', CLIENT_ID)
+  url.searchParams.set('redirect_uri', REDIRECT_URI)
+  url.searchParams.set('scope', SCOPE)
+  url.searchParams.set('code_challenge', challenge)
+  url.searchParams.set('code_challenge_method', 'S256')
+  url.searchParams.set('state', state)
+  url.searchParams.set('id_token_add_organizations', 'true')
+  url.searchParams.set('codex_cli_simplified_flow', 'true')
+  url.searchParams.set('originator', ORIGINATOR)
+
+  onProgress?.('Starting local callback server on localhost:1455...')
+  const { code } = await waitForCodexCallback(state)
+    .catch(async () => {
+      // Start browser-less server first, opener second
+      throw new Error('Callback server failed')
     })
 
-    const data = await response.json()
+  // Note: we race startServer with openUrl; inline it below.
+  // Actually restructure to open browser AFTER server is listening.
+  onProgress?.('Exchanging authorization code for tokens...')
+  const tokens = await exchangeCodexCodeForToken(code, verifier)
+  const accountId = extractCodexAccountId(tokens.access)
+  if (!accountId) {
+    throw new Error('No chatgpt_account_id in token')
+  }
 
-    if (response.ok) {
-      const token: StoredToken = {
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-        token_type: data.token_type || 'Bearer',
+  const creds: CodexCredentials = { ...tokens, accountId }
+  await storeCodexCredentials(creds)
+  return creds
+}
+
+// Server-side helper that runs full sequence: listen → open browser → wait for code
+export async function runOpenAICodexLoginFlow(
+  openUrl: (url: string) => Promise<void>,
+  onProgress?: (msg: string) => void,
+): Promise<CodexCredentials> {
+  const { verifier, challenge } = generatePKCE()
+  const state = createState()
+
+  const authUrl = new URL(AUTHORIZE_URL)
+  authUrl.searchParams.set('response_type', 'code')
+  authUrl.searchParams.set('client_id', CLIENT_ID)
+  authUrl.searchParams.set('redirect_uri', REDIRECT_URI)
+  authUrl.searchParams.set('scope', SCOPE)
+  authUrl.searchParams.set('code_challenge', challenge)
+  authUrl.searchParams.set('code_challenge_method', 'S256')
+  authUrl.searchParams.set('state', state)
+  authUrl.searchParams.set('id_token_add_organizations', 'true')
+  authUrl.searchParams.set('codex_cli_simplified_flow', 'true')
+  authUrl.searchParams.set('originator', ORIGINATOR)
+
+  onProgress?.('Starting local callback server on localhost:1455...')
+
+  const codePromise = waitForCodexCallback(state)
+
+  // Give server a moment to bind, then open browser
+  await new Promise(r => setTimeout(r, 100))
+  onProgress?.('Opening browser for ChatGPT authentication...')
+  try {
+    await openUrl(authUrl.toString())
+  } catch {
+    onProgress?.(`Open this URL: ${authUrl.toString()}`)
+  }
+
+  onProgress?.('Waiting for authorization...')
+  const { code } = await codePromise
+
+  onProgress?.('Exchanging authorization code for tokens...')
+  const tokens = await exchangeCodexCodeForToken(code, verifier)
+  const accountId = extractCodexAccountId(tokens.access)
+  if (!accountId) {
+    throw new Error('No chatgpt_account_id in token')
+  }
+
+  const creds: CodexCredentials = { ...tokens, accountId }
+  await storeCodexCredentials(creds)
+  return creds
+}
+
+// ---------------------------------------------------------------------------
+// Callback server
+// ---------------------------------------------------------------------------
+
+const CALLBACK_SUCCESS_HTML = `<!doctype html>
+<html><head><meta charset="utf-8"/><title>Authentication successful</title></head>
+<body style="font-family:system-ui;padding:2rem;">
+  <h2>Authentication successful</h2>
+  <p>Return to your terminal to continue.</p>
+</body></html>`
+
+function waitForCodexCallback(expectedState: string): Promise<{ code: string }> {
+  return new Promise((resolve, reject) => {
+    let timeout: NodeJS.Timeout | null = null
+    const server = createServer((req, res) => {
+      try {
+        const url = new URL(req.url || '/', 'http://localhost:1455')
+        if (url.pathname !== '/auth/callback') {
+          res.statusCode = 404
+          res.end('Not found')
+          return
+        }
+        const state = url.searchParams.get('state')
+        const code = url.searchParams.get('code')
+        const error = url.searchParams.get('error')
+
+        if (error) {
+          res.statusCode = 400
+          res.end(`OAuth error: ${error}`)
+          finish(new Error(`OAuth error: ${error}`))
+          return
+        }
+        if (state !== expectedState) {
+          res.statusCode = 400
+          res.end('State mismatch')
+          finish(new Error('OAuth state mismatch'))
+          return
+        }
+        if (!code) {
+          res.statusCode = 400
+          res.end('Missing code')
+          finish(new Error('Missing authorization code'))
+          return
+        }
+
+        res.statusCode = 200
+        res.setHeader('Content-Type', 'text/html; charset=utf-8')
+        res.end(CALLBACK_SUCCESS_HTML)
+        finish(undefined, { code })
+      } catch (err) {
+        finish(err instanceof Error ? err : new Error('Callback error'))
       }
+    })
 
-      await storeToken(token)
-      return token
-    }
-
-    // Auth0 error responses
-    const error = data.error
-    if (error === 'authorization_pending') {
-      continue // User hasn't authorized yet
-    }
-    if (error === 'slow_down') {
-      await sleep(5000) // Slow down and retry
-      continue
-    }
-    if (error === 'expired_token') {
-      throw new Error('Device code expired. Please try again.')
-    }
-    if (error === 'access_denied') {
-      throw new Error('Authorization denied by user.')
+    const finish = (err?: Error, result?: { code: string }) => {
+      if (timeout) clearTimeout(timeout)
+      try { server.close() } catch { /* ignore */ }
+      if (err) reject(err)
+      else if (result) resolve(result)
     }
 
-    throw new Error(`OAuth error: ${error}: ${data.error_description || ''}`)
-  }
-
-  throw new Error('Authorization timed out. Please try again.')
+    server.once('error', (err) => finish(err instanceof Error ? err : new Error('Server error')))
+    server.listen(1455, '127.0.0.1')
+    timeout = setTimeout(() => finish(new Error('OAuth timeout (5 min)')), 5 * 60 * 1000)
+  })
 }
 
 // ---------------------------------------------------------------------------
-// Token resolution (with refresh)
+// Token exchange & refresh
 // ---------------------------------------------------------------------------
 
-/**
- * Resolve stored access token, refreshing if expired.
- * Returns null if no token is stored.
- */
-export async function resolveCodexAuth(): Promise<string | null> {
-  const token = await loadToken()
-  if (!token) return null
+async function exchangeCodexCodeForToken(
+  code: string,
+  verifier: string,
+): Promise<{ access: string; refresh: string; expires: number }> {
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: CLIENT_ID,
+    code,
+    code_verifier: verifier,
+    redirect_uri: REDIRECT_URI,
+  })
 
-  // Token still valid (with 5 minute buffer)
-  if (Date.now() < token.expires_at - 300_000) {
-    return token.access_token
-  }
-
-  // Refresh
-  if (token.refresh_token) {
-    try {
-      const refreshed = await refreshAccessToken(token.refresh_token)
-      return refreshed.access_token
-    } catch {
-      // Refresh failed — token is expired
-      return null
-    }
-  }
-
-  return null
-}
-
-async function refreshAccessToken(refreshToken: string): Promise<StoredToken> {
-  const response = await fetch(`${AUTH0_DOMAIN}/oauth/token`, {
+  const response = await fetch(TOKEN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      grant_type: 'refresh_token',
-      client_id: CLIENT_ID,
-      refresh_token: refreshToken,
-    }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
   })
 
   if (!response.ok) {
-    throw new Error(`Token refresh failed: ${response.status}`)
+    const text = await response.text().catch(() => '')
+    throw new Error(`Codex token exchange failed: ${response.status} ${text}`)
   }
 
-  const data = await response.json()
-  const token: StoredToken = {
-    access_token: data.access_token,
-    refresh_token: data.refresh_token || refreshToken,
-    expires_at: Date.now() + (data.expires_in || 3600) * 1000,
-    token_type: data.token_type || 'Bearer',
+  const data = await response.json() as {
+    access_token?: string
+    refresh_token?: string
+    expires_in?: number
   }
 
-  await storeToken(token)
-  return token
+  if (!data.access_token || !data.refresh_token || typeof data.expires_in !== 'number') {
+    throw new Error(`Codex token response missing fields: ${JSON.stringify(data)}`)
+  }
+
+  return {
+    access: data.access_token,
+    refresh: data.refresh_token,
+    expires: Date.now() + data.expires_in * 1000,
+  }
+}
+
+export async function refreshCodexToken(
+  refreshToken: string,
+): Promise<{ access: string; refresh: string; expires: number }> {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    client_id: CLIENT_ID,
+    refresh_token: refreshToken,
+  })
+
+  const response = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(`Codex token refresh failed: ${response.status} ${text}`)
+  }
+
+  const data = await response.json() as {
+    access_token?: string
+    refresh_token?: string
+    expires_in?: number
+  }
+
+  if (!data.access_token || !data.refresh_token || typeof data.expires_in !== 'number') {
+    throw new Error('Codex refresh response missing fields')
+  }
+
+  return {
+    access: data.access_token,
+    refresh: data.refresh_token,
+    expires: Date.now() + data.expires_in * 1000,
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Token storage
+// Storage
 // ---------------------------------------------------------------------------
 
-async function storeToken(token: StoredToken): Promise<void> {
+async function storeCodexCredentials(creds: CodexCredentials): Promise<void> {
   await mkdir(TOKEN_DIR, { recursive: true })
-  await writeFile(TOKEN_FILE, JSON.stringify(token, null, 2), { mode: 0o600 })
+  await writeFile(TOKEN_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 })
 }
 
-async function loadToken(): Promise<StoredToken | null> {
+async function loadOwnCredentials(): Promise<CodexCredentials | null> {
   try {
     const raw = await readFile(TOKEN_FILE, 'utf-8')
     const parsed = JSON.parse(raw)
-    if (parsed.access_token && parsed.expires_at) {
-      return parsed
+    if (parsed.access && parsed.refresh && typeof parsed.expires === 'number' && parsed.accountId) {
+      return parsed as CodexCredentials
     }
-  } catch {
-    // File doesn't exist or is invalid
-  }
+    // Legacy format compatibility
+    if (parsed.access_token && parsed.refresh_token) {
+      const legacy = parsed as StoredTokenLegacy
+      const accountId = extractCodexAccountId(legacy.access_token)
+      if (accountId) {
+        return {
+          access: legacy.access_token,
+          refresh: legacy.refresh_token,
+          expires: legacy.expires_at,
+          accountId,
+        }
+      }
+    }
+  } catch { /* file missing or invalid */ }
+  return null
+}
+
+async function loadCodexCliCredentials(): Promise<CodexCredentials | null> {
+  try {
+    const raw = await readFile(CODEX_CLI_AUTH_FILE, 'utf-8')
+    const parsed = JSON.parse(raw)
+    const tokens = parsed.tokens
+    if (tokens?.access_token && tokens?.refresh_token) {
+      const accountId = extractCodexAccountId(tokens.access_token)
+        || tokens.account_id
+      if (!accountId) return null
+
+      let expires = extractExpiryFromJwt(tokens.access_token)
+        ?? Date.now() + 10 * 24 * 3600_000
+
+      return {
+        access: tokens.access_token,
+        refresh: tokens.refresh_token,
+        expires,
+        accountId,
+      }
+    }
+  } catch { /* file missing or invalid */ }
   return null
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Public: resolve credentials for API calls
 // ---------------------------------------------------------------------------
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+export async function resolveCodexCredentials(): Promise<CodexCredentials | null> {
+  // 1. Own stored credentials (from PKCE flow via /login)
+  let creds = await loadOwnCredentials()
+  if (creds) {
+    creds = await ensureFreshCodex(creds, 'own')
+    if (creds) return creds
+  }
+
+  // 2. Codex CLI credentials (for users who already logged in via `codex`)
+  creds = await loadCodexCliCredentials()
+  if (creds) {
+    creds = await ensureFreshCodex(creds, 'codex-cli')
+    if (creds) return creds
+  }
+
+  return null
+}
+
+/**
+ * Back-compat shim: old callers expect a raw access token string.
+ * @deprecated Prefer resolveCodexCredentials() which returns accountId too.
+ */
+export async function resolveCodexAuth(): Promise<string | null> {
+  const creds = await resolveCodexCredentials()
+  return creds?.access ?? null
+}
+
+async function ensureFreshCodex(
+  creds: CodexCredentials,
+  source: 'own' | 'codex-cli',
+): Promise<CodexCredentials | null> {
+  if (Date.now() < creds.expires - 300_000) {
+    return creds
+  }
+  try {
+    const refreshed = await refreshCodexToken(creds.refresh)
+    const accountId = extractCodexAccountId(refreshed.access) ?? creds.accountId
+    const next: CodexCredentials = { ...refreshed, accountId }
+    if (source === 'own') {
+      await storeCodexCredentials(next)
+    }
+    return next
+  } catch {
+    return null
+  }
 }

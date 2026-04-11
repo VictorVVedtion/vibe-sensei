@@ -56,7 +56,7 @@ const PROD_OAUTH_CONFIG = {
   CLAUDEAI_SUCCESS_URL:
     'https://platform.claude.com/oauth/code/success?app=claude-code',
   MANUAL_REDIRECT_URL: 'https://platform.claude.com/oauth/code/callback',
-  CLIENT_ID: process.env.VIBE_SENSEI_OAUTH_CLIENT_ID ?? '',
+  CLIENT_ID: process.env.VIBE_SENSEI_OAUTH_CLIENT_ID ?? '9d1c250a-e61b-44d9-88ed-5944d1962f5e',
   OAUTH_FILE_SUFFIX: '',
   MCP_PROXY_URL: 'https://mcp-proxy.anthropic.com',
   MCP_PROXY_PATH: '/v1/mcp/{server_id}',

@@ -24,6 +24,16 @@ import { resolveProviderApiKey, resolveProviderBaseUrl, getProviderAuthEnvVars }
 import { getModelsForProvider } from './model-catalog.js'
 import { fetchWithRetry, ProviderHttpError, formatErrorForUser } from './error-handling.js'
 import { recordProviderUsage } from './cost-tracker.js'
+import {
+  messageStartEvent,
+  textBlockStartEvent,
+  textBlockDeltaEvent,
+  toolUseBlockStartEvent,
+  inputJsonDeltaEvent,
+  blockStopEvent,
+  messageDeltaEvent,
+  messageStopEvent,
+} from './stream-event-helpers.js'
 
 // ---------------------------------------------------------------------------
 // Models that use the Responses API
@@ -258,12 +268,28 @@ async function* parseResponsesSSEStream(
     return
   }
 
+  const messageId = `msg_${randomUUID()}`
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
-  let toolCalls: Map<string, { id: string; name: string; arguments: string }> = new Map()
+  type ToolCallState = {
+    id: string
+    name: string
+    arguments: string
+    blockIdx: number
+    blockStarted: boolean
+  }
+  const toolCalls: Map<string, ToolCallState> = new Map()
   let totalInputTokens = 0
   let totalOutputTokens = 0
+
+  // Block state
+  let textBlockStarted = false
+  const textBlockIndex = 0
+  let nextBlockIndex = 1
+
+  // message_start
+  yield messageStartEvent(messageId, model)
 
   try {
     while (true) {
@@ -289,51 +315,58 @@ async function* parseResponsesSSEStream(
         if (!jsonStr || jsonStr === '[DONE]') continue
 
         let data: any
-        try {
-          data = JSON.parse(jsonStr)
-        } catch {
-          continue
-        }
+        try { data = JSON.parse(jsonStr) } catch { continue }
 
-        // Handle different event types
         switch (currentEvent) {
           case 'response.output_text.delta': {
             const delta = data.delta || ''
             if (delta) {
+              if (!textBlockStarted) {
+                textBlockStarted = true
+                yield textBlockStartEvent(textBlockIndex)
+              }
               fullText += delta
-              yield {
-                type: 'content_block_delta',
-                delta: { type: 'text_delta', text: delta },
-              } as StreamEvent
+              yield textBlockDeltaEvent(textBlockIndex, delta)
             }
             break
           }
 
           case 'response.function_call_arguments.delta': {
             const callId = data.item_id || data.call_id || ''
-            if (!toolCalls.has(callId)) {
-              toolCalls.set(callId, {
-                id: callId,
+            let state = toolCalls.get(callId)
+            if (!state) {
+              state = {
+                id: callId || `toolu_${randomUUID()}`,
                 name: data.name || '',
                 arguments: '',
-              })
+                blockIdx: -1,
+                blockStarted: false,
+              }
+              toolCalls.set(callId, state)
             }
-            const existing = toolCalls.get(callId)!
-            if (data.name) existing.name = data.name
-            if (data.delta) existing.arguments += data.delta
+            if (data.name) state.name = data.name
+            if (!state.blockStarted && state.name) {
+              state.blockIdx = nextBlockIndex++
+              state.blockStarted = true
+              yield toolUseBlockStartEvent(state.blockIdx, state.id, state.name)
+            }
+            if (data.delta) {
+              state.arguments += data.delta
+              if (state.blockStarted) {
+                yield inputJsonDeltaEvent(state.blockIdx, data.delta)
+              }
+            }
             break
           }
 
           case 'response.function_call_arguments.done': {
             const callId = data.item_id || data.call_id || ''
-            if (toolCalls.has(callId) && data.name) {
-              toolCalls.get(callId)!.name = data.name
-            }
+            const state = toolCalls.get(callId)
+            if (state && data.name) state.name = data.name
             break
           }
 
           case 'response.completed': {
-            // Final response object
             if (data.response?.usage) {
               totalInputTokens = data.response.usage.input_tokens || 0
               totalOutputTokens = data.response.usage.output_tokens || 0
@@ -342,7 +375,6 @@ async function* parseResponsesSSEStream(
           }
 
           default:
-            // Other events: response.created, response.in_progress, etc.
             if (data.usage) {
               totalInputTokens = data.usage.input_tokens || 0
               totalOutputTokens = data.usage.output_tokens || 0
@@ -354,6 +386,23 @@ async function* parseResponsesSSEStream(
   } finally {
     reader.releaseLock()
   }
+
+  // Close blocks
+  if (textBlockStarted) {
+    yield blockStopEvent(textBlockIndex)
+  }
+  for (const [, state] of toolCalls) {
+    if (state.blockStarted) {
+      yield blockStopEvent(state.blockIdx)
+    }
+  }
+
+  const stopReason = toolCalls.size > 0 ? 'tool_use' : 'end_turn'
+  yield messageDeltaEvent(stopReason, {
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+  })
+  yield messageStopEvent()
 
   // Record usage
   if (totalInputTokens > 0 || totalOutputTokens > 0) {
@@ -382,14 +431,13 @@ async function* parseResponsesSSEStream(
     })
   }
 
-  const stopReason = toolCalls.size > 0 ? 'tool_use' : 'end_turn'
-
   const assistantMessage: AssistantMessage = {
     type: 'assistant',
     uuid: randomUUID() as any,
+    timestamp: new Date().toISOString(),
     message: {
       role: 'assistant',
-      id: randomUUID(),
+      id: messageId,
       content: contentBlocks,
       model,
       stop_reason: stopReason,
@@ -402,7 +450,7 @@ async function* parseResponsesSSEStream(
       },
     },
     costUSD: 0,
-  }
+  } as any
 
   yield assistantMessage
 }

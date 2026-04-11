@@ -458,8 +458,115 @@ function getKnownModelOption(model: string): ModelOption | null {
   }
 }
 
+/**
+ * Options for non-Anthropic providers when the user is logged into them
+ * via /login → OpenAI / Gemini or has provider env vars set.
+ */
+function getExternalProviderOptions(): ModelOption[] {
+  const options: ModelOption[] = []
+  try {
+    const { existsSync } = require('fs')
+    const { join } = require('path')
+    const { homedir } = require('os')
+    const home = homedir()
+
+    // Gemini — only surface if credentials exist
+    const hasGeminiEnv = !!process.env.GEMINI_API_KEY || !!process.env.GOOGLE_API_KEY
+    const hasGeminiOAuth =
+      existsSync(join(home, '.vibe-sensei', 'gemini-oauth.json')) ||
+      existsSync(join(home, '.gemini', 'oauth_creds.json'))
+    if (hasGeminiEnv || hasGeminiOAuth) {
+      options.push(
+        {
+          value: 'gemini/gemini-3.1-pro-preview',
+          label: 'Gemini 3.1 Pro',
+          description: 'Latest Gemini Pro — best reasoning (preview)',
+        },
+        {
+          value: 'gemini/gemini-3-pro-preview',
+          label: 'Gemini 3 Pro',
+          description: 'Gemini 3 Pro (preview)',
+        },
+        {
+          value: 'gemini/gemini-3-flash-preview',
+          label: 'Gemini 3 Flash',
+          description: 'Gemini 3 Flash — fast & cheap (preview)',
+        },
+        {
+          value: 'gemini/gemini-2.5-pro',
+          label: 'Gemini 2.5 Pro',
+          description: 'Gemini 2.5 Pro — stable',
+        },
+        {
+          value: 'gemini/gemini-2.5-flash',
+          label: 'Gemini 2.5 Flash',
+          description: 'Gemini 2.5 Flash — fast',
+        },
+        {
+          value: 'gemini/gemini-2.5-flash-lite',
+          label: 'Gemini 2.5 Flash Lite',
+          description: 'Gemini 2.5 Flash Lite — fastest',
+        },
+      )
+    }
+
+    // OpenAI — env var (platform API) OR Codex OAuth (ChatGPT Pro)
+    const hasOpenAIEnv = !!process.env.OPENAI_API_KEY
+    const hasCodexOAuth =
+      existsSync(join(home, '.vibe-sensei', 'openai-codex-oauth.json')) ||
+      existsSync(join(home, '.codex', 'auth.json'))
+    if (hasOpenAIEnv || hasCodexOAuth) {
+      options.push(
+        {
+          value: 'openai/gpt-5.4',
+          label: 'GPT-5.4',
+          description: 'Latest GPT-5 — most capable (ChatGPT Codex)',
+        },
+        {
+          value: 'openai/gpt-5.3-codex',
+          label: 'GPT-5.3 Codex',
+          description: 'GPT-5.3 specialized for coding',
+        },
+        {
+          value: 'openai/gpt-5.2',
+          label: 'GPT-5.2',
+          description: 'GPT-5.2 general purpose',
+        },
+        {
+          value: 'openai/gpt-5.1',
+          label: 'GPT-5.1',
+          description: 'GPT-5.1 general purpose',
+        },
+        {
+          value: 'openai/gpt-5.1-codex',
+          label: 'GPT-5.1 Codex',
+          description: 'GPT-5.1 specialized for coding',
+        },
+        {
+          value: 'openai/gpt-5.1-codex-mini',
+          label: 'GPT-5.1 Codex Mini',
+          description: 'GPT-5.1 Codex smaller/faster',
+        },
+        {
+          value: 'openai/gpt-5',
+          label: 'GPT-5',
+          description: 'GPT-5 baseline',
+        },
+      )
+    }
+  } catch { /* ignore — fs/os/path not available */ }
+  return options
+}
+
 export function getModelOptions(fastMode = false): ModelOption[] {
   const options = getModelOptionsBase(fastMode)
+
+  // Inject Gemini / OpenAI models when user has those credentials
+  for (const extOpt of getExternalProviderOptions()) {
+    if (!options.some(o => o.value === extOpt.value)) {
+      options.push(extOpt)
+    }
+  }
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION

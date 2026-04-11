@@ -21,6 +21,73 @@ import { resolveProviderApiKey, resolveProviderBaseUrl, getProviderAuthEnvVars }
 import { getModelsForProvider } from './model-catalog.js'
 import { fetchWithRetry, ProviderHttpError, formatErrorForUser } from './error-handling.js'
 import { recordProviderUsage } from './cost-tracker.js'
+import {
+  messageStartEvent,
+  textBlockStartEvent,
+  textBlockDeltaEvent,
+  toolUseBlockStartEvent,
+  inputJsonDeltaEvent,
+  blockStopEvent,
+  messageDeltaEvent,
+  messageStopEvent,
+} from './stream-event-helpers.js'
+
+// Debug logging (enable with VIBE_GEMINI_DEBUG=1)
+function debugLog(msg: string): void {
+  if (!process.env.VIBE_GEMINI_DEBUG) return
+  try {
+    const fs = require('fs')
+    fs.appendFileSync('/tmp/vibe-gemini-debug.log', `[${new Date().toISOString()}] ${msg}\n`)
+  } catch { /* ignore */ }
+}
+
+/**
+ * Cloud Code Assist only supports a specific set of Gemini model names.
+ * Alias unsupported names to the closest supported model.
+ *
+ * Supported (verified 2026-04-11):
+ *   - gemini-3.1-pro-preview  (latest pro, default)
+ *   - gemini-3-pro-preview
+ *   - gemini-3-flash-preview
+ *   - gemini-2.5-pro
+ *   - gemini-2.5-flash
+ *   - gemini-2.5-flash-lite
+ */
+const CLOUD_CODE_ASSIST_MODELS = new Set([
+  'gemini-3.1-pro-preview',
+  'gemini-3-pro-preview',
+  'gemini-3-flash-preview',
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+])
+
+function remapToCloudCodeAssistModel(model: string): string {
+  if (CLOUD_CODE_ASSIST_MODELS.has(model)) return model
+
+  const lowered = model.toLowerCase()
+
+  // Flash variants → prefer flash
+  if (lowered.includes('flash')) {
+    if (lowered.includes('lite') || lowered.includes('8b')) {
+      return 'gemini-2.5-flash-lite'
+    }
+    if (lowered.includes('3')) {
+      return 'gemini-3-flash-preview'
+    }
+    return 'gemini-2.5-flash'
+  }
+  // Lite/nano → lite
+  if (lowered.includes('lite') || lowered.includes('nano')) {
+    return 'gemini-2.5-flash-lite'
+  }
+  // Pro-class 2.5 → 2.5-pro
+  if (lowered.includes('2.5') && lowered.includes('pro')) {
+    return 'gemini-2.5-pro'
+  }
+  // Everything else (pro, ultra, unknown, old names) → latest pro
+  return 'gemini-3.1-pro-preview'
+}
 
 // ---------------------------------------------------------------------------
 // Gemini ProviderClient
@@ -32,21 +99,99 @@ export class GeminiProvider implements ProviderClient {
   async *streamQuery(
     params: ProviderQueryParams,
   ): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
+    debugLog(`streamQuery: model=${params.model}, tools=${params.tools?.length || 0}`)
     const apiKey = resolveProviderApiKey('gemini')
     const baseUrl = resolveProviderBaseUrl('gemini')
 
     if (!apiKey) {
-      // Try OAuth fallback
-      const oauthToken = await tryGeminiOAuth()
-      if (!oauthToken) {
-        yield createErrorMessage(`No API key configured for Gemini. Set one of: ${getProviderAuthEnvVars('gemini').join(', ')}`)
+      const { resolveGeminiAuth } = await import('./gemini-oauth.js')
+      const auth = await resolveGeminiAuth()
+      if (!auth) {
+        yield createErrorMessage(`No API key configured for Gemini. Set ${getProviderAuthEnvVars('gemini').join(' or ')}, or run /login to sign in.`)
         return
       }
-      yield* this.streamWithAuth(params, baseUrl, { type: 'oauth', token: oauthToken })
+      if (auth.type === 'api-key') {
+        yield* this.streamWithAuth(params, baseUrl, { type: 'api-key', key: auth.key })
+        return
+      }
+      // OAuth with projectId → Cloud Code Assist endpoint
+      yield* this.streamWithCloudCodeAssist(params, auth.accessToken, auth.projectId)
       return
     }
 
     yield* this.streamWithAuth(params, baseUrl, { type: 'api-key', key: apiKey })
+  }
+
+  /**
+   * OAuth path: call cloudcode-pa.googleapis.com/v1internal:streamGenerateContent
+   * with Gemini CLI headers and project in request body.
+   * Ported from @mariozechner/pi-ai.
+   *
+   * IMPORTANT: Cloud Code Assist only supports the gemini-2.5-* family
+   * (gemini-2.5-flash, gemini-2.5-pro). Older / preview models return 404.
+   * We alias unsupported names to the closest supported model.
+   */
+  private async *streamWithCloudCodeAssist(
+    params: ProviderQueryParams,
+    accessToken: string,
+    projectId: string,
+  ): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
+    const url = 'https://cloudcode-pa.googleapis.com/v1internal:streamGenerateContent?alt=sse'
+    const innerBody = buildGeminiRequestBody(params)
+
+    // Remap models not supported by Cloud Code Assist
+    const requestedModel = params.model
+    const ccaModel = remapToCloudCodeAssistModel(requestedModel)
+    if (ccaModel !== requestedModel) {
+      debugLog(`[cca] remapped model ${requestedModel} → ${ccaModel}`)
+    }
+
+    // Cloud Code Assist wraps the request in { project, model, request, userAgent, requestId }
+    const wrappedBody = {
+      project: projectId,
+      model: ccaModel,
+      request: innerBody,
+      userAgent: 'vibe-sensei',
+      requestId: `vs-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+    }
+
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+      'User-Agent': 'google-cloud-sdk vscode_cloudshelleditor/0.1',
+      'X-Goog-Api-Client': 'gl-node/22.17.0',
+      'Client-Metadata': JSON.stringify({
+        ideType: 'IDE_UNSPECIFIED',
+        platform: 'PLATFORM_UNSPECIFIED',
+        pluginType: 'GEMINI',
+      }),
+    }
+
+    let response: Response
+    try {
+      response = await fetchWithRetry(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(wrappedBody),
+        signal: params.signal,
+      }, 'gemini', { maxRetries: 2 })
+    } catch (error) {
+      if (error instanceof ProviderHttpError) {
+        yield createErrorMessage(formatErrorForUser(error.classified, 'gemini'))
+      } else {
+        yield createErrorMessage(`Connection error to Gemini (Cloud Code Assist): ${(error as Error).message}`)
+      }
+      return
+    }
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '')
+      yield createErrorMessage(`Gemini Cloud Code Assist error (${response.status}): ${errText.substring(0, 300)}`)
+      return
+    }
+
+    yield* parseCloudCodeAssistStream(response, params.model)
   }
 
   private async *streamWithAuth(
@@ -116,9 +261,10 @@ export class GeminiProvider implements ProviderClient {
     const key = resolveProviderApiKey('gemini')
     if (key) return true
 
-    // Check for OAuth
-    const oauthToken = await tryGeminiOAuth()
-    return oauthToken !== null
+    // Check for OAuth credentials (including projectId discovery state)
+    const { resolveGeminiAuth } = await import('./gemini-oauth.js')
+    const auth = await resolveGeminiAuth()
+    return auth !== null
   }
 
   getInfo(): ProviderInfo {
@@ -289,13 +435,27 @@ function toolsToGeminiFunctions(
   for (const tool of tools) {
     if (!tool || typeof tool !== 'object') continue
     const name = tool.name || ''
-    const description = tool.description || ''
-    const parameters = tool.input_schema || tool.inputSchema || { type: 'object', properties: {} }
-
     if (!name) continue
 
-    // Gemini does not accept additionalProperties in the schema
-    const cleanedParams = removeAdditionalProperties(parameters)
+    const description = typeof tool.description === 'string' ? tool.description : ''
+
+    // Convert Zod → JSON Schema. vibe-sensei tools carry `inputSchema` as a
+    // raw Zod object, which when serialized leaks Zod internals like `def`
+    // that Gemini rejects with `Unknown name "def"`. Prefer pre-converted
+    // `inputJSONSchema` / `input_schema` first.
+    let parameters: any
+    if (tool.inputJSONSchema) {
+      parameters = tool.inputJSONSchema
+    } else if (tool.input_schema) {
+      parameters = tool.input_schema
+    } else if (tool.inputSchema && typeof tool.inputSchema === 'object') {
+      parameters = toolSchemaToJsonSchema(tool.inputSchema)
+    } else {
+      parameters = { type: 'object', properties: {} }
+    }
+
+    // Gemini rejects schemas with $defs/$ref/$schema/additionalProperties.
+    const cleanedParams = sanitizeSchemaForGemini(parameters)
 
     result.push({ name, description, parameters: cleanedParams })
   }
@@ -303,21 +463,139 @@ function toolsToGeminiFunctions(
   return result
 }
 
-function removeAdditionalProperties(schema: any): any {
-  if (!schema || typeof schema !== 'object') return schema
-  const cleaned = { ...schema }
-  delete cleaned.additionalProperties
+// Convert a Zod schema to JSON Schema. Tolerant of already-converted schemas.
+function toolSchemaToJsonSchema(schema: any): any {
+  // If it already looks like a JSON Schema (has `type: 'object'` or `properties`),
+  // pass through.
+  if (
+    schema &&
+    typeof schema === 'object' &&
+    !schema._def &&
+    !schema.def &&
+    (schema.type === 'object' || schema.properties)
+  ) {
+    return schema
+  }
+  // Otherwise treat as Zod and convert.
+  try {
+    const { zodToJsonSchema } = require('../../../utils/zodToJsonSchema.js')
+    return zodToJsonSchema(schema)
+  } catch {
+    return { type: 'object', properties: {} }
+  }
+}
 
-  if (cleaned.properties) {
-    const props: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(cleaned.properties)) {
-      props[key] = removeAdditionalProperties(value)
+/**
+ * Convert a JSON Schema to a Gemini-compatible schema:
+ *   1. Inline all `$ref` references against `$defs` / `definitions`
+ *   2. Strip all `$*` keys and `additionalProperties`
+ *   3. Recurse into `properties`, `items`, `anyOf`, `oneOf`, `allOf`
+ */
+function sanitizeSchemaForGemini(schema: any): any {
+  if (!schema || typeof schema !== 'object') return schema
+
+  // Collect definitions from the root schema for $ref resolution
+  const defs = schema.$defs || schema.definitions || {}
+  return inlineAndClean(schema, defs)
+}
+
+// Gemini's restricted OpenAPI-subset schema. Use a WHITELIST — anything
+// not in this set is stripped, because vendor extensions and JSON Schema
+// features leak through otherwise (x-google-*, `deprecated`, `default`, etc.).
+//
+// Based on Google's Cloud Code Assist API schema spec.
+const GEMINI_SCHEMA_KEYS = new Set([
+  'type',
+  'format',
+  'description',
+  'nullable',
+  'enum',
+  'properties',
+  'required',
+  'items',
+  'minItems', 'maxItems',
+  'minLength', 'maxLength',
+  'minimum', 'maximum',
+  'pattern',
+  'anyOf',
+  'default',
+])
+
+/**
+ * Recursively clean a JSON Schema node for Gemini.
+ * The whitelist only applies to SCHEMA OBJECTS. Maps like `properties` /
+ * `$defs` have user-defined keys that must be preserved as-is; we only
+ * apply the whitelist when walking into their VALUES.
+ */
+function inlineAndClean(node: any, defs: Record<string, any>): any {
+  if (Array.isArray(node)) {
+    return node.map(item => inlineAndClean(item, defs))
+  }
+  if (!node || typeof node !== 'object') return node
+
+  // Resolve $ref → inline from defs
+  if (typeof node.$ref === 'string') {
+    const refPath = node.$ref
+    const match = refPath.match(/^#\/(\$defs|definitions)\/(.+)$/)
+    if (match) {
+      const defName = match[2]
+      const target = defs[defName]
+      if (target) {
+        const { $ref, ...rest } = node
+        return inlineAndClean({ ...target, ...rest }, defs)
+      }
     }
-    cleaned.properties = props
+    // Unresolvable $ref — return a permissive placeholder
+    return {}
   }
 
-  if (cleaned.items) {
-    cleaned.items = removeAdditionalProperties(cleaned.items)
+  // `const` → single-value `enum` (Gemini doesn't support const)
+  if ('const' in node) {
+    const { const: constVal, ...rest } = node
+    return inlineAndClean({ ...rest, enum: [constVal] }, defs)
+  }
+
+  const cleaned: Record<string, any> = {}
+  for (const [key, value] of Object.entries(node)) {
+    // WHITELIST: only keep keys Gemini explicitly supports
+    if (!GEMINI_SCHEMA_KEYS.has(key)) continue
+
+    // `properties` is a MAP of user-defined property names to schemas.
+    // Don't apply the whitelist to its KEYS; recurse into each value
+    // as a new schema node.
+    if (key === 'properties' && value && typeof value === 'object') {
+      const cleanedProps: Record<string, any> = {}
+      for (const [propName, propSchema] of Object.entries(value as Record<string, any>)) {
+        cleanedProps[propName] = inlineAndClean(propSchema, defs)
+      }
+      cleaned[key] = cleanedProps
+      continue
+    }
+
+    // `required` is an array of property names (strings) — don't recurse
+    if (key === 'required' && Array.isArray(value)) {
+      cleaned[key] = value
+      continue
+    }
+
+    // `enum` is an array of literal values — don't recurse
+    if (key === 'enum' && Array.isArray(value)) {
+      cleaned[key] = value
+      continue
+    }
+
+    cleaned[key] = inlineAndClean(value, defs)
+  }
+
+  // Gemini requires `type` to be a single string, not array (e.g. ["string","null"])
+  if (Array.isArray(cleaned.type)) {
+    const types = cleaned.type.filter((t: string) => t !== 'null')
+    if (types.length === 1) {
+      cleaned.type = types[0]
+      cleaned.nullable = true
+    } else {
+      cleaned.type = types[0] || 'string'
+    }
   }
 
   return cleaned
@@ -326,6 +604,169 @@ function removeAdditionalProperties(schema: any): any {
 // ---------------------------------------------------------------------------
 // SSE stream parsing
 // ---------------------------------------------------------------------------
+
+/**
+ * Parse Cloud Code Assist SSE stream.
+ * Each event is wrapped: { response: { candidates: [...], usageMetadata: {...} } }
+ *
+ * Emits the full Anthropic-style stream_event sequence so the REPL renders
+ * progressive text/tool deltas.
+ */
+async function* parseCloudCodeAssistStream(
+  response: Response,
+  model: string,
+): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
+  const reader = response.body?.getReader()
+  if (!reader) {
+    yield createErrorMessage('No response body from Gemini (Cloud Code Assist)')
+    return
+  }
+
+  const messageId = `msg_${randomUUID()}`
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let fullText = ''
+  const toolCalls: Array<{ id: string; name: string; args: unknown }> = []
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
+
+  // Block index state
+  let textBlockStarted = false
+  const textBlockIndex = 0
+  let nextBlockIndex = 1
+
+  debugLog(`[parser] starting, response.ok=${response.ok}`)
+
+  // 1. message_start — tells the REPL a new assistant turn has begun
+  yield messageStartEvent(messageId, model)
+  debugLog('[parser] yielded message_start')
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data: ')) continue
+        const jsonStr = trimmed.slice(6)
+        if (!jsonStr) continue
+
+        let wrapper: any
+        try { wrapper = JSON.parse(jsonStr) } catch { continue }
+
+        // Unwrap Cloud Code Assist response envelope
+        const chunk = wrapper.response ?? wrapper
+        if (!chunk) continue
+
+        const candidates = chunk.candidates || []
+        debugLog(`[parser] chunk candidates=${candidates.length}`)
+        for (const candidate of candidates) {
+          const parts = candidate.content?.parts || []
+          for (const part of parts) {
+            if (part.text) {
+              debugLog(`[parser] text delta: ${JSON.stringify(part.text).substring(0, 100)}`)
+              // Start the text block on first text delta
+              if (!textBlockStarted) {
+                textBlockStarted = true
+                yield textBlockStartEvent(textBlockIndex)
+                debugLog('[parser] yielded content_block_start (text)')
+              }
+              fullText += part.text
+              yield textBlockDeltaEvent(textBlockIndex, part.text)
+              debugLog('[parser] yielded content_block_delta (text_delta)')
+            }
+            if (part.functionCall) {
+              debugLog(`[parser] tool call: ${part.functionCall.name}`)
+              toolCalls.push({
+                id: `toolu_${randomUUID()}`,
+                name: part.functionCall.name,
+                args: part.functionCall.args || {},
+              })
+            }
+          }
+        }
+
+        if (chunk.usageMetadata) {
+          totalInputTokens = chunk.usageMetadata.promptTokenCount || 0
+          totalOutputTokens = chunk.usageMetadata.candidatesTokenCount || 0
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  // Close the text block if we opened one
+  if (textBlockStarted) {
+    yield blockStopEvent(textBlockIndex)
+  }
+
+  // Emit tool_use blocks (Gemini delivers the full arguments at once)
+  for (const tc of toolCalls) {
+    const idx = nextBlockIndex++
+    yield toolUseBlockStartEvent(idx, tc.id, tc.name)
+    const argsJson = JSON.stringify(tc.args)
+    if (argsJson && argsJson !== '{}') {
+      yield inputJsonDeltaEvent(idx, argsJson)
+    }
+    yield blockStopEvent(idx)
+  }
+
+  const stopReason = toolCalls.length > 0 ? 'tool_use' : 'end_turn'
+
+  // message_delta + message_stop
+  yield messageDeltaEvent(stopReason, {
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+  })
+  yield messageStopEvent()
+
+  if (totalInputTokens > 0 || totalOutputTokens > 0) {
+    recordProviderUsage('gemini', model, totalInputTokens, totalOutputTokens)
+  }
+
+  // Final AssistantMessage for query.ts accumulation
+  const contentBlocks: any[] = []
+  if (fullText) contentBlocks.push({ type: 'text', text: fullText })
+  for (const tc of toolCalls) {
+    contentBlocks.push({
+      type: 'tool_use',
+      id: tc.id,
+      name: tc.name,
+      input: tc.args,
+    })
+  }
+
+  const finalMsg = {
+    type: 'assistant',
+    uuid: randomUUID() as any,
+    timestamp: new Date().toISOString(),
+    message: {
+      role: 'assistant',
+      id: messageId,
+      content: contentBlocks,
+      model,
+      stop_reason: stopReason,
+      usage: {
+        input_tokens: totalInputTokens,
+        output_tokens: totalOutputTokens,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
+        server_tool_use: undefined,
+      },
+    } as any,
+    costUSD: 0,
+  } as unknown as AssistantMessage
+
+  debugLog(`[parser] about to yield final AssistantMessage, fullText len=${fullText.length}, contentBlocks=${contentBlocks.length}`)
+  yield finalMsg
+  debugLog('[parser] yielded final AssistantMessage, DONE')
+}
 
 async function* parseGeminiSSEStream(
   response: Response,
@@ -337,12 +778,19 @@ async function* parseGeminiSSEStream(
     return
   }
 
+  const messageId = `msg_${randomUUID()}`
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
-  let toolCalls: Array<{ name: string; args: unknown }> = []
+  const toolCalls: Array<{ id: string; name: string; args: unknown }> = []
   let totalInputTokens = 0
   let totalOutputTokens = 0
+
+  let textBlockStarted = false
+  const textBlockIndex = 0
+  let nextBlockIndex = 1
+
+  yield messageStartEvent(messageId, model)
 
   try {
     while (true) {
@@ -360,26 +808,23 @@ async function* parseGeminiSSEStream(
         if (!jsonStr) continue
 
         let chunk: any
-        try {
-          chunk = JSON.parse(jsonStr)
-        } catch {
-          continue
-        }
+        try { chunk = JSON.parse(jsonStr) } catch { continue }
 
-        // Process candidates
         const candidates = chunk.candidates || []
         for (const candidate of candidates) {
           const parts = candidate.content?.parts || []
           for (const part of parts) {
             if (part.text) {
+              if (!textBlockStarted) {
+                textBlockStarted = true
+                yield textBlockStartEvent(textBlockIndex)
+              }
               fullText += part.text
-              yield {
-                type: 'content_block_delta',
-                delta: { type: 'text_delta', text: part.text },
-              } as StreamEvent
+              yield textBlockDeltaEvent(textBlockIndex, part.text)
             }
             if (part.functionCall) {
               toolCalls.push({
+                id: `toolu_${randomUUID()}`,
                 name: part.functionCall.name,
                 args: part.functionCall.args || {},
               })
@@ -387,7 +832,6 @@ async function* parseGeminiSSEStream(
           }
         }
 
-        // Usage metadata
         if (chunk.usageMetadata) {
           totalInputTokens = chunk.usageMetadata.promptTokenCount || 0
           totalOutputTokens = chunk.usageMetadata.candidatesTokenCount || 0
@@ -398,35 +842,49 @@ async function* parseGeminiSSEStream(
     reader.releaseLock()
   }
 
-  // Record usage
+  if (textBlockStarted) {
+    yield blockStopEvent(textBlockIndex)
+  }
+
+  for (const tc of toolCalls) {
+    const idx = nextBlockIndex++
+    yield toolUseBlockStartEvent(idx, tc.id, tc.name)
+    const argsJson = JSON.stringify(tc.args)
+    if (argsJson && argsJson !== '{}') {
+      yield inputJsonDeltaEvent(idx, argsJson)
+    }
+    yield blockStopEvent(idx)
+  }
+
+  const stopReason = toolCalls.length > 0 ? 'tool_use' : 'end_turn'
+  yield messageDeltaEvent(stopReason, {
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+  })
+  yield messageStopEvent()
+
   if (totalInputTokens > 0 || totalOutputTokens > 0) {
     recordProviderUsage('gemini', model, totalInputTokens, totalOutputTokens)
   }
 
-  // Build final assistant message
   const contentBlocks: any[] = []
-
-  if (fullText) {
-    contentBlocks.push({ type: 'text', text: fullText })
-  }
-
+  if (fullText) contentBlocks.push({ type: 'text', text: fullText })
   for (const tc of toolCalls) {
     contentBlocks.push({
       type: 'tool_use',
-      id: randomUUID(),
+      id: tc.id,
       name: tc.name,
       input: tc.args,
     })
   }
 
-  const stopReason = toolCalls.length > 0 ? 'tool_use' : 'end_turn'
-
-  const assistantMessage: AssistantMessage = {
+  yield {
     type: 'assistant',
     uuid: randomUUID() as any,
+    timestamp: new Date().toISOString(),
     message: {
       role: 'assistant',
-      id: randomUUID(),
+      id: messageId,
       content: contentBlocks,
       model,
       stop_reason: stopReason,
@@ -437,11 +895,9 @@ async function* parseGeminiSSEStream(
         cache_read_input_tokens: 0,
         server_tool_use: undefined,
       },
-    },
+    } as any,
     costUSD: 0,
-  }
-
-  yield assistantMessage
+  } as unknown as AssistantMessage
 }
 
 // ---------------------------------------------------------------------------

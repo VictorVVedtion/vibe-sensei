@@ -121,3 +121,41 @@ export function getProviderAuthStatus(): Record<string, boolean> {
 export function getProviderAuthEnvVars(provider: string): string[] {
   return PROVIDER_AUTH_ENV_VARS[provider] || []
 }
+
+/**
+ * Check whether any non-Anthropic provider has credentials configured
+ * via environment variables. Used to determine if the user is
+ * "authenticated" via an external provider even without Anthropic keys.
+ *
+ * Note: This is synchronous (env vars only). Async CLI OAuth checks
+ * (Codex/Gemini) happen at query time in the provider implementations.
+ */
+export function hasAnyNonAnthropicProviderKey(): boolean {
+  for (const [provider, envVars] of Object.entries(PROVIDER_AUTH_ENV_VARS)) {
+    if (provider === 'anthropic' || provider === 'ollama') continue
+    for (const envVar of envVars) {
+      if (process.env[envVar]?.trim()) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Synchronously check if Codex CLI or Gemini CLI auth files exist.
+ * This is a fast existence check (not token validation) used to
+ * suppress "Not logged in" when CLI OAuth credentials are present.
+ */
+export function hasCliOAuthCredentials(): boolean {
+  try {
+    const { existsSync } = require('fs')
+    const { join } = require('path')
+    const { homedir } = require('os')
+    const home = homedir()
+    return (
+      existsSync(join(home, '.codex', 'auth.json')) ||
+      existsSync(join(home, '.gemini', 'oauth_creds.json'))
+    )
+  } catch {
+    return false
+  }
+}

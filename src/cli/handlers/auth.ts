@@ -240,13 +240,20 @@ export async function authStatus(opts: {
   const oauthAccount = getOauthAccountInfo()
   const subscriptionType = getSubscriptionType()
   const using3P = isUsing3PServices()
+  let hasExternalProviderKey = false
+  try {
+    const { hasAnyNonAnthropicProviderKey, hasCliOAuthCredentials } = require('../../services/api/providers/auth-env.js')
+    hasExternalProviderKey = hasAnyNonAnthropicProviderKey() || hasCliOAuthCredentials()
+  } catch { /* module not loaded */ }
   const loggedIn =
-    hasToken || apiKeySource !== 'none' || hasApiKeyEnvVar || using3P
+    hasToken || apiKeySource !== 'none' || hasApiKeyEnvVar || using3P || hasExternalProviderKey
 
   // Determine auth method
   let authMethod: string = 'none'
   if (using3P) {
     authMethod = 'third_party'
+  } else if (hasExternalProviderKey) {
+    authMethod = 'external_provider'
   } else if (authTokenSource === 'claude.ai') {
     authMethod = 'claude.ai'
   } else if (authTokenSource === 'apiKeyHelper') {
