@@ -224,12 +224,35 @@ function buildResponsesRequestBody(params: ProviderQueryParams): Record<string, 
   const modelId = stripProviderPrefix(params.model)
   if (modelId.startsWith('gpt-5') || modelId.startsWith('o1') || modelId.startsWith('o3')) {
     body.reasoning = {
-      effort: 'medium',
+      effort: thinkingConfigToReasoningEffort(params.thinkingConfig),
       summary: 'auto',
     }
   }
 
   return body
+}
+
+/**
+ * Map our internal `ThinkingConfig` (Anthropic-shaped:
+ * `{type: 'enabled', budgetTokens}` / `{type: 'adaptive'}` / `{type: 'disabled'}`)
+ * to OpenAI's `reasoning.effort`: 'low' | 'medium' | 'high'.
+ *
+ * Budget thresholds picked so Anthropic 'low' (~2048 tokens via
+ * /effort) maps to 'low', 'medium' (~8192) to 'medium', 'high' and
+ * 'max' (>=16000) to 'high'. Matches the intent of the user's
+ * /effort choice without requiring a second setting per provider.
+ */
+function thinkingConfigToReasoningEffort(
+  config: ProviderQueryParams['thinkingConfig'],
+): 'low' | 'medium' | 'high' {
+  if (config.type === 'disabled') return 'low'
+  if (config.type === 'enabled') {
+    if (config.budgetTokens < 4000) return 'low'
+    if (config.budgetTokens < 12000) return 'medium'
+    return 'high'
+  }
+  // 'adaptive' — let the model decide, default to medium
+  return 'medium'
 }
 
 function stripProviderPrefix(model: string): string {

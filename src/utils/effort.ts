@@ -190,9 +190,29 @@ export function getEffortSuffix(
   effortValue: EffortValue | undefined,
 ): string {
   if (effortValue === undefined) return ''
+  // Don't show a "with X effort" label for providers whose request
+  // builders don't wire the effort/thinking config through. Showing it
+  // is a lie — the API call is identical no matter what the user sets.
+  if (!providerHonorsEffort(model)) return ''
   const resolved = resolveAppliedEffort(model, effortValue)
   if (resolved === undefined) return ''
   return ` with ${convertEffortValueToLevel(resolved)} effort`
+}
+
+/**
+ * Returns true for providers whose request builder actually maps
+ * `thinkingConfig` / effort to an API parameter. Used to suppress the
+ * "with X effort" suffix in the status line for providers that ignore
+ * the setting entirely (so the UI doesn't lie).
+ *
+ * Anthropic (no prefix): honors via `thinking.budget_tokens`.
+ * OpenAI Codex (`openai/*`): honors via `reasoning.effort` on gpt-5/o1/o3.
+ * Gemini (`gemini/*`) and others: currently ignored by the request builder.
+ */
+function providerHonorsEffort(model: string): boolean {
+  if (!model.includes('/')) return true
+  const prefix = model.split('/', 1)[0]?.toLowerCase() ?? ''
+  return prefix === 'openai'
 }
 
 export function isValidNumericEffort(value: number): boolean {
