@@ -351,6 +351,29 @@ type GeminiContent = {
 function messagesToGeminiContents(messages: any[]): GeminiContent[] {
   const contents: GeminiContent[] = []
 
+  // Pre-scan to build a `tool_use_id → tool_name` index. Gemini's
+  // `functionResponse.name` must match an earlier `functionCall.name`
+  // (e.g. "ShowChart"), NOT the Anthropic-style `tool_use_id`
+  // ("toolu_abc123..."). Sending the id makes Gemini silently hang on
+  // follow-up turns because it can't correlate the response to any
+  // call it made.
+  const toolUseIdToName = new Map<string, string>()
+  for (const msg of messages) {
+    if (msg?.message?.role !== 'assistant') continue
+    const c = msg.message.content
+    if (!Array.isArray(c)) continue
+    for (const block of c) {
+      if (
+        typeof block === 'object' && block !== null &&
+        (block as any).type === 'tool_use' &&
+        typeof (block as any).id === 'string' &&
+        typeof (block as any).name === 'string'
+      ) {
+        toolUseIdToName.set((block as any).id, (block as any).name)
+      }
+    }
+  }
+
   for (const msg of messages) {
     if (!msg.message) continue
     const role = msg.message.role
@@ -363,9 +386,18 @@ function messagesToGeminiContents(messages: any[]): GeminiContent[] {
         for (const block of content) {
           if (typeof block === 'object' && block !== null && 'type' in block) {
             if (block.type === 'tool_result') {
+              const toolUseId = (block as any).tool_use_id
+              const toolName =
+                (typeof toolUseId === 'string' && toolUseIdToName.get(toolUseId)) ||
+                // Fallback when the tool_use block isn't in this batch
+                // (e.g. mid-conversation resume). Use the id so the
+                // response is at least present — Gemini will still
+                // reject name mismatches but the failure is surfaced.
+                toolUseId ||
+                'unknown'
               parts.push({
                 functionResponse: {
-                  name: (block as any).tool_use_id || 'unknown',
+                  name: toolName,
                   response: {
                     content: typeof (block as any).content === 'string'
                       ? (block as any).content
