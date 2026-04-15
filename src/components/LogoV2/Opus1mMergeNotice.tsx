@@ -4,11 +4,20 @@ import { useEffect, useState } from 'react';
 import { UP_ARROW } from '../../constants/figures.js';
 import { Box, Text } from '../../ink.js';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js';
-import { isOpus1mMergeEnabled } from '../../utils/model/model.js';
+import { getMainLoopModel, isOpus1mMergeEnabled } from '../../utils/model/model.js';
 import { AnimatedAsterisk } from './AnimatedAsterisk.js';
 const MAX_SHOW_COUNT = 6;
 export function shouldShowOpus1mMergeNotice(): boolean {
-  return isOpus1mMergeEnabled() && (getGlobalConfig().opus1mMergeNoticeSeenCount ?? 0) < MAX_SHOW_COUNT;
+  if (!isOpus1mMergeEnabled()) return false;
+  // The banner only applies to Claude users — the "1M context" change is
+  // specific to Anthropic's Opus. Vibe Sensei ships multi-provider support,
+  // and non-Anthropic models are identified by a `<provider>/<model>`
+  // prefix convention (e.g. `gemini/gemini-3-flash-preview`,
+  // `openai/gpt-5.4`). Suppress the notice for those — it's just confusing
+  // Anthropic marketing copy in a session that doesn't use Claude.
+  const currentModel = getMainLoopModel();
+  if (currentModel && currentModel.includes('/')) return false;
+  return (getGlobalConfig().opus1mMergeNoticeSeenCount ?? 0) < MAX_SHOW_COUNT;
 }
 export function Opus1mMergeNotice() {
   const $ = _c(4);

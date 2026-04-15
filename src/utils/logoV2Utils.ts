@@ -4,6 +4,7 @@ import type { LogOption } from '../types/logs.js'
 import { getSubscriptionName, isClaudeAISubscriber } from './auth.js'
 import { getCwd } from './cwd.js'
 import { getDisplayPath } from './file.js'
+import { getMainLoopModel } from './model/model.js'
 import {
   truncate,
   truncateToWidth,
@@ -237,6 +238,41 @@ export function formatReleaseNoteForDisplay(
 }
 
 /**
+ * Derive the label shown to the right of the model name in the logo
+ * header. Non-Anthropic models (identified by the `<provider>/<model>`
+ * prefix convention) get a provider-appropriate label instead of the
+ * legacy "API Usage Billing" tag, which was inherited from Claude Code
+ * and doesn't describe the billing channel for Gemini/OpenAI routes.
+ */
+function resolveBillingLabel(): string {
+  if (isClaudeAISubscriber()) return getSubscriptionName()
+
+  const currentModel = getMainLoopModel()
+  if (currentModel && currentModel.includes('/')) {
+    const providerPrefix = currentModel.split('/', 1)[0]?.toLowerCase() ?? ''
+    switch (providerPrefix) {
+      case 'openai':
+        return 'OpenAI'
+      case 'gemini':
+        return 'Gemini'
+      case 'deepseek':
+        return 'DeepSeek'
+      case 'groq':
+        return 'Groq'
+      case 'xai':
+        return 'xAI'
+      case 'mistral':
+        return 'Mistral'
+      default:
+        // Unknown provider — show a titled version of the prefix rather
+        // than leaking "API Usage Billing" which is Anthropic-specific.
+        return providerPrefix.charAt(0).toUpperCase() + providerPrefix.slice(1)
+    }
+  }
+  return 'API Usage Billing'
+}
+
+/**
  * Gets the common logo display data used by both LogoV2 and CondensedLogo
  */
 export function getLogoDisplayData(): {
@@ -253,9 +289,7 @@ export function getLogoDisplayData(): {
   const cwd = serverUrl
     ? `${displayPath} in ${serverUrl.replace(/^https?:\/\//, '')}`
     : displayPath
-  const billingType = isClaudeAISubscriber()
-    ? getSubscriptionName()
-    : 'API Usage Billing'
+  const billingType = resolveBillingLabel()
   const agentName = getInitialSettings().agent
 
   return {
