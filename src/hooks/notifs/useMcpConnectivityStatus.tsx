@@ -6,6 +6,7 @@ import { getIsRemoteMode } from '../../bootstrap/state.js';
 import { Text } from '../../ink.js';
 import { hasClaudeAiMcpEverConnected } from '../../services/mcp/claudeai.js';
 import type { MCPServerConnection } from '../../services/mcp/types.js';
+import { getMainLoopModel } from '../../utils/model/model.js';
 type Props = {
   mcpClients?: MCPServerConnection[];
 };
@@ -30,7 +31,17 @@ export function useMcpConnectivityStatus(t0) {
       const failedClaudeAiClients = mcpClients.filter(_temp2);
       const needsAuthLocalServers = mcpClients.filter(_temp3);
       const needsAuthClaudeAiServers = mcpClients.filter(_temp4);
-      if (failedLocalClients.length === 0 && failedClaudeAiClients.length === 0 && needsAuthLocalServers.length === 0 && needsAuthClaudeAiServers.length === 0) {
+      // Vibe Sensei multi-provider: suppress claude.ai connector nags
+      // when the active session isn't using an Anthropic model. These
+      // connectors are Claude-Pro-gated features (Google Drive, Notion,
+      // etc. via Anthropic's OAuth proxy) — nagging a Gemini/OpenAI
+      // user to re-auth them is noise. Local MCP server warnings still
+      // fire because those are user-installed and provider-agnostic.
+      const currentModel = getMainLoopModel();
+      const suppressClaudeAiNags = typeof currentModel === 'string' && currentModel.includes('/');
+      const showFailedClaudeAi = !suppressClaudeAiNags && failedClaudeAiClients.length > 0;
+      const showNeedsAuthClaudeAi = !suppressClaudeAiNags && needsAuthClaudeAiServers.length > 0;
+      if (failedLocalClients.length === 0 && !showFailedClaudeAi && needsAuthLocalServers.length === 0 && !showNeedsAuthClaudeAi) {
         return;
       }
       if (failedLocalClients.length > 0) {
@@ -40,7 +51,7 @@ export function useMcpConnectivityStatus(t0) {
           priority: "medium"
         });
       }
-      if (failedClaudeAiClients.length > 0) {
+      if (showFailedClaudeAi) {
         addNotification({
           key: "mcp-claudeai-failed",
           jsx: <><Text color="error">{failedClaudeAiClients.length} claude.ai{" "}{failedClaudeAiClients.length === 1 ? "connector" : "connectors"}{" "}unavailable</Text><Text dimColor={true}> · /mcp</Text></>,
@@ -54,7 +65,7 @@ export function useMcpConnectivityStatus(t0) {
           priority: "medium"
         });
       }
-      if (needsAuthClaudeAiServers.length > 0) {
+      if (showNeedsAuthClaudeAi) {
         addNotification({
           key: "mcp-claudeai-needs-auth",
           jsx: <><Text color="warning">{needsAuthClaudeAiServers.length} claude.ai{" "}{needsAuthClaudeAiServers.length === 1 ? "connector needs" : "connectors need"}{" "}auth</Text><Text dimColor={true}> · /mcp</Text></>,
