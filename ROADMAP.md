@@ -22,16 +22,24 @@ Gacha-style summon ceremony with 4-phase animated guardian reveal. `/pulse` deli
 
 10 slash commands: `/buy` `/sell` `/swap` `/positions` `/balance` `/risk` `/consult` `/debate` `/chart` `/master`. Master roster expanded from 56 to 68.
 
+### v0.3.0 --- OSS Launch + Multi-Provider
+
+- **Multi-provider OAuth** --- `/login` 3-way picker (Anthropic / OpenAI Codex / Google Gemini). PKCE flow per provider, credentials stored 0o600 under `~/.vibe-sensei/`. New OpenAI Codex provider routes `gpt-5.*` / `o1` / `o3` through the user's ChatGPT subscription. New Gemini provider uses the Cloud Code Assist free tier shared with the Gemini CLI. All non-Anthropic providers emit Anthropic-shaped stream events so the REPL renders them identically.
+- **`/model` picker expanded** --- 13 extra models (6 Gemini, 7 GPT-5 family) surface when the matching credentials are present.
+- **Anthropic-UI cleanup** --- Opus 1M-context banner, "API Usage Billing" tag, Claude in Chrome subscription gate, and claude.ai connector nags now suppress when the active session is non-Anthropic. The `with X effort` suffix only renders for providers that actually wire effort to the API.
+- **Gemini multi-turn correctness** --- `functionResponse.name` uses tool name (not `tool_use_id`); `thoughtSignature` captured and echoed; `inlineAndClean` cycle guard for circular `$ref`; 429 classifier distinguishes permanent capacity exhaustion from transient rate limits.
+- **Governance docs** --- CONTRIBUTING, Code of Conduct, SECURITY, ROADMAP, MIT LICENSE.
+
 ---
 
 ## Current
 
-### v0.3.0 --- OSS Launch
+### v0.3.x --- Launch Polish
 
-- **`--demo` mode** --- zero API keys required, try the full experience instantly
+- **`--demo` mode** --- zero API keys required, try the full experience instantly (scaffolding landed, content next)
 - **VHS hero GIF** --- animated terminal demo for the README
 - **README rewrite** --- lazygit-style one-liner install, hero GIF, quick-start
-- **Governance docs** --- CONTRIBUTING, Code of Conduct, SECURITY, ROADMAP
+- **Wiki** --- multi-provider guide, provider-architecture deep-dive, "add a master" contributor guide
 
 ---
 

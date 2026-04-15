@@ -85,10 +85,25 @@ Hooks into the query loop. After every trading tool call, the guardian observer 
 - **`src/state/store.ts`** — Store for AppState.
 - **`src/bootstrap/state.ts`** — Module-level singletons for session-global state (session ID, CWD, project root, token counts).
 
-### API & Providers
+### API & Providers (`src/services/api/providers/`)
 
-- **`src/services/api/claude.ts`** — Core API client. Supports multiple providers: Anthropic, AWS Bedrock, Google Vertex.
-- Provider selection in `src/utils/model/providers.ts`.
+Multi-provider layer. All providers emit Anthropic-shaped stream events so the REPL renders them identically.
+
+- **`registry.ts`** — Provider registry. `getProviderForModelId(providerId, modelId)` routes to the correct client based on which credentials are present (e.g. OpenAI without `OPENAI_API_KEY` but with Codex OAuth → routes to `openai-codex` not `openai-responses`).
+- **`stream-event-helpers.ts`** — Shared envelope builders. Non-Anthropic providers emit `message_start → content_block_start → delta → stop → message_delta → message_stop → AssistantMessage` so REPL rendering is provider-agnostic.
+- **Anthropic** (`src/services/api/claude.ts`) — Core client. First-party API + Bedrock + Vertex + Foundry.
+- **OpenAI Codex** (`openai-codex-provider.ts`, `openai-codex-oauth.ts`) — Routes `gpt-5.*` / `o1` / `o3` through `chatgpt.com/backend-api/codex/responses` using the user's ChatGPT Plus/Pro session. PKCE OAuth flow stores creds at `~/.vibe-sensei/openai-codex-oauth.json`. Maps `thinkingConfig` → `reasoning.effort: low|medium|high`.
+- **OpenAI compat** (`openai-compat.ts`, `openai-responses.ts`) — Standard Chat Completions / Responses API path when `OPENAI_API_KEY` is set.
+- **Google Gemini** (`gemini.ts`, `gemini-oauth.ts`) — Routes via `cloudcode-pa.googleapis.com/v1internal:streamGenerateContent` (Cloud Code Assist) using the Gemini CLI's free-tier OAuth, OR via `generativelanguage.googleapis.com` when `GEMINI_API_KEY` is set. Strict whitelist sanitizer for tool schemas (strips Google's protobuf extensions). Captures and echoes Gemini 3's `thoughtSignature` to enable multi-turn conversations after tool calls.
+- **`auth-env.ts`** — Env-var resolution: `resolveProviderApiKey(providerId)`, `resolveProviderBaseUrl(providerId)`, etc.
+- Provider selection in `src/utils/model/providers.ts` (Anthropic-only enum) and `src/utils/model/modelOptions.ts` (multi-provider model picker).
+
+### Login & Model Switching
+
+- **`src/commands/login/multi-login.tsx`** — 3-way picker (Anthropic / OpenAI / Gemini). Each provider runs its own PKCE flow; on success the session model auto-switches to the provider's default.
+- **`src/commands/login/login.tsx`** — Legacy Anthropic-only login screen, still consumed by `upgrade.tsx` and `extra-usage.tsx` for the upgrade flow.
+- **`src/commands/model/model.tsx`** — `/model` slash command + picker UI.
+- **`src/commands/provider/provider.ts`** — `/provider` status / list / set / cost / auth subcommands.
 
 ## Key Systems
 
@@ -102,6 +117,12 @@ Hooks into the query loop. After every trading tool call, the guardian observer 
 | Debate engine | `src/buddy/debate.ts` | Two masters argue for/against before big trades |
 | Deterministic assignment | `src/buddy/companion.ts` | `mulberry32(hash(userId))` for master selection |
 | UDF chart server | `src/services/chart/` | TradingView data feed |
+| Provider registry | `src/services/api/providers/registry.ts` | Routes a `(providerId, modelId)` to the correct client based on which credentials are present |
+| Stream-event helpers | `src/services/api/providers/stream-event-helpers.ts` | Anthropic-shaped envelope builders so all providers render identically in the REPL |
+| Gemini schema sanitizer | `src/services/api/providers/gemini.ts` (`sanitizeSchemaForGemini`) | Strict whitelist; strips `$defs`, `$ref`, `additionalProperties`, Google's `x-google-*` extensions; remaps `oneOf`→`anyOf`, deep-merges `allOf`; visited-set guard against circular `$ref` |
+| Gemini thought-signature | `src/services/api/providers/gemini.ts` (`_geminiThoughtSignature` field on tool_use blocks) | Captures Gemini 3's per-call `thoughtSignature` and echoes it back on follow-up turns. Without this, Gemini rejects multi-turn requests with HTTP 400 "missing thought_signature" |
+| Cloud Code Assist routing | `src/services/api/providers/gemini.ts` (`CLOUD_CODE_ASSIST_MODELS`, `remapToCloudCodeAssistModel`) | Whitelist of models served by the Gemini CLI's free-tier OAuth endpoint; pro-class requests fall through to `gemini-2.5-pro`, others to `gemini-3-flash-preview` |
+| 429 classifier | `src/services/api/providers/error-handling.ts` (`classifyHttpError`) | Distinguishes permanent `MODEL_CAPACITY_EXHAUSTED` (non-retryable) from transient `RATE_LIMIT_EXCEEDED` (retryable, parses Google's "reset after Ns" hint) |
 
 ## Working with This Codebase
 

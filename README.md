@@ -39,7 +39,13 @@ bun install
 bun run dev
 ```
 
-**Requirements:** [Bun](https://bun.sh/) >= 1.3, API key (Anthropic, Bedrock, or Vertex).
+**Requirements:** [Bun](https://bun.sh/) >= 1.3, and one of:
+
+- **Anthropic** --- `ANTHROPIC_API_KEY` env var, or `/login` with a claude.ai account (also works via Bedrock / Vertex through the standard env flags).
+- **OpenAI Codex** --- `/login` with a ChatGPT Plus/Pro account. Routes `gpt-5.*`, `o1`, `o3` through `chatgpt.com/backend-api/codex/responses`, reusing your ChatGPT subscription.
+- **Google Gemini** --- `/login` with a Google account. Routes through `cloudcode-pa.googleapis.com` using the free-tier Cloud Code Assist capacity shared with the Gemini CLI. Default: `gemini-3-flash-preview`.
+
+`/login` is a 3-way provider picker. `/model` lists every model your credentials unlock. Switch providers mid-session without restarting.
 
 ## What happens when you trade
 
@@ -141,6 +147,9 @@ Includes morning brief, counterfactual tracking, anti-portfolio, milestones, and
 | `/master` | Guardian card + diary panel |
 | `/summon` | Replay summoning ceremony |
 | `/backtest <strategy>` | Backtest a legendary strategy |
+| `/login` | 3-way provider picker (Anthropic / OpenAI / Gemini) with PKCE OAuth |
+| `/model` | Pick a model; surfaces Claude + 13 extra (6 Gemini, 7 GPT-5 family) when creds present |
+| `/provider` | Show provider status, list models, set active model, view session cost |
 
 <details>
 <summary><strong>Architecture</strong></summary>
@@ -158,15 +167,17 @@ Includes morning brief, counterfactual tracking, anti-portfolio, milestones, and
 
 ```
 src/
-  buddy/           -- Guardian system (68 masters, debates, ghosts, diary)
-  commands/        -- Slash command implementations
-  tools/           -- 13 trading tools
+  buddy/                      -- Guardian system (68 masters, debates, ghosts, diary)
+  commands/                   -- Slash command implementations (/login, /model, /buy, ...)
+  tools/                      -- 13 trading tools
   services/
-    exchange/      -- Paper + live trading via CCXT
-    knowledge/     -- Event store + wiki compiler
-    trading/       -- Guardian observer + tilt detector
-  components/      -- React/Ink terminal UI
-  screens/REPL.tsx -- Main interactive loop
+    api/providers/            -- Multi-provider layer (Anthropic / OpenAI Codex / Gemini)
+                                 stream-event-helpers, schema sanitizer, thought-signature
+    exchange/                 -- Paper + live trading via CCXT
+    knowledge/                -- Event store + wiki compiler
+    trading/                  -- Guardian observer + tilt detector
+  components/                 -- React/Ink terminal UI
+  screens/REPL.tsx            -- Main interactive loop
 ```
 
 </details>
