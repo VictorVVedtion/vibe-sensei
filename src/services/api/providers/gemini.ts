@@ -427,12 +427,22 @@ function messagesToGeminiContents(messages: any[]): GeminiContent[] {
         for (const block of content) {
           if (typeof block === 'object' && block !== null && 'type' in block) {
             if (block.type === 'tool_use') {
-              parts.push({
+              // Echo the signature we captured from Gemini's original
+              // response — it lives as a SIBLING of `functionCall` on
+              // the part, not nested inside. Gemini 3 rejects the
+              // request with HTTP 400 "missing thought_signature" when
+              // the history contains a functionCall without it.
+              const sig = (block as any)._geminiThoughtSignature
+              const part: any = {
                 functionCall: {
                   name: (block as any).name,
                   args: (block as any).input ?? {},
                 },
-              })
+              }
+              if (typeof sig === 'string' && sig.length > 0) {
+                part.thoughtSignature = sig
+              }
+              parts.push(part)
             } else if (block.type === 'text') {
               parts.push({ text: (block as any).text || '' })
             }
@@ -747,7 +757,18 @@ async function* parseCloudCodeAssistStream(
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
-  const toolCalls: Array<{ id: string; name: string; args: unknown }> = []
+  // Gemini 3 returns an opaque `thoughtSignature` alongside each
+  // functionCall part. We MUST echo that signature back on the same
+  // functionCall when it appears in conversation history; otherwise
+  // Gemini rejects the follow-up request with:
+  //   HTTP 400: function call `<Name>` is missing a `thought_signature`.
+  // See https://docs.cloud.google.com/vertex-ai/generative-ai/docs/thought-signatures
+  const toolCalls: Array<{
+    id: string
+    name: string
+    args: unknown
+    thoughtSignature?: string
+  }> = []
   let totalInputTokens = 0
   let totalOutputTokens = 0
 
@@ -802,11 +823,16 @@ async function* parseCloudCodeAssistStream(
               debugLog('[parser] yielded content_block_delta (text_delta)')
             }
             if (part.functionCall) {
-              debugLog(`[parser] tool call: ${part.functionCall.name}`)
+              debugLog(`[parser] tool call: ${part.functionCall.name}${part.thoughtSignature ? ' [sig captured]' : ''}`)
               toolCalls.push({
                 id: `toolu_${randomUUID()}`,
                 name: part.functionCall.name,
                 args: part.functionCall.args || {},
+                // `thoughtSignature` lives as a SIBLING of `functionCall`
+                // on the part, not nested inside the functionCall object.
+                thoughtSignature: typeof part.thoughtSignature === 'string'
+                  ? part.thoughtSignature
+                  : undefined,
               })
             }
           }
@@ -851,7 +877,12 @@ async function* parseCloudCodeAssistStream(
     recordProviderUsage('gemini', model, totalInputTokens, totalOutputTokens)
   }
 
-  // Final AssistantMessage for query.ts accumulation
+  // Final AssistantMessage for query.ts accumulation.
+  // `_geminiThoughtSignature` is a non-standard, vendor-prefixed field
+  // that survives the tool_use block's JSON round-trip through the
+  // conversation store. The Gemini converter reads it back when building
+  // the next request. Other providers ignore unknown fields on tool_use
+  // blocks so this doesn't leak functionally, only visually in traces.
   const contentBlocks: any[] = []
   if (fullText) contentBlocks.push({ type: 'text', text: fullText })
   for (const tc of toolCalls) {
@@ -860,6 +891,9 @@ async function* parseCloudCodeAssistStream(
       id: tc.id,
       name: tc.name,
       input: tc.args,
+      ...(tc.thoughtSignature
+        ? { _geminiThoughtSignature: tc.thoughtSignature }
+        : {}),
     })
   }
 
@@ -903,7 +937,12 @@ async function* parseGeminiSSEStream(
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
-  const toolCalls: Array<{ id: string; name: string; args: unknown }> = []
+  const toolCalls: Array<{
+    id: string
+    name: string
+    args: unknown
+    thoughtSignature?: string
+  }> = []
   let totalInputTokens = 0
   let totalOutputTokens = 0
 
@@ -948,6 +987,10 @@ async function* parseGeminiSSEStream(
                 id: `toolu_${randomUUID()}`,
                 name: part.functionCall.name,
                 args: part.functionCall.args || {},
+                // See parseCloudCodeAssistStream for rationale.
+                thoughtSignature: typeof part.thoughtSignature === 'string'
+                  ? part.thoughtSignature
+                  : undefined,
               })
             }
           }
@@ -996,6 +1039,9 @@ async function* parseGeminiSSEStream(
       id: tc.id,
       name: tc.name,
       input: tc.args,
+      ...(tc.thoughtSignature
+        ? { _geminiThoughtSignature: tc.thoughtSignature }
+        : {}),
     })
   }
 
@@ -1030,7 +1076,7 @@ function geminiResponseToAssistantMessage(
   model: string,
 ): AssistantMessage {
   const contentBlocks: any[] = []
-  const toolCalls: Array<{ name: string; args: unknown }> = []
+  const toolCalls: Array<{ name: string; args: unknown; thoughtSignature?: string }> = []
 
   const candidates = json.candidates || []
   for (const candidate of candidates) {
@@ -1043,6 +1089,10 @@ function geminiResponseToAssistantMessage(
         toolCalls.push({
           name: part.functionCall.name,
           args: part.functionCall.args || {},
+          // See parseCloudCodeAssistStream for rationale.
+          thoughtSignature: typeof part.thoughtSignature === 'string'
+            ? part.thoughtSignature
+            : undefined,
         })
       }
     }
@@ -1054,6 +1104,9 @@ function geminiResponseToAssistantMessage(
       id: randomUUID(),
       name: tc.name,
       input: tc.args,
+      ...(tc.thoughtSignature
+        ? { _geminiThoughtSignature: tc.thoughtSignature }
+        : {}),
     })
   }
 

@@ -58,14 +58,16 @@ export function classifyHttpError(
 
   // Rate limit
   if (status === 429) {
-    // Model-capacity exhaustion (Google Cloud Code Assist / Vertex) is
-    // NOT a transient rate limit — the backend genuinely has no quota
-    // for this specific model on this tier. Retrying won't help; it
-    // just produces 15-20s of silent hangs before the error surfaces.
-    // Short-circuit to non-retryable so the user sees the failure fast.
-    const isCapacityExhausted =
-      /MODEL_CAPACITY_EXHAUSTED|RESOURCE_EXHAUSTED|exceeded your current quota/i.test(body)
-    if (isCapacityExhausted) {
+    // Distinguish two 429 shapes Google Cloud Code Assist returns:
+    //   1. MODEL_CAPACITY_EXHAUSTED — the backend has no quota for this
+    //      model on this tier (e.g. gemini-3.1-pro-preview on free tier).
+    //      Retrying won't help — the user needs a different model.
+    //   2. RATE_LIMIT_EXCEEDED — transient per-minute/per-second throttle
+    //      with a "quota will reset after Ns" hint. Retry AFTER N seconds.
+    // Before this distinction, any "RESOURCE_EXHAUSTED" was marked
+    // non-retryable, which killed legitimate rate-limit recovery.
+    const isPermanentCapacityGap = /MODEL_CAPACITY_EXHAUSTED/i.test(body)
+    if (isPermanentCapacityGap) {
       return {
         type: 'rate_limit',
         message: `Model capacity exhausted on ${provider}`,
@@ -76,13 +78,19 @@ export function classifyHttpError(
         rawBody: body,
       }
     }
-    const retryAfter = parseRetryAfter(body)
+    // Google's body often contains "quota will reset after 32s" or
+    // "Retry after 500ms" in natural language — honor that when parsing
+    // retry-after.
+    const retryAfter =
+      parseGoogleResetAfter(body) ?? parseRetryAfter(body)
     return {
       type: 'rate_limit',
       message: `Rate limited by ${provider}`,
       retryable: true,
       retryAfterMs: retryAfter,
-      suggestion: 'Waiting for rate limit to reset...',
+      suggestion: retryAfter && retryAfter > 10_000
+        ? `Rate limited. Waiting ~${Math.round(retryAfter / 1000)}s for reset...`
+        : 'Waiting for rate limit to reset...',
       httpStatus: status,
       rawBody: body,
     }
@@ -296,6 +304,31 @@ export function formatErrorForUser(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Parse Google Cloud Code Assist's natural-language rate-limit reset
+ * hint from the response body. Examples:
+ *   "Your quota will reset after 32s."
+ *   "Your quota will reset after 1s."
+ *   "Quota will reset after 500ms."
+ * Returns milliseconds, or null if no hint found.
+ */
+function parseGoogleResetAfter(body: string): number | null {
+  const secMatch = body.match(/reset after (\d+\.?\d*)\s*s\b/i)
+  if (secMatch) {
+    const secs = parseFloat(secMatch[1])
+    if (Number.isFinite(secs) && secs >= 0) {
+      // Add a small buffer so we don't race the server clock.
+      return Math.ceil(secs * 1000) + 500
+    }
+  }
+  const msMatch = body.match(/reset after (\d+)\s*ms\b/i)
+  if (msMatch) {
+    const ms = parseInt(msMatch[1], 10)
+    if (Number.isFinite(ms) && ms >= 0) return ms + 500
+  }
+  return null
+}
 
 function parseRetryAfter(body: string): number {
   try {
