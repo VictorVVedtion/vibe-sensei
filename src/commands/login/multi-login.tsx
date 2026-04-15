@@ -18,7 +18,7 @@ type Provider = 'anthropic' | 'openai' | 'gemini';
 const PROVIDER_DEFAULT_MODEL: Record<Provider, string | null> = {
   anthropic: null,                    // keep current model (Claude default works)
   openai: 'openai/gpt-5.4',            // Latest Codex-supported model
-  gemini: 'gemini/gemini-3.1-pro-preview',  // Latest Gemini 3 model
+  gemini: 'gemini/gemini-3-flash-preview',  // Gemini 3 Flash — free-tier Cloud Code Assist capacity, fast, good tool-calls (3.1-pro/3-pro 429 on free tier)
 };
 
 // Debug log helper (enable with VIBE_LOGIN_DEBUG=1, stderr is eaten by Ink).

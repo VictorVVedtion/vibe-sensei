@@ -198,15 +198,15 @@ export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
     if (!hasAnthropic && (hasAnyNonAnthropicProviderKey() || hasCliOAuthCredentials())) {
       // Prefer env-var-backed providers first (explicit user config)
       if (resolveProviderApiKey('openai')) return 'openai/gpt-4o'
-      if (resolveProviderApiKey('gemini')) return 'gemini/gemini-3.1-pro-preview'
+      if (resolveProviderApiKey('gemini')) return 'gemini/gemini-3-flash-preview'
       if (resolveProviderApiKey('deepseek')) return 'deepseek/deepseek-chat'
       if (resolveProviderApiKey('groq')) return 'groq/llama-3.3-70b-versatile'
       if (resolveProviderApiKey('xai')) return 'xai/grok-2'
       if (resolveProviderApiKey('mistral')) return 'mistral/mistral-large-latest'
       // CLI OAuth credentials — use the latest supported models
       const home = homedir()
-      if (existsSync(join(home, '.vibe-sensei', 'gemini-oauth.json'))) return 'gemini/gemini-3.1-pro-preview'
-      if (existsSync(join(home, '.gemini', 'oauth_creds.json'))) return 'gemini/gemini-3.1-pro-preview'
+      if (existsSync(join(home, '.vibe-sensei', 'gemini-oauth.json'))) return 'gemini/gemini-3-flash-preview'
+      if (existsSync(join(home, '.gemini', 'oauth_creds.json'))) return 'gemini/gemini-3-flash-preview'
       if (existsSync(join(home, '.codex', 'auth.json'))) return 'openai/gpt-5.4'
     }
   } catch { /* fall through to Anthropic default */ }

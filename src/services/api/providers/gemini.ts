@@ -56,17 +56,20 @@ function debugLog(msg: string): void {
  * Cloud Code Assist only supports a specific set of Gemini model names.
  * Alias unsupported names to the closest supported model.
  *
- * Supported (verified 2026-04-11):
- *   - gemini-3.1-pro-preview  (latest pro, default)
- *   - gemini-3-pro-preview
- *   - gemini-3-flash-preview
- *   - gemini-2.5-pro
+ * Supported on the Cloud Code Assist OAuth path (verified 2026-04-14):
+ *   - gemini-3-flash-preview  (latest, fast, default)
+ *   - gemini-2.5-pro           (pro-class, slower)
  *   - gemini-2.5-flash
  *   - gemini-2.5-flash-lite
+ *
+ * Explicitly EXCLUDED (Cloud Code Assist returns HTTP 429
+ * MODEL_CAPACITY_EXHAUSTED for these on the free tier):
+ *   - gemini-3.1-pro-preview
+ *   - gemini-3-pro-preview
+ * Users with paid-tier access should use the direct
+ * generativelanguage.googleapis.com API key path instead of OAuth.
  */
 const CLOUD_CODE_ASSIST_MODELS = new Set([
-  'gemini-3.1-pro-preview',
-  'gemini-3-pro-preview',
   'gemini-3-flash-preview',
   'gemini-2.5-pro',
   'gemini-2.5-flash',
@@ -92,12 +95,14 @@ function remapToCloudCodeAssistModel(model: string): string {
   if (lowered.includes('lite') || lowered.includes('nano')) {
     return 'gemini-2.5-flash-lite'
   }
-  // Pro-class 2.5 → 2.5-pro
-  if (lowered.includes('2.5') && lowered.includes('pro')) {
+  // Any pro-class request → 2.5-pro (3.x pro variants 429 on the
+  // Cloud Code Assist free tier, so we can't route pro to them).
+  if (lowered.includes('pro') || lowered.includes('ultra')) {
     return 'gemini-2.5-pro'
   }
-  // Everything else (pro, ultra, unknown, old names) → latest pro
-  return 'gemini-3.1-pro-preview'
+  // Everything else (unknown / old names) → latest flash-preview, which
+  // is faster, free-tier-available, and handles tool calls well.
+  return 'gemini-3-flash-preview'
 }
 
 // ---------------------------------------------------------------------------

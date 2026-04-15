@@ -58,6 +58,24 @@ export function classifyHttpError(
 
   // Rate limit
   if (status === 429) {
+    // Model-capacity exhaustion (Google Cloud Code Assist / Vertex) is
+    // NOT a transient rate limit — the backend genuinely has no quota
+    // for this specific model on this tier. Retrying won't help; it
+    // just produces 15-20s of silent hangs before the error surfaces.
+    // Short-circuit to non-retryable so the user sees the failure fast.
+    const isCapacityExhausted =
+      /MODEL_CAPACITY_EXHAUSTED|RESOURCE_EXHAUSTED|exceeded your current quota/i.test(body)
+    if (isCapacityExhausted) {
+      return {
+        type: 'rate_limit',
+        message: `Model capacity exhausted on ${provider}`,
+        retryable: false,
+        retryAfterMs: null,
+        suggestion: 'This model has no capacity on your current tier. Try a different model (e.g. /model and pick gemini-3-flash-preview or gemini-2.5-pro) or use a paid API key.',
+        httpStatus: status,
+        rawBody: body,
+      }
+    }
     const retryAfter = parseRetryAfter(body)
     return {
       type: 'rate_limit',

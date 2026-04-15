@@ -38,7 +38,7 @@ export async function call(
           'Subcommands:',
           '  list [provider]  — List available models (optionally filtered by provider)',
           '  auth [provider]  — Show authentication status',
-          '  set <model>      — Set the current model (e.g. "gpt-5.4", "gemini/gemini-3.1-pro-preview")',
+          '  set <model>      — Set the current model (e.g. "gpt-5.4", "gemini/gemini-3-flash-preview")',
           '  status           — Show provider overview',
           '  cost             — Show session cost breakdown by provider',
         ].join('\n'),

@@ -478,24 +478,14 @@ function getExternalProviderOptions(): ModelOption[] {
     if (hasGeminiEnv || hasGeminiOAuth) {
       options.push(
         {
-          value: 'gemini/gemini-3.1-pro-preview',
-          label: 'Gemini 3.1 Pro',
-          description: 'Latest Gemini Pro — best reasoning (preview)',
-        },
-        {
-          value: 'gemini/gemini-3-pro-preview',
-          label: 'Gemini 3 Pro',
-          description: 'Gemini 3 Pro (preview)',
-        },
-        {
           value: 'gemini/gemini-3-flash-preview',
           label: 'Gemini 3 Flash',
-          description: 'Gemini 3 Flash — fast & cheap (preview)',
+          description: 'Gemini 3 Flash — fast & cheap (preview, default)',
         },
         {
           value: 'gemini/gemini-2.5-pro',
           label: 'Gemini 2.5 Pro',
-          description: 'Gemini 2.5 Pro — stable',
+          description: 'Gemini 2.5 Pro — best reasoning available on Cloud Code Assist',
         },
         {
           value: 'gemini/gemini-2.5-flash',
