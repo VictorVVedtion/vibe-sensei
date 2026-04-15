@@ -23,29 +23,36 @@ Vibe Sensei is a terminal-native AI trading copilot where historical legends —
 >
 > No. They write reports. Our 68 masters **yell at you in character**, then SBF's ghost shows up when you touch leverage. Plus master debates, rarity tiers, ghost warnings, braille charts, and a full terminal-native experience that doesn't need a browser.
 
-## Try it now (no API key needed)
+## Quick start
 
 ```bash
-bun install
-bun run dev -- --demo
-```
-
-Demo mode boots with **Warren Buffett** as your guardian, canned responses, and zero external API calls. See the guardian system, ghost warnings, and master debates in 60 seconds.
-
-## Full setup
-
-```bash
+git clone https://github.com/VictorVVedtion/vibe-sensei
+cd vibe-sensei
 bun install
 bun run dev
 ```
 
-**Requirements:** [Bun](https://bun.sh/) >= 1.3, and one of:
+Then `/login` and pick **Google** --- Gemini's free tier works with just a Google account. No API key, no credit card. You're talking to Buffett's ghost in 60 seconds.
 
-- **Anthropic** --- `ANTHROPIC_API_KEY` env var, or `/login` with a claude.ai account (also works via Bedrock / Vertex through the standard env flags).
-- **OpenAI Codex** --- `/login` with a ChatGPT Plus/Pro account. Routes `gpt-5.*`, `o1`, `o3` through `chatgpt.com/backend-api/codex/responses`, reusing your ChatGPT subscription.
-- **Google Gemini** --- `/login` with a Google account. Routes through `cloudcode-pa.googleapis.com` using the free-tier Cloud Code Assist capacity shared with the Gemini CLI. Default: `gemini-3-flash-preview`.
+Got a Claude or ChatGPT Plus account? Same `/login` flow, pick that provider instead. Got an API key? `export ANTHROPIC_API_KEY=...` (or `OPENAI_API_KEY`, `GEMINI_API_KEY`) and skip `/login`.
 
-`/login` is a 3-way provider picker. `/model` lists every model your credentials unlock. Switch providers mid-session without restarting.
+**Requirements:** [Bun](https://bun.sh/) >= 1.3.
+
+<details>
+<summary><strong>All providers</strong> --- exact auth, default models, routing notes</summary>
+
+| Provider | How to authenticate | Default model | Routing |
+|----------|---------------------|---------------|---------|
+| **Google Gemini** (free tier) | `/login` (Google account) | `gemini-3-flash-preview` | `cloudcode-pa.googleapis.com` --- reuses the [Gemini CLI](https://github.com/google-gemini/gemini-cli) free-tier OAuth. No API key needed. Pro models (`gemini-3.1-pro-preview`, `gemini-3-pro-preview`) auto-remap to `gemini-2.5-pro` on this tier. |
+| **OpenAI Codex** | `/login` (ChatGPT Plus/Pro) | `gpt-5.4` | `chatgpt.com/backend-api/codex/responses` --- reuses your ChatGPT subscription, no separate API key. Maps `/effort` to `reasoning.effort: low\|medium\|high`. |
+| **Anthropic** | `ANTHROPIC_API_KEY` env, or `/login` | `claude-opus-4-6` | First-party API, plus Bedrock (`CLAUDE_CODE_USE_BEDROCK=1`) and Vertex (`CLAUDE_CODE_USE_VERTEX=1`). |
+| **Google Gemini** (paid API) | `GEMINI_API_KEY` env | `gemini-3-flash-preview` | `generativelanguage.googleapis.com` --- higher quota than the free tier, supports the full 3.x lineup. |
+| **OpenAI API** | `OPENAI_API_KEY` env | `gpt-5.4` | Standard Responses API. |
+| **Others** | provider env var | varies | DeepSeek, Groq, xAI, Mistral via the OpenAI-compat layer. |
+
+`/login` is a 3-way picker. `/model` lists every model your credentials unlock --- 13 extra non-Anthropic models surface when the matching creds are present. `/provider` shows status, sets the active model, and reports session cost. Switch providers mid-session without restarting.
+
+</details>
 
 ## What happens when you trade
 
