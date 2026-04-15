@@ -186,7 +186,9 @@ function ClaudeInChromeMenu(t0) {
   } else {
     options = $[8];
   }
-  const isDisabled = isWSL || true && !isClaudeAISubscriber;
+  // Vibe Sensei: don't disable on non-subscriber — the browser MCP is
+  // provider-agnostic. WSL is still unsupported at the MCP bridge layer.
+  const isDisabled = isWSL;
   let t5;
   if ($[18] !== onDone) {
     t5 = () => onDone();
@@ -210,9 +212,11 @@ function ClaudeInChromeMenu(t0) {
   } else {
     t7 = $[22];
   }
+  // Subscription gate removed for Vibe Sensei multi-provider — leave
+  // the memo slot empty so downstream render stays stable.
   let t8;
   if ($[23] !== isClaudeAISubscriber) {
-    t8 = true && !isClaudeAISubscriber && <Text color="error">Claude in Chrome requires a claude.ai subscription.</Text>;
+    t8 = null;
     $[23] = isClaudeAISubscriber;
     $[24] = t8;
   } else {
